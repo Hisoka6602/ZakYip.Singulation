@@ -56,13 +56,22 @@ ZakYip.Singulation.Host/
 
 ```mermaid
 graph TD
-    Core["ZakYip.Singulation.Core"]
 
-    Protocol["ZakYip.Singulation.Protocol"]
-    Transport["ZakYip.Singulation.Transport"]
-    Drivers["ZakYip.Singulation.Drivers"]
-    Host["ZakYip.Singulation.Host"]
+    subgraph Layer0["Domain Core (最底层)"]
+        Core["ZakYip.Singulation.Core"]
+    end
 
+    subgraph Layer1["Middle Layers"]
+        Protocol["ZakYip.Singulation.Protocol"]
+        Transport["ZakYip.Singulation.Transport"]
+        Drivers["ZakYip.Singulation.Drivers"]
+    end
+
+    subgraph Layer2["Host (最顶层)"]
+        Host["ZakYip.Singulation.Host"]
+    end
+
+    %% 依赖关系
     Protocol --> Core
     Transport --> Core
     Transport --> Protocol
@@ -71,6 +80,7 @@ graph TD
     Host --> Protocol
     Host --> Transport
     Host --> Drivers
+
 
 ```
 
