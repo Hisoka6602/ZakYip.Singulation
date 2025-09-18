@@ -52,19 +52,26 @@ ZakYip.Singulation.Host/
 
 
 
-
-
-
-Core
-├─ Protocol
-├─ Drivers
-└─ Transport (also depends on Protocol)
-     └─ Host depends on all: Core, Protocol, Transport, Drivers
-
-
-
-
 ```
 
+```mermaid
+graph TD
+    Core["ZakYip.Singulation.Core"]
+
+    Protocol["ZakYip.Singulation.Protocol"]
+    Transport["ZakYip.Singulation.Transport"]
+    Drivers["ZakYip.Singulation.Drivers"]
+    Host["ZakYip.Singulation.Host"]
+
+    Protocol --> Core
+    Transport --> Core
+    Transport --> Protocol
+    Drivers --> Core
+    Host --> Core
+    Host --> Protocol
+    Host --> Transport
+    Host --> Drivers
+
+```
 
 
