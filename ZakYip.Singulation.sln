@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36429.23 d17.14
+VisualStudioVersion = 17.14.36429.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Host", "ZakYip.Singulation.Host\ZakYip.Singulation.Host.csproj", "{36893AF5-40D1-4263-A562-99EAFF006B15}"
 EndProject
@@ -22,6 +22,10 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{9A12F129-9237-433E-B718-9286A804205D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Core", "ZakYip.Singulation.Core\ZakYip.Singulation.Core.csproj", "{04AAADF8-9D6F-414C-873A-E0DAEF0B47C1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Demo", "Demo", "{9985423F-4A36-4C9D-8297-33BEECA1EE72}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.ConsoleDemo", "ZakYip.Singulation.ConsoleDemo\ZakYip.Singulation.ConsoleDemo.csproj", "{445D90E1-A619-4338-AADE-AD50FCF0BFF4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -49,6 +53,10 @@ Global
 		{04AAADF8-9D6F-414C-873A-E0DAEF0B47C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04AAADF8-9D6F-414C-873A-E0DAEF0B47C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04AAADF8-9D6F-414C-873A-E0DAEF0B47C1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{445D90E1-A619-4338-AADE-AD50FCF0BFF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{445D90E1-A619-4338-AADE-AD50FCF0BFF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{445D90E1-A619-4338-AADE-AD50FCF0BFF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{445D90E1-A619-4338-AADE-AD50FCF0BFF4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -59,6 +67,7 @@ Global
 		{31EE0B1D-40AD-4B0A-B099-43E50A301531} = {C91A22D3-DED2-40CB-9719-C43CEF226F18}
 		{4EA37FA6-5032-428A-BAF8-CD8C7FF0B2D5} = {49354E2A-FB7A-4210-B84F-AF3BD756BC29}
 		{04AAADF8-9D6F-414C-873A-E0DAEF0B47C1} = {9A12F129-9237-433E-B718-9286A804205D}
+		{445D90E1-A619-4338-AADE-AD50FCF0BFF4} = {9985423F-4A36-4C9D-8297-33BEECA1EE72}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6DDFE0F1-0377-435D-981C-79DE92661182}

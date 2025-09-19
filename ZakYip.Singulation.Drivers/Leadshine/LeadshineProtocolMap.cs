@@ -5,6 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace ZakYip.Singulation.Drivers.Leadshine {
-    internal class LeadshineAxisDrive {
+    internal class LeadshineProtocolMap {
     }
 }
