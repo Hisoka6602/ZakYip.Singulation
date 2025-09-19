@@ -38,6 +38,21 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default);
 
         /// <summary>
+        /// 设置速度模式下的加速度/减速度（单位：RPM/s）。
+        /// <para>
+        /// 典型实现：将 <c>0x6083</c>（Profile Acceleration）与 <c>0x6084</c>（Profile Deceleration）
+        /// 通过 PDO 写入（<c>nmc_write_rxpdo</c>），常为 U32（4 字节）。
+        /// </para>
+        /// <remarks>
+        /// 通常在清故障与设模式（0x6060=3）之后、进入 <c>Enable Operation</c> 之前调用一次；
+        /// 如现场映射为 16 位，请相应调整 <c>bitlength</c> 与打包长度。
+        /// </remarks>
+        /// </summary>
+        /// <param name="accelRpmPerSec">加速度（RPM/s）。</param>
+        /// <param name="decelRpmPerSec">减速度（RPM/s）。</param>
+        ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default);
+
+        /// <summary>
         /// 停止轴运动（急停或减速停由实现/设备配置决定）。
         /// <para>建议可重入且快速返回；设备支持时优先软停，异常时回退为急停。</para>
         /// </summary>

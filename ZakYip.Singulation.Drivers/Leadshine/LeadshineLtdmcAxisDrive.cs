@@ -26,6 +26,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private volatile DriverStatus _status = DriverStatus.Disconnected;
         private long _lastTicks;
 
+        // 可选：加/减速换算比例（RPM/s -> 设备单位，很多现场=1.0）
+        private readonly decimal _accelTo6083 = 1.0m;
+
         private const ushort Port = 2;        // EtherCAT 端口固定为2 :contentReference[oaicite:6]{index=6}
         private const ushort IDX_CTRLWORD = 0x6040;
         private const ushort IDX_STATUS = 0x6041;
@@ -33,6 +36,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private const ushort IDX_CTRL = 0x6040;  // 控制字
         private const ushort IDX_MODE = 0x6060;  // 模式设定（int8，PV=3）
         private const ushort IDX_TGTVEL = 0x60FF;  // 目标速度（int32）
+        private const ushort IDX_PROF_ACCEL = 0x6083; // Profile Acceleration
+        private const ushort IDX_PROF_DECEL = 0x6084; // Profile Deceleration
 
         public LeadshineLtdmcAxisDrive(ushort cardNo, ushort axisNo, ushort nodeIndex, AxisId axisId, DriverOptions opts, double rpmTo60ff = 1.0) {
             _card = cardNo;
@@ -61,6 +66,22 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             if (ret != 0) throw new InvalidOperationException($"write 0x60FF failed, ret={ret}");
 
             _status = DriverStatus.Connected;
+        }
+
+        public async ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default) {
+            await ThrottleAsync(ct);
+
+            // 量化到无符号32位（常见：Profile Accel/Decel 为 U32）
+            static uint ToU32(decimal v) => v <= 0 ? 0u : (uint)Math.Min(uint.MaxValue, Math.Round(v));
+
+            var acc = BitConverter.GetBytes(ToU32(accelRpmPerSec * _accelTo6083));
+            var dec = BitConverter.GetBytes(ToU32(decelRpmPerSec * _accelTo6083));
+
+            var r1 = LTDMC.nmc_write_rxpdo(_card, Port, _nodeId, IDX_PROF_ACCEL, 0, 32, acc);
+            if (r1 != 0) throw new InvalidOperationException($"write 0x6083 failed, ret={r1}");
+
+            var r2 = LTDMC.nmc_write_rxpdo(_card, Port, _nodeId, IDX_PROF_DECEL, 0, 32, dec);
+            if (r2 != 0) throw new InvalidOperationException($"write 0x6084 failed, ret={r2}");
         }
 
         public async ValueTask StopAsync(CancellationToken ct = default) {
@@ -130,7 +151,20 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         public async ValueTask DisableAsync(CancellationToken ct = default) {
             await ThrottleAsync(ct);
-            LTDMC.nmc_set_axis_disable(_card, _axis);                  // 失能该总线轴（SDK）:contentReference[oaicite:10]{index=10}
+
+            // —— 1) 目标速度清零（防止残余速度命令在再次上电时拉起）——
+            // 若现场把 0x60FF 映射为 16 位，请用 bitlength=16（2字节）；若是 32 位把下面两行改成 32 位。
+            var zeroVel16 = BitConverter.GetBytes((short)0);
+            _ = LTDMC.nmc_write_rxpdo(_card, Port, _nodeId, 0x60FF, 0, 16, zeroVel16);
+            // 如果现场是 32 位：_ = LTDMC.nmc_write_rxpdo(_card, Port, _nodeId, 0x60FF, 0, 32, BitConverter.GetBytes(0));
+
+            // —— 2) 写控制字为 0（0x6040 = 0x0000）→ 关闭电压/退出运行态 ——
+            var cw0 = BitConverter.GetBytes((ushort)0x0000);   // 16bit，小端 2 字节
+            var ret = LTDMC.nmc_write_rxpdo(_card, Port, _nodeId, 0x6040, 0, 16, cw0);
+
+            if (ret != 0) throw new InvalidOperationException($"Disable failed: write 0x6040=0x0000, ret={ret}");
+            await Task.Delay(10, ct);
+
             _status = DriverStatus.Disconnected;
         }
 
@@ -159,11 +193,5 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         [System.Runtime.InteropServices.DllImport("LTDMC.dll")]
         public static extern short nmc_read_txpdo(ushort CardNo, ushort portnum, ushort slave_station_addr, ushort index, ushort subindex, ushort bitlength, byte[] data);
-
-        [System.Runtime.InteropServices.DllImport("LTDMC.dll")]
-        public static extern short nmc_set_axis_enable(ushort CardNo, ushort axis);  // :contentReference[oaicite:12]{index=12}
-
-        [System.Runtime.InteropServices.DllImport("LTDMC.dll")]
-        public static extern short nmc_set_axis_disable(ushort CardNo, ushort axis); // :contentReference[oaicite:13]{index=13}
     }
 }

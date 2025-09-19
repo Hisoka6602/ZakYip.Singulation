@@ -72,6 +72,10 @@ namespace ZakYip.Singulation.Drivers.Simulated {
             _status = DriverStatus.Connected;
         }
 
+        public ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default) {
+            return default;
+        }
+
         /// <summary>
         /// 停止轴运动。
         /// 执行步骤：

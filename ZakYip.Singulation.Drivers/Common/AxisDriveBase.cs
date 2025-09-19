@@ -92,6 +92,10 @@ namespace ZakYip.Singulation.Drivers.Common {
         public virtual async ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default)
             => await SetRpmAsync(rpm, ct);
 
+        public ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default) {
+            return default;
+        }
+
         /// <summary>
         /// 紧急停止。
         /// <list type="number">
