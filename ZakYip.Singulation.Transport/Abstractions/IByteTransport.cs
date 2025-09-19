@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Transport.Enums;
 
-namespace ZakYip.Singulation.Transport {
+namespace ZakYip.Singulation.Transport.Abstractions {
 
     /// <summary>最底层的字节传输适配（UDP/TCP/串口/SDK 回调）。</summary>
     public interface IByteTransport : IAsyncDisposable {

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Enums;
 using ZakYip.Singulation.Transport.Enums;
-using ZakYip.Singulation.Core.Contracts.Struct;
+using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
 namespace ZakYip.Singulation.Host.Transports {
     /// <summary>对外状态快照：给 /status 使用。</summary>

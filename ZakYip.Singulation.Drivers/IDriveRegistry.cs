@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Core.Contracts.Struct;
+using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
 namespace ZakYip.Singulation.Drivers {
 

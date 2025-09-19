@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Host.Transports;
 
-namespace ZakYip.Singulation.Host {
+namespace ZakYip.Singulation.Host.Runtime {
+
     public interface IRuntimeStatusProvider {
 
         RuntimeStatus Snapshot();

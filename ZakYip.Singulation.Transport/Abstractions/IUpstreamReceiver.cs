@@ -3,13 +3,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Protocol;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Protocol.Enums;
 using ZakYip.Singulation.Transport.Enums;
 using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Protocol.Abstractions;
 
-namespace ZakYip.Singulation.Transport {
+namespace ZakYip.Singulation.Transport.Abstractions {
 
     /// <summary>将字节流 + 编解码组合成 SpeedSet 事件流。</summary>
     public interface IUpstreamReceiver : IAsyncDisposable {
