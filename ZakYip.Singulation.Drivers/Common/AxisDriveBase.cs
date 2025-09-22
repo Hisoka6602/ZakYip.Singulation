@@ -9,6 +9,7 @@ using ZakYip.Singulation.Drivers.Enums;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Drivers.Abstractions.Ports;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
+using ZakYip.Singulation.Drivers.Abstractions.Events;
 
 namespace ZakYip.Singulation.Drivers.Common {
 
@@ -46,6 +47,12 @@ namespace ZakYip.Singulation.Drivers.Common {
             Port = port ?? throw new ArgumentNullException(nameof(port)); // 2) 端口注入
             Opts = opts;          // 3) 选项兜底
         }
+
+        public event EventHandler<AxisErrorEventArgs>? AxisFaulted;
+
+        public event EventHandler<DriverNotLoadedEventArgs>? DriverNotLoaded;
+
+        public event EventHandler<AxisDisconnectedEventArgs>? AxisDisconnected;
 
         /// <summary>轴ID（只读）。</summary>
         public AxisId Axis { get; }

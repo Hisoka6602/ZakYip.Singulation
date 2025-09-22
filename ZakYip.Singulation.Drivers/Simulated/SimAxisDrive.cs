@@ -8,6 +8,7 @@ using ZakYip.Singulation.Drivers.Enums;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
+using ZakYip.Singulation.Drivers.Abstractions.Events;
 
 namespace ZakYip.Singulation.Drivers.Simulated {
 
@@ -49,6 +50,12 @@ namespace ZakYip.Singulation.Drivers.Simulated {
             // 启动后台逼近循环
             _loop = Task.Run(LoopAsync);
         }
+
+        public event EventHandler<AxisErrorEventArgs>? AxisFaulted;
+
+        public event EventHandler<DriverNotLoadedEventArgs>? DriverNotLoaded;
+
+        public event EventHandler<AxisDisconnectedEventArgs>? AxisDisconnected;
 
         /// <summary>轴标识（只读）。</summary>
         public AxisId Axis { get; }

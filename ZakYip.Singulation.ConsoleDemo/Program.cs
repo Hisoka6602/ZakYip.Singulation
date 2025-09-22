@@ -1,18 +1,21 @@
 ﻿using csLTDMC;
 using System.Globalization;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Leadshine;
 using ZakYip.Singulation.Drivers.Simulated;
+using static System.Net.Mime.MediaTypeNames;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
+using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 internal static class Program {
 
     private static void Main(string[] args) {
         // ===== 手动配置区（改这些变量就行） =====
-        var axisCount = 3;           // 轴数
-        double targetRpm = 1200;        // 目标转速 (rpm)
+        var axisCount = 24;           // 轴数
+        double targetRpm = 10000 * 10;        // 目标转速 (rpm)
         ushort cardNo = 8;           // 控制器卡号
         var controllerIp = "192.168.5.11";          // 留空=本地初始化；填IP=以太网初始化，如 "192.168.1.10"
         var rpmTo60FfScale = 1.0;         // rpm → 0x60FF 单位比例（不清楚就先用 1.0）
@@ -30,6 +33,27 @@ internal static class Program {
         }
 
         try {
+            //获取总轴
+            ushort totalSlaves = 0;
+            LTDMC.nmc_get_total_slaves(cardNo, 2, ref totalSlaves);
+
+            //获取总线状态
+            ushort errcode = 0;
+            do {
+                LTDMC.nmc_get_errcode(cardNo, 2, ref errcode);
+                if (errcode != 0) {
+                    //复位
+                    LTDMC.dmc_soft_reset(cardNo);
+                    LTDMC.dmc_board_close();
+
+                    for (int i = 0; i < 15; i++)//总线卡软件复位耗时15s左右
+                    {
+                        Thread.Sleep(1000);
+                    }
+                    LTDMC.dmc_board_init_eth(cardNo, controllerIp);
+                }
+            } while (errcode != 0);
+
             // 2) 准备驱动（NodeID = 1000 + i，axisNo = i，EtherCAT端口=2 在驱动内部固定）
             var opts = new DriverOptions {
                 MaxRpm = Math.Max(100, Math.Abs(targetRpm)) + 500,
@@ -56,8 +80,8 @@ internal static class Program {
             foreach (var d in drives.OfType<LeadshineLtdmcAxisDrive>())
                 d.EnableAsync().GetAwaiter().GetResult();
             // 3.5) 设置加/减速度（外部统一设置一次，再写速度）
-            decimal accelRpmPerSec = 3000;   // 你要的加速度
-            decimal decelRpmPerSec = 3000;   // 你要的减速度
+            decimal accelRpmPerSec = 10000;   // 你要的加速度
+            decimal decelRpmPerSec = 10000;   // 你要的减速度
             Console.WriteLine($"[STEP] Set Acc/Dec => {accelRpmPerSec}/{decelRpmPerSec} rpm/s");
             Parallel.ForEach(drives, d => {
                 d.SetAccelDecelAsync(accelRpmPerSec, decelRpmPerSec).GetAwaiter().GetResult();

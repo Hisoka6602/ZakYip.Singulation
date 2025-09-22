@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Drivers.Enums;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
+using ZakYip.Singulation.Drivers.Abstractions.Events;
 
 namespace ZakYip.Singulation.Drivers.Abstractions {
 
@@ -13,6 +14,25 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
     /// <para>实现方应保证：幂等、低延迟、低分配，并对异常/掉线具备可恢复能力。</para>
     /// </summary>
     public interface IAxisDrive : IAsyncDisposable {
+        // ---------------- 新增事件 ----------------
+
+        /// <summary>
+        /// 当轴运行过程中出现异常时触发。
+        /// <para>典型如速度命令失败、写寄存器返回非 0 等。</para>
+        /// </summary>
+        event EventHandler<AxisErrorEventArgs>? AxisFaulted;
+
+        /// <summary>
+        /// 当底层驱动库函数未正确加载（如 LTDMC.dll 缺失）时触发。
+        /// <para>实现应在构造或调用前检查并在此事件中通知。</para>
+        /// </summary>
+        event EventHandler<DriverNotLoadedEventArgs>? DriverNotLoaded;
+
+        /// <summary>
+        /// 当轴与控制器断线时触发。
+        /// <para>实现方应在心跳（Ping）或写命令失败时触发。</para>
+        /// </summary>
+        event EventHandler<AxisDisconnectedEventArgs>? AxisDisconnected;
 
         /// <summary>
         /// 轴标识（不可变）。
