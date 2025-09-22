@@ -35,6 +35,13 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         event EventHandler<AxisDisconnectedEventArgs>? AxisDisconnected;
 
         /// <summary>
+        /// 实时速度反馈（只播报观测到的实际速度，不保证每次命令后都立刻到达目标）。
+        /// <para>实现应确保非阻塞广播；订阅方的异常不得影响驱动主流程。</para>
+        /// <para>单位齐备：rpm / m/s / pps；方向为数值正负，受反转配置影响。</para>
+        /// </summary>
+        event EventHandler<AxisSpeedFeedbackEventArgs>? SpeedFeedback;
+
+        /// <summary>
         /// 轴标识（不可变）。
         /// </summary>
         AxisId Axis { get; }
@@ -58,6 +65,14 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default);
 
         /// <summary>
+        /// 写入目标转速(mm/s)
+        /// </summary>
+        /// <param name="mmPerSec"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        ValueTask WriteSpeedAsync(double mmPerSec, CancellationToken ct = default);
+
+        /// <summary>
         /// 设置速度模式下的加速度/减速度（单位：RPM/s）。
         /// <para>
         /// 典型实现：将 <c>0x6083</c>（Profile Acceleration）与 <c>0x6084</c>（Profile Deceleration）
@@ -71,6 +86,15 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <param name="accelRpmPerSec">加速度（RPM/s）。</param>
         /// <param name="decelRpmPerSec">减速度（RPM/s）。</param>
         ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default);
+
+        /// <summary>
+        /// 设置速度模式下的加速度/减速度（单位：mm/s）。
+        /// </summary>
+        /// <param name="accelMmPerSec"></param>
+        /// <param name="decelMmPerSec"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        ValueTask SetAccelDecelAsync(double accelMmPerSec, double decelMmPerSec, CancellationToken ct = default);
 
         /// <summary>
         /// 停止轴运动（急停或减速停由实现/设备配置决定）。

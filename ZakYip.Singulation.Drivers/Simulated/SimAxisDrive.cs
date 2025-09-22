@@ -57,6 +57,8 @@ namespace ZakYip.Singulation.Drivers.Simulated {
 
         public event EventHandler<AxisDisconnectedEventArgs>? AxisDisconnected;
 
+        public event EventHandler<AxisSpeedFeedbackEventArgs>? SpeedFeedback;
+
         /// <summary>轴标识（只读）。</summary>
         public AxisId Axis { get; }
 
@@ -79,7 +81,15 @@ namespace ZakYip.Singulation.Drivers.Simulated {
             _status = DriverStatus.Connected;
         }
 
+        public ValueTask WriteSpeedAsync(double mmPerSec, CancellationToken ct = default) {
+            return default;
+        }
+
         public ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default) {
+            return default;
+        }
+
+        public ValueTask SetAccelDecelAsync(double accelMmPerSec, double decelMmPerSec, CancellationToken ct = default) {
             return default;
         }
 

@@ -76,6 +76,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             /// 分子/分母定义电机/轴的传动比。
             /// </summary>
             public const ushort GearRatio = 0x6091;
+
+            /// <summary>
+            /// 0x606C 实际速度 (Actual Velocity)，INTEGER32。
+            /// 单位：RPM（现场确认）。
+            /// 由驱动反馈当前实时速度。
+            /// </summary>
+            public const ushort ActualVelocity = 0x606C;
         }
 
         /// <summary>
@@ -105,6 +112,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             public const int TargetVelocity = 32; // 0x60FF
             public const int ProfileAcceleration = 32; // 0x6083
             public const int ProfileDeceleration = 32; // 0x6084
+            public const int ActualVelocity = 32;      // 0x606C
                                                        // 0x6091, 0x6092 分子/分母一般也是 32bit
         }
 

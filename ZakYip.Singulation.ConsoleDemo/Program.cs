@@ -15,7 +15,7 @@ internal static class Program {
     private static void Main(string[] args) {
         // ===== 手动配置区（改这些变量就行） =====
         var axisCount = 24;           // 轴数
-        double targetRpm = 10000 * 10;        // 目标转速 (rpm)
+        double targetRpm = 1200;        // 目标转速 (rpm)
         ushort cardNo = 8;           // 控制器卡号
         var controllerIp = "192.168.5.11";          // 留空=本地初始化；填IP=以太网初始化，如 "192.168.1.10"
         var rpmTo60FfScale = 1.0;         // rpm → 0x60FF 单位比例（不清楚就先用 1.0）
@@ -36,7 +36,7 @@ internal static class Program {
             //获取总轴
             ushort totalSlaves = 0;
             LTDMC.nmc_get_total_slaves(cardNo, 2, ref totalSlaves);
-
+            if (totalSlaves > 0) axisCount = totalSlaves;
             //获取总线状态
             ushort errcode = 0;
             do {
@@ -63,7 +63,7 @@ internal static class Program {
                 MaxBackoff = TimeSpan.FromSeconds(5)
             };
 
-            IAxisDrive[] drives = new IAxisDrive[axisCount];
+            var drives = new IAxisDrive[axisCount];
             for (int i = 1; i <= axisCount; i++) {
                 drives[i - 1] = new LeadshineLtdmcAxisDrive(
                     cardNo: cardNo,
@@ -71,7 +71,8 @@ internal static class Program {
                     nodeIndex: (ushort)i,
                     axisId: new AxisId(i),
                     opts: opts,
-                    rpmTo60ff: rpmTo60FfScale
+                    rpmTo60ff: rpmTo60FfScale,
+                    i % 2 == 0
                 );
             }
 
@@ -80,8 +81,8 @@ internal static class Program {
             foreach (var d in drives.OfType<LeadshineLtdmcAxisDrive>())
                 d.EnableAsync().GetAwaiter().GetResult();
             // 3.5) 设置加/减速度（外部统一设置一次，再写速度）
-            decimal accelRpmPerSec = 10000;   // 你要的加速度
-            decimal decelRpmPerSec = 10000;   // 你要的减速度
+            decimal accelRpmPerSec = 1200;   // 你要的加速度
+            decimal decelRpmPerSec = 1200;   // 你要的减速度
             Console.WriteLine($"[STEP] Set Acc/Dec => {accelRpmPerSec}/{decelRpmPerSec} rpm/s");
             Parallel.ForEach(drives, d => {
                 d.SetAccelDecelAsync(accelRpmPerSec, decelRpmPerSec).GetAwaiter().GetResult();
