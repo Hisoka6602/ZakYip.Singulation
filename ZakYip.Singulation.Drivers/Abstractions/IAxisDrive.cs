@@ -88,13 +88,12 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default);
 
         /// <summary>
-        /// 设置速度模式下的加速度/减速度（单位：mm/s）。
+        /// 设置速度模式下的加速度/减速度（单位：mm/s²）。
+        /// <para>内部会自动换算成 RPM/s，再写入 0x6083/0x6084。</para>
         /// </summary>
-        /// <param name="accelMmPerSec"></param>
-        /// <param name="decelMmPerSec"></param>
-        /// <param name="ct"></param>
-        /// <returns></returns>
-        ValueTask SetAccelDecelAsync(double accelMmPerSec, double decelMmPerSec, CancellationToken ct = default);
+        /// <param name="accelMmPerSec">加速度 (mm/s²)</param>
+        /// <param name="decelMmPerSec">减速度 (mm/s²)</param>
+        ValueTask SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec, CancellationToken ct = default);
 
         /// <summary>
         /// 停止轴运动（急停或减速停由实现/设备配置决定）。

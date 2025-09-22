@@ -15,7 +15,7 @@ internal static class Program {
     private static void Main(string[] args) {
         // ===== 手动配置区（改这些变量就行） =====
         var axisCount = 24;           // 轴数
-        double targetRpm = 1200;        // 目标转速 (rpm)
+        double targetRpm = 1000;        // 目标转速 (rpm)
         ushort cardNo = 8;           // 控制器卡号
         var controllerIp = "192.168.5.11";          // 留空=本地初始化；填IP=以太网初始化，如 "192.168.1.10"
         var rpmTo60FfScale = 1.0;         // rpm → 0x60FF 单位比例（不清楚就先用 1.0）
@@ -43,7 +43,7 @@ internal static class Program {
                 LTDMC.nmc_get_errcode(cardNo, 2, ref errcode);
                 if (errcode != 0) {
                     //复位
-                    LTDMC.dmc_soft_reset(cardNo);
+                    LTDMC.dmc_cool_reset(cardNo);
                     LTDMC.dmc_board_close();
 
                     for (int i = 0; i < 15; i++)//总线卡软件复位耗时15s左右
@@ -72,7 +72,8 @@ internal static class Program {
                     axisId: new AxisId(i),
                     opts: opts,
                     rpmTo60ff: rpmTo60FfScale,
-                    i % 2 == 0
+                    i % 2 != 0,
+                    0.4
                 );
             }
 
@@ -81,16 +82,16 @@ internal static class Program {
             foreach (var d in drives.OfType<LeadshineLtdmcAxisDrive>())
                 d.EnableAsync().GetAwaiter().GetResult();
             // 3.5) 设置加/减速度（外部统一设置一次，再写速度）
-            decimal accelRpmPerSec = 1200;   // 你要的加速度
-            decimal decelRpmPerSec = 1200;   // 你要的减速度
+            decimal accelRpmPerSec = 1000;   // 你要的加速度
+            decimal decelRpmPerSec = 1000;   // 你要的减速度
             Console.WriteLine($"[STEP] Set Acc/Dec => {accelRpmPerSec}/{decelRpmPerSec} rpm/s");
             Parallel.ForEach(drives, d => {
-                d.SetAccelDecelAsync(accelRpmPerSec, decelRpmPerSec).GetAwaiter().GetResult();
+                d.SetAccelDecelByLinearAsync(accelRpmPerSec, decelRpmPerSec).GetAwaiter().GetResult();
             });
 
             // 4) 统一设速
             Console.WriteLine($"[STEP] Set ALL => {targetRpm} rpm");
-            Parallel.ForEach(drives, d => d.WriteSpeedAsync(new AxisRpm(targetRpm)).GetAwaiter().GetResult());
+            Parallel.ForEach(drives, d => d.WriteSpeedAsync(targetRpm).GetAwaiter().GetResult());
 
             // 5) 运行保持
             if (holdSeconds > 0) {

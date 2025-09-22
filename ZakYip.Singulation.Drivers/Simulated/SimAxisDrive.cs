@@ -89,6 +89,10 @@ namespace ZakYip.Singulation.Drivers.Simulated {
             return default;
         }
 
+        public ValueTask SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec, CancellationToken ct = default) {
+            return default;
+        }
+
         public ValueTask SetAccelDecelAsync(double accelMmPerSec, double decelMmPerSec, CancellationToken ct = default) {
             return default;
         }

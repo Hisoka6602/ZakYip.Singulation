@@ -113,7 +113,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             public const int ProfileAcceleration = 32; // 0x6083
             public const int ProfileDeceleration = 32; // 0x6084
             public const int ActualVelocity = 32;      // 0x606C
-                                                       // 0x6091, 0x6092 分子/分母一般也是 32bit
+            public const int FeedConstant = 32;
+            //FeedConstant
+            // 0x6091, 0x6092 分子/分母一般也是 32bit
         }
 
         /// <summary>
