@@ -36,7 +36,7 @@ namespace ZakYip.Singulation.Core.Contracts {
         /// 实现需保证线程安全和“原子切换”，避免半更新状态。
         /// </summary>
         /// <param name="params">新的运行参数。</param>
-        void Configure(PlannerParams @params);
+        void Configure(LinearPlannerParams @params);
 
         /// <summary>
         /// 执行一次速度规划。

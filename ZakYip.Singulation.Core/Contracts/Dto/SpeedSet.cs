@@ -6,42 +6,18 @@ using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Core.Contracts.Dto {
-
     /// <summary>
-    /// 上游视觉系统发来的速度集合。
-    /// 每一帧对应一次全局观测，描述在该时刻各小皮带的目标速度。
+    /// 表示一帧来自上游视觉的速度集合（单位：mm/s）。
+    /// 该数据将直接输入速度规划器（ISpeedPlanner）。
     /// </summary>
-    public sealed class SpeedSet {
-
-        /// <summary>
-        /// 帧序号（由上游生成）。
-        /// 可用于检测乱序、丢帧、重放等问题。
-        /// </summary>
-        public long FrameSeq { get; init; }
-
-        /// <summary>
-        /// 该帧的时间戳（上游产生的采样时间）。
-        /// 用于对齐多源数据或延时补偿。
-        /// </summary>
-        public DateTimeOffset Timestamp { get; init; }
-
-        /// <summary>
-        /// 每个小皮带的速度值集合。
-        /// 顺序对应物理布局，长度与 AxisCount 一致。
-        /// 采用 ReadOnlyMemory 以减少复制开销。
-        /// </summary>
-        public ReadOnlyMemory<decimal> SegmentSpeeds { get; init; }
-
-        /// <summary>
-        /// 当前速度值的单位（例如 m/s 或 RPM）。
-        /// 解析器负责填充，Planner 可根据需要统一转换。
-        /// </summary>
-        public SpeedUnit Unit { get; init; } = SpeedUnit.MetersPerSecond;
-
-        /// <summary>
-        /// 数据来源标识，例如 Vision、Simulator、Fallback。
-        /// 方便调试与监控。
-        /// </summary>
-        public SourceFlags Source { get; init; } = SourceFlags.Vision;
-    }
+    /// <param name="TimestampUtc">速度帧产生的 UTC 时间戳，用于时序与丢帧诊断。</param>
+    /// <param name="Sequence">可选的帧序号；部分协议未提供，可置 0。</param>
+    /// <param name="MainMmps">分离段各小段的线速度（mm/s），按拓扑顺序排列。</param>
+    /// <param name="EjectMmps">疏散/扩散段的线速度（mm/s），按拓扑顺序排列。</param>
+    public readonly record struct SpeedSet(
+        DateTime TimestampUtc,
+        int Sequence,
+        IReadOnlyList<int> MainMmps,
+        IReadOnlyList<int> EjectMmps
+    );
 }

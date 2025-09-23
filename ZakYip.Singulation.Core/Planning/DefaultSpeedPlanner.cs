@@ -13,51 +13,46 @@ using ZakYip.Singulation.Core.Contracts.ValueObjects;
 namespace ZakYip.Singulation.Core.Planning {
 
     /// <summary>
-    /// 默认速度规划器：
-    /// 输入：拓扑 + 上游速度帧（SpeedSet，单位 m/s 或 RPM）
-    /// 输出：与拓扑轴顺序一致的 RPM 序列（AxisRpm[]）
-    /// 处理：单位换算 → 限幅 → 平滑 → 斜率限制；并做缺帧/乱序降级。
+    /// 默认速度规划器（mm/s 原生版）：
+    /// 输入：<see cref="SpeedSet"/>（mm/s）
+    /// 处理：一次限幅（mm/s）→ 平滑（滑动平均）→ 斜率限制（mm/s²）
+    /// 输出：各轴 <see cref="AxisRpm"/>（末端按轴几何从 mm/s 换算为 RPM 以对接驱动）
     /// </summary>
     /// <remarks>
-    /// 低分配实现要点：
-    /// - 复用输出缓存与平滑缓冲；下一次 Plan 会覆盖上一次输出；
-    /// - 运行时参数采用 Volatile 写入，保证在线调参原子可见；
-    /// - 采用简单滑动平均 + 线性斜率限制（可后续升级到 S 曲线）。
+    /// 与旧实现的差异：
+    /// 1）不再读取 input 的单位枚举，不再使用旧的 SegmentSpeeds / FrameSeq 等字段；
+    /// 2）内部状态全部采用 mm/s 表示，仅在出口做一次性 mm/s→RPM 的换算；
+    /// 3）运行参数改为 <see cref="LinearPlannerParams"/>（mm/s 语义）。
     /// </remarks>
     public sealed class DefaultSpeedPlanner : ISpeedPlanner, IDisposable {
         private readonly PlannerConfig _cfg;
+        private LinearPlannerParams _params;
 
-        // 运行参数，支持在线调参（使用 Volatile 确保原子可见性）
-        private PlannerParams _params;
-
-        // 状态
         private volatile PlannerStatus _status = PlannerStatus.Idle;
 
         /// <summary>当前规划器运行状态。</summary>
         public PlannerStatus Status => _status;
 
-        // 历史与平滑缓冲（提供默认初始化，防止极端情况下空引用）
-        private decimal[] _lastRpm = [];          // 上次输出
+        // —— 历史与平滑缓冲（单位：mm/s） ——
+        private decimal[] _lastMmps = Array.Empty<decimal>();     // 上次输出（mm/s）
 
-        private decimal[] _smoothSum = [];          // 滑窗和值
-        private decimal[,] _smoothBuf = new decimal[0, 0]; // [axis, k] 环形缓冲
-        private int[] _smoothCount = [];          // 已填充量
-        private int[] _smoothIndex = [];          // 写指针
+        private decimal[] _smoothSum = Array.Empty<decimal>();     // 各轴滑窗和值
+        private decimal[,] _smoothBuf = new decimal[0, 0];         // [axis, k] 环形缓冲
+        private int[] _smoothCount = Array.Empty<int>();           // 已填充计数
+        private int[] _smoothIndex = Array.Empty<int>();           // 写指针
 
-        // 输出缓存（避免重复分配；注意：下一次 Plan 会覆盖）
-        private AxisRpm[] _out = [];
+        // —— 输出缓存（RPM）——
+        private AxisRpm[] _outRpm = Array.Empty<AxisRpm>();
 
-        // 帧序跟踪
-        private long _lastFrameSeq = -1;
+        // —— 帧序跟踪（来自 SpeedSet.Sequence） ——
+        private long _lastSeq = -1;
 
         /// <summary>
-        /// 构造规划器并分配所需缓冲。
+        /// 使用轴几何/上限配置与 mm/s 规划参数创建规划器。
         /// </summary>
-        /// <param name="cfg">硬件/物理参数配置（轴数、直径、齿比、速度上限等）。</param>
-        /// <param name="initialParams">运行时调参（限幅、平滑窗、斜率、缺帧策略等）。</param>
-        /// <exception cref="ArgumentNullException">当 <paramref name="cfg"/> 或 <paramref name="initialParams"/> 为空时抛出。</exception>
-        /// <exception cref="ArgumentException">当 <see cref="PlannerConfig.AxisCount"/> 非正数时抛出。</exception>
-        public DefaultSpeedPlanner(PlannerConfig cfg, PlannerParams initialParams) {
+        /// <param name="cfg">硬件/物理参数（轴数、皮带直径、齿比、线速度上/下限等）。</param>
+        /// <param name="initialParams">mm/s 语义下的规划器运行参数。</param>
+        public DefaultSpeedPlanner(PlannerConfig cfg, LinearPlannerParams initialParams) {
             _cfg = cfg ?? throw new ArgumentNullException(nameof(cfg));
             _params = initialParams ?? throw new ArgumentNullException(nameof(initialParams));
 
@@ -68,142 +63,112 @@ namespace ZakYip.Singulation.Core.Planning {
         }
 
         /// <summary>
-        /// 在线更新规划器运行参数（原子可见）。
-        /// 若平滑窗口大小发生变化，将重建内部平滑缓冲并重置状态为 Idle。
+        /// 在线更新规划参数。若平滑窗口大小发生变化，会重建内部平滑缓冲并复位状态。
         /// </summary>
-        /// <param name="params">新的运行参数（限幅、平滑窗口、最大加速度、缺帧策略、采样周期等）。</param>
-        public void Configure(PlannerParams @params) {
-            // 原子更新运行参数
-            Volatile.Write(ref _params, @params);
-
-            // 若滑窗大小变化，需要重建平滑缓冲（整体重置以保证线程安全与一致性）
-            var newWin = Math.Max(1, @params.SmoothWindow);
+        /// <param name="p">新的 mm/s 规划参数。</param>
+        public void Configure(LinearPlannerParams p) {
+            Volatile.Write(ref _params, p);
+            var newWin = Math.Max(1, p.SmoothWindow);
             if (_smoothBuf.GetLength(1) != newWin) {
                 AllocateBuffers(_cfg.AxisCount, newWin);
-                // 置 Idle 并重置帧序，避免窗口切换瞬间的抖动与误判
                 _status = PlannerStatus.Idle;
-                _lastFrameSeq = -1;
+                _lastSeq = -1;
             }
         }
 
         /// <summary>
-        /// 执行一次速度规划：将输入速度（m/s 或 RPM）转换为各轴目标 RPM，并进行限幅/平滑/斜率限制。
+        /// 执行一次速度规划：将 <see cref="SpeedSet"/>（mm/s）经限幅/平滑/斜率后，
+        /// 按轴几何换算为 RPM 输出，以便直接写入驱动（0x60FF）。
         /// </summary>
-        /// <param name="topology">输送机拓扑（轴集合与顺序，输出结果顺序与其一致）。</param>
-        /// <param name="input">上游速度集合（含帧序号/时间戳/单位/来源，以及每段速度）。</param>
-        /// <returns>与 <paramref name="topology"/> 轴数量一致、顺序一致的 RPM 序列（复用内部缓冲）。</returns>
-        /// <exception cref="ArgumentNullException">当 <paramref name="topology"/> 为空时抛出。</exception>
-        /// <exception cref="ArgumentException">当拓扑轴数与配置轴数或输入速度长度不一致时抛出。</exception>
+        /// <param name="topology">输送拓扑（轴顺序与数量）。</param>
+        /// <param name="input">上游速度集合（mm/s）。</param>
+        /// <returns>与 <paramref name="topology"/> 顺序一致的各轴目标 RPM。</returns>
         public ReadOnlyMemory<AxisRpm> Plan(ConveyorTopology topology, in SpeedSet input) {
             if (topology is null) throw new ArgumentNullException(nameof(topology));
 
-            var speeds = input.SegmentSpeeds.Span;
+            // 拼接输入 mm/s：分离段 + 疏散段 ⇒ 与拓扑轴数一致
             var n = topology.Axes.Count;
-            if (n != _cfg.AxisCount || speeds.Length != n)
+            var mmps = GetConcatenatedMmps(input, n); // mm/s
+
+            if (n != _cfg.AxisCount || mmps.Length != n)
                 throw new ArgumentException("Topology/Axes count or input speed length mismatch.");
 
             var p = Volatile.Read(ref _params);
             var dt = Math.Max(1e-6, p.SamplingPeriod.TotalSeconds);
 
-            UpdateStatusByFrameSeq(input.FrameSeq);
+            UpdateStatusBySeq(input.Sequence);
 
-            for (var i = 0; i < n; i++) {
-                // 1) 单位换算：m/s → RPM（若输入本身即 RPM 则直通）
-                var rpm = input.Unit == SpeedUnit.MetersPerSecond
-                    ? LinearSpeedToRpm(speeds[i], i)
-                    : speeds[i];
+            for (int i = 0; i < n; i++) {
+                // 1) 一次限幅（按运行参数的 mm/s 上/下限）
+                var v = Math.Clamp(mmps[i], p.MinMmps, p.MaxMmps);
 
-                // 2) 限幅：运行参数限幅 + 叠加硬件线速度上限（换算成该轴的 RPM）
-                rpm = Math.Clamp(rpm, p.MinRpm, p.MaxRpm);
-                rpm = ClampByHardwareSpeedLimit(rpm, i);
+                // 2) Degraded 时的缺帧策略
+                if (_status == PlannerStatus.Degraded && p.HoldOnNoFrame)
+                    v = _lastMmps[i];
 
-                // 3) 缺帧策略：Degraded 且 HoldOnNoFrame = true 时保持上次输出（也可改为缓降策略）
-                if (_status == PlannerStatus.Degraded && p.HoldOnNoFrame) {
-                    rpm = _lastRpm[i];
-                }
+                // 3) 平滑（滑动平均）
+                v = Smooth(i, v);
 
-                // 4) 平滑（滑动平均）
-                rpm = Smooth(i, rpm);
+                // 4) 斜率限制（mm/s² × dt）
+                v = RampLimit(i, v, p.MaxAccelMmps2, (decimal)dt);
 
-                // 5) 斜率限制（加速度限制，单位 RPM/s）
-                rpm = RampLimit(i, rpm, p.MaxAccelRpmPerSec, (decimal)dt);
+                // 5) 叠加硬件线速度上限（mm/s）后的二次限幅（避免异常输入）
+                v = ClampByHardwareSpeedLimitMmps(v, i);
 
-                // 输出、保存历史（注意：_out 为复用缓冲，下一次 Plan 会覆盖）
-                _out[i] = new AxisRpm(rpm);
-                _lastRpm[i] = rpm;
+                // 6) 出口换算为 RPM（Axis i）
+                var rpm = MmpsToRpm(v, i);
+
+                _outRpm[i] = new AxisRpm(rpm);
+                _lastMmps[i] = v;
             }
 
             if (_status == PlannerStatus.Idle)
                 _status = PlannerStatus.Running;
 
-            return _out;
+            return _outRpm;
         }
 
-        /// <summary>
-        /// 释放资源（当前无非托管资源，预留扩展）。
-        /// </summary>
-        public void Dispose() {
-            // 当前无非托管资源；若未来引入池化或非托管句柄，在此处释放。
-        }
+        /// <summary>释放资源（当前无非托管资源）。</summary>
+        public void Dispose() { /* 预留 */ }
 
-        // ---------------- 内部工具 ----------------
+        // ---------------- 内部：缓冲/工具 ----------------
 
         /// <summary>
-        /// 按轴数与滑窗大小分配/重建内部缓冲并清零。
+        /// 分配或重建缓冲（mm/s 的历史与平滑；RPM 的输出缓存）。
         /// </summary>
-        /// <param name="axisCount">轴数量（必须为正）。</param>
-        /// <param name="smoothWindow">滑动平均窗口大小（>= 1；值越大越平滑，但响应变慢）。</param>
         private void AllocateBuffers(int axisCount, int smoothWindow) {
-            _lastRpm = new decimal[axisCount];
+            _lastMmps = new decimal[axisCount];
             _smoothSum = new decimal[axisCount];
             _smoothBuf = new decimal[axisCount, smoothWindow];
             _smoothCount = new int[axisCount];
             _smoothIndex = new int[axisCount];
-            _out = new AxisRpm[axisCount];
+            _outRpm = new AxisRpm[axisCount];
         }
 
         /// <summary>
-        /// 线速度（m/s）按该轴直径与齿轮比换算为 RPM。
-        /// 公式：rpm = (v / (π * D)) * gearRatio * 60
+        /// 将输入的分离段与疏散段拼接为与拓扑轴数一致的 mm/s 向量。
         /// </summary>
-        /// <param name="beltMetersPerSec">该轴对应段的线速度（单位：米/秒）。</param>
-        /// <param name="axisIndex">轴索引（0..AxisCount-1），用于读取直径/齿比。</param>
-        /// <returns>换算得到的电机转速（RPM）。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private decimal LinearSpeedToRpm(decimal beltMetersPerSec, int axisIndex) {
-            var d = _cfg.BeltDiameter[axisIndex]; // 皮带直径（米）
-            var gr = _cfg.GearRatio[axisIndex];    // 齿轮比（电机：皮带）
-            if (d <= 0) return 0.0m;
+        private static decimal[] GetConcatenatedMmps(in SpeedSet input, int expectedCount) {
+            var main = input.MainMmps;
+            var eject = input.EjectMmps;
 
-            var revPerSec = (beltMetersPerSec / (decimal)(Math.PI * d)) * (decimal)gr;
-            return revPerSec * 60.0m;
+            var total = (main?.Count ?? 0) + (eject?.Count ?? 0);
+            if (total != expectedCount)
+                throw new ArgumentException($"Input mm/s length {total} != expected {expectedCount}");
+
+            var arr = new decimal[total];
+            int k = 0;
+            if (main is not null)
+                for (int i = 0; i < main.Count; i++) arr[k++] = main[i];
+            if (eject is not null)
+                for (int i = 0; i < eject.Count; i++) arr[k++] = eject[i];
+            return arr;
         }
 
         /// <summary>
-        /// 叠加硬件线速度上限（以 m/s 表示）后，换算为该轴 RPM 上下限并进行二次限幅。
+        /// 简单滑动平均平滑（mm/s）。
         /// </summary>
-        /// <param name="rpm">一次限幅后的目标 RPM（基于运行参数）。</param>
-        /// <param name="axisIndex">轴索引（0..AxisCount-1），用于读取硬件上/下限。</param>
-        /// <returns>考虑硬件限制后的 RPM。</returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private decimal ClampByHardwareSpeedLimit(decimal rpm, int axisIndex) {
-            var maxV = _cfg.MaxBeltSpeed;
-            if (maxV <= 0) return rpm;
-
-            var maxRpmHw = LinearSpeedToRpm((decimal)maxV, axisIndex);
-            var minRpmHw = _cfg.MinBeltSpeed > 0 ? LinearSpeedToRpm((decimal)_cfg.MinBeltSpeed, axisIndex) : 0.0m;
-
-            if (rpm > maxRpmHw) rpm = maxRpmHw;
-            if (rpm < minRpmHw) rpm = minRpmHw;
-            return rpm;
-        }
-
-        /// <summary>
-        /// 简单滑动平均平滑：固定窗口环形缓冲，减少抖动。
-        /// </summary>
-        /// <param name="axis">轴索引（0..AxisCount-1），使用各自的滑窗状态。</param>
-        /// <param name="value">当前周期欲输出的 RPM 值（未平滑）。</param>
-        /// <returns>平滑后的 RPM 值。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private decimal Smooth(int axis, decimal value) {
             var cap = _smoothBuf.GetLength(1);
@@ -212,12 +177,8 @@ namespace ZakYip.Singulation.Core.Planning {
             var idx = _smoothIndex[axis];
             var old = _smoothBuf[axis, idx];
 
-            if (_smoothCount[axis] < cap) {
-                _smoothCount[axis]++;
-            }
-            else {
-                _smoothSum[axis] -= old; // 移除旧值贡献
-            }
+            if (_smoothCount[axis] < cap) _smoothCount[axis]++;
+            else _smoothSum[axis] -= old;
 
             _smoothBuf[axis, idx] = value;
             _smoothSum[axis] += value;
@@ -229,46 +190,66 @@ namespace ZakYip.Singulation.Core.Planning {
         }
 
         /// <summary>
-        /// 斜率限制（加速度限制）：限制 RPM 在每周期内的最大变化量（MaxAccelRpmPerSec * dt）。
+        /// 斜率限制（mm/s²）：控制每周期最大速度变化量。
         /// </summary>
-        /// <param name="axis">轴索引（0..AxisCount-1）。</param>
-        /// <param name="target">希望到达的目标 RPM（已平滑/限幅后）。</param>
-        /// <param name="maxAccelRpmPerSec">最大加速度（单位：RPM/s）。</param>
-        /// <param name="dt">当前控制周期时长（秒）。</param>
-        /// <returns>应用斜率限制后的 RPM。</returns>
+        /// <param name="axis">轴索引。</param>
+        /// <param name="targetMmps">目标速度（mm/s）。</param>
+        /// <param name="maxAccelMmps2">最大加速度（mm/s²）。</param>
+        /// <param name="dt">周期（秒）。</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private decimal RampLimit(int axis, decimal target, decimal maxAccelRpmPerSec, decimal dt) {
-            if (maxAccelRpmPerSec <= 0) return target;
+        private decimal RampLimit(int axis, decimal targetMmps, decimal maxAccelMmps2, decimal dt) {
+            if (maxAccelMmps2 <= 0) return targetMmps;
 
-            var current = _lastRpm[axis];
-            var delta = target - current;
-            var maxDelta = maxAccelRpmPerSec * dt;
+            var current = _lastMmps[axis];
+            var delta = targetMmps - current;
+            var maxDelta = maxAccelMmps2 * dt; // 每周期允许的最大变化量（mm/s）
 
             if (delta > maxDelta) return current + maxDelta;
             if (delta < -maxDelta) return current - maxDelta;
-            return target;
+            return targetMmps;
         }
 
         /// <summary>
-        /// 根据帧序检查乱序/丢帧：正常递增为 Running，非递增或跳变置为 Degraded。
+        /// 将线速度（mm/s）按轴的皮带直径与齿轮比换算为 RPM。
+        /// 公式：rpm = ((v_mmps / 1000) / (π * D_m)) * gearRatio * 60
         /// </summary>
-        /// <param name="seq">本帧的序号（与上一帧相比用于判定连续/丢失/乱序）。</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void UpdateStatusByFrameSeq(long seq) {
-            if (_lastFrameSeq < 0) {
-                _lastFrameSeq = seq;
-                _status = PlannerStatus.Idle;
-                return;
-            }
+        private decimal MmpsToRpm(decimal vMmps, int axisIndex) {
+            var d_m = (decimal)_cfg.BeltDiameter[axisIndex]; // 皮带/滚筒直径（米）
+            var gr = (decimal)_cfg.GearRatio[axisIndex];    // 齿轮比（电机:滚筒）
+            if (d_m <= 0 || gr <= 0) return 0m;
 
-            var gap = seq - _lastFrameSeq;
-            _lastFrameSeq = seq;
+            var v_mps = vMmps / 1000m;
+            var revPerSec = (v_mps / ((decimal)Math.PI * d_m)) * gr;
+            return revPerSec * 60m;
+        }
 
-            // gap: 本帧序号与上一帧序号的差值（seq - lastSeq）
+        /// <summary>
+        /// 叠加硬件线速度上/下限（mm/s）的二次限幅。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private decimal ClampByHardwareSpeedLimitMmps(decimal vMmps, int axisIndex) {
+            var maxV = (decimal)_cfg.MaxBeltSpeed;
+            var minV = (decimal)Math.Max(0.0, _cfg.MinBeltSpeed);
+            if (maxV > 0 && vMmps > maxV) vMmps = maxV;
+            if (vMmps < minV) vMmps = minV;
+            return vMmps;
+        }
+
+        /// <summary>
+        /// 用帧序更新运行状态（Running/Degraded），处理丢帧/乱序。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void UpdateStatusBySeq(long seq) {
+            if (_lastSeq < 0) { _lastSeq = seq; _status = PlannerStatus.Idle; return; }
+
+            var gap = seq - _lastSeq;
+            _lastSeq = seq;
+
             _status = gap switch {
-                1 => PlannerStatus.Running,   // 连续
-                > 1 => PlannerStatus.Degraded,  // 丢帧
-                <= 0 => PlannerStatus.Degraded   // 乱序/重放
+                1 => PlannerStatus.Running,    // 连续
+                > 1 => PlannerStatus.Degraded,   // 丢帧
+                _ => PlannerStatus.Degraded    // 乱序/重放/相同
             };
         }
     }
