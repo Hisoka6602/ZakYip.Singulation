@@ -70,7 +70,7 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <param name="mmPerSec"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        ValueTask WriteSpeedAsync(double mmPerSec, CancellationToken ct = default);
+        ValueTask WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default);
 
         /// <summary>
         /// 设置速度模式下的加速度/减速度（单位：RPM/s）。
@@ -102,15 +102,5 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <param name="ct">取消令牌。</param>
         /// <returns>异步任务。</returns>
         ValueTask StopAsync(CancellationToken ct = default);
-
-        /// <summary>
-        /// 连通性/活跃性探测（轻量心跳）。
-        /// <para>实现应使用无副作用的读操作，内部可含重试与退避。</para>
-        /// </summary>
-        /// <param name="ct">取消令牌。</param>
-        /// <returns>
-        /// <c>true</c> 表示请求-应答成功且校验通过；<c>false</c> 表示通信异常（为便于心跳循环，不抛异常）。
-        /// </returns>
-        ValueTask<bool> PingAsync(CancellationToken ct = default);
     }
 }

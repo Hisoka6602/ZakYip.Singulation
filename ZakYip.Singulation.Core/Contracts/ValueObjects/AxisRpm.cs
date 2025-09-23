@@ -2,63 +2,77 @@
 
 namespace ZakYip.Singulation.Core.Contracts.ValueObjects {
     [DebuggerDisplay("{Value} RPM")]
-    public readonly record struct AxisRpm(double Value) {
+    public readonly record struct AxisRpm(decimal Value) {
         public static AxisRpm Zero => new(0);
 
-        public AxisRpm Clamp(double min, double max) => new(Math.Min(max, Math.Max(min, Value)));
+        public AxisRpm Clamp(decimal min, decimal max) => new(Math.Min(max, Math.Max(min, Value)));
 
-        /// <summary>RPM → RPS（rev/s）</summary>
-        public double ToRevPerSec() => Value / 60.0;
+        /// RPM → RPS（rev/s）
+        public decimal ToRevPerSec() => Value / 60.0m;
 
-        /// <summary>RPM → PPS（pulses/s）：pps = (rpm / 60) × PPR / gearRatio</summary>
-        public double ToPulsePerSec(int pulsesPerRev, double gearRatio = 1.0)
-            => gearRatio <= 0 ? 0 : (Value / 60.0) * pulsesPerRev / gearRatio;
-
-        /// <summary>RPM → m/s（SI）：v = (rpm / 60) × (π·D) / gearRatio</summary>
-        public double ToMetersPerSec(double drumDiameterMeters, double gearRatio = 1.0) {
+        /// RPM → m/s：v = (rpm / 60) × (π·D) / gearRatio × dir × scale
+        public decimal ToMetersPerSec(
+            decimal drumDiameterMeters,
+            decimal gearRatio = 1.0m,
+            int directionSign = +1,
+            decimal linearScale = 1.0m) {
             if (drumDiameterMeters <= 0 || gearRatio <= 0) return 0;
-            return ToRevPerSec() * Math.PI * drumDiameterMeters / gearRatio;
+            var v = ToRevPerSec() * (decimal)Math.PI * drumDiameterMeters / gearRatio;
+            return v * directionSign * linearScale;
         }
 
-        /// <summary>RPM → m/s（便捷：直径单位为 mm）</summary>
-        public double ToMetersPerSecByMm(double drumDiameterMm, double gearRatio = 1.0)
-            => ToMetersPerSec(drumDiameterMm / 1000.0, gearRatio);
+        /// RPM → mm/s（便捷：直径单位为 mm）
+        public decimal ToMmPerSec(
+            decimal drumDiameterMm,
+            decimal gearRatio = 1.0m,
+            int directionSign = +1,
+            decimal linearScale = 1.0m)
+            => 1000.0m * ToMetersPerSec(drumDiameterMm / 1000.0m, gearRatio, directionSign, linearScale);
 
-        /// <summary>PPS → RPM：rpm = (pps / PPR) × 60</summary>
-        public static AxisRpm FromPulsePerSec(double pulsesPerSec, int pulsesPerRev) {
-            if (pulsesPerRev <= 0) return default;
-            var rps = pulsesPerSec / pulsesPerRev;
-            return new AxisRpm(rps * 60.0);
-        }
-
-        /// <summary>m/s → RPM（SI）：rpm = (v / (π·D)) × gearRatio × 60</summary>
-        public static AxisRpm FromMetersPerSecond(double metersPerSec, double drumDiameterMeters, double gearRatio = 1.0) {
+        /// m/s → RPM：rpm = (v / (π·D)) × gearRatio × 60 × dir × scale
+        public static AxisRpm FromMetersPerSecond(
+            decimal metersPerSec,
+            decimal drumDiameterMeters,
+            decimal gearRatio = 1.0m,
+            int directionSign = +1,
+            decimal linearScale = 1.0m) {
             if (drumDiameterMeters <= 0 || gearRatio <= 0) return default;
-            var rps = (metersPerSec / (Math.PI * drumDiameterMeters)) * gearRatio;
-            return new AxisRpm(rps * 60.0);
+            var v = metersPerSec / (directionSign == 0 ? 1 : directionSign) / (linearScale <= 0 ? 1 : linearScale);
+            var rps = (v / ((decimal)Math.PI * drumDiameterMeters)) * gearRatio;
+            return new AxisRpm(rps * 60.0m);
         }
 
-        /// <summary>m/s → RPM（便捷：直径单位为 mm）</summary>
-        public static AxisRpm FromMetersPerSecondMm(double metersPerSec, double drumDiameterMm, double gearRatio = 1.0)
-            => FromMetersPerSecond(metersPerSec, drumDiameterMm / 1000.0, gearRatio);
-        /// <summary>
-        /// 由线速度（mm/s）换算“每秒脉冲数”（PPS, pulses per second）。
-        /// 数学公式：pps = ( v(mm/s) / (π·D(mm)) ) × PPR / gearRatio
-        /// </summary>
-        public static double MmPerSecToPps(double mmPerSec, double drumDiameterMm, int pulsesPerRev, double gearRatio = 1.0) {
-            if (drumDiameterMm <= 0 || pulsesPerRev <= 0 || gearRatio <= 0) return 0;
-            return (mmPerSec / (Math.PI * drumDiameterMm)) * pulsesPerRev / gearRatio;
-        }
+        /// mm/s → RPM（便捷：直径单位为 mm）
+        public static AxisRpm FromMmPerSec(
+            decimal mmPerSec,
+            decimal drumDiameterMm,
+            decimal gearRatio = 1.0m,
+            int directionSign = +1,
+            decimal linearScale = 1.0m)
+            => FromMetersPerSecond(mmPerSec / 1000.0m, drumDiameterMm / 1000.0m, gearRatio, directionSign, linearScale);
 
-        /// <summary>
-        /// 由“每秒脉冲数”（PPS）换算线速度（mm/s）。
-        /// 数学公式：v(mm/s) = ( pps / PPR ) × (π·D(mm)) × gearRatio
-        /// </summary>
-        public static double PpsToMmPerSec(double pulsesPerSec, double drumDiameterMm, int pulsesPerRev, double gearRatio = 1.0) {
-            if (drumDiameterMm <= 0 || pulsesPerRev <= 0 || gearRatio <= 0) return 0;
-            return (pulsesPerSec / pulsesPerRev) * (Math.PI * drumDiameterMm) * gearRatio;
-        }
-        public static explicit operator double(AxisRpm rpm) => rpm.Value;
-        public static explicit operator AxisRpm(double rpm) => new(rpm);
+        /// RPM → PPS：pps = (rpm / 60) × PPR / gearRatio
+        public decimal ToPulsePerSec(int pulsesPerRev, decimal gearRatio = 1.0m)
+            => (pulsesPerRev <= 0 || gearRatio <= 0) ? 0 : (Value / 60.0m) * pulsesPerRev / gearRatio;
+
+        /// PPS → RPM：rpm = (pps / PPR) × 60
+        public static AxisRpm FromPulsePerSec(decimal pulsesPerSec, int pulsesPerRev)
+            => pulsesPerRev <= 0 ? default : new AxisRpm((pulsesPerSec / pulsesPerRev) * 60.0m);
+
+        /// 线速度（mm/s）→ PPS：pps = ( v / (π·D) ) × PPR / gearRatio
+        public static decimal MmPerSecToPps(decimal mmPerSec, decimal drumDiameterMm, int pulsesPerRev, decimal gearRatio = 1.0m)
+            => (drumDiameterMm <= 0 || pulsesPerRev <= 0 || gearRatio <= 0) ? 0
+             : (mmPerSec / ((decimal)Math.PI * drumDiameterMm)) * pulsesPerRev / gearRatio;
+
+        /// PPS → 线速度（mm/s）：v = ( pps / PPR ) × (π·D) × gearRatio
+        public static decimal PpsToMmPerSec(decimal pulsesPerSec, decimal drumDiameterMm, int pulsesPerRev, decimal gearRatio = 1.0m)
+            => (drumDiameterMm <= 0 || pulsesPerRev <= 0 || gearRatio <= 0) ? 0
+             : (pulsesPerSec / pulsesPerRev) * ((decimal)Math.PI * drumDiameterMm) * gearRatio;
+
+        public decimal ToMmPerSec(KinematicParams k)
+            => ToMmPerSec((decimal)(k.MmPerRev / Math.PI) * (decimal)Math.PI /*占位*/,
+                k.GearRatio, k.DirectionSign, (decimal)k.LinearScale);
+        public static explicit operator decimal(AxisRpm rpm) => rpm.Value;
+        public static explicit operator AxisRpm(decimal rpm) => new(rpm);
     }
 }

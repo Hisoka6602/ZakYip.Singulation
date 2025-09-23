@@ -37,10 +37,10 @@ namespace ZakYip.Singulation.Core.Planning {
         public PlannerStatus Status => _status;
 
         // 历史与平滑缓冲（提供默认初始化，防止极端情况下空引用）
-        private double[] _lastRpm = [];          // 上次输出
+        private decimal[] _lastRpm = [];          // 上次输出
 
-        private double[] _smoothSum = [];          // 滑窗和值
-        private double[,] _smoothBuf = new double[0, 0]; // [axis, k] 环形缓冲
+        private decimal[] _smoothSum = [];          // 滑窗和值
+        private decimal[,] _smoothBuf = new decimal[0, 0]; // [axis, k] 环形缓冲
         private int[] _smoothCount = [];          // 已填充量
         private int[] _smoothIndex = [];          // 写指针
 
@@ -126,7 +126,7 @@ namespace ZakYip.Singulation.Core.Planning {
                 rpm = Smooth(i, rpm);
 
                 // 5) 斜率限制（加速度限制，单位 RPM/s）
-                rpm = RampLimit(i, rpm, p.MaxAccelRpmPerSec, dt);
+                rpm = RampLimit(i, rpm, p.MaxAccelRpmPerSec, (decimal)dt);
 
                 // 输出、保存历史（注意：_out 为复用缓冲，下一次 Plan 会覆盖）
                 _out[i] = new AxisRpm(rpm);
@@ -154,9 +154,9 @@ namespace ZakYip.Singulation.Core.Planning {
         /// <param name="axisCount">轴数量（必须为正）。</param>
         /// <param name="smoothWindow">滑动平均窗口大小（>= 1；值越大越平滑，但响应变慢）。</param>
         private void AllocateBuffers(int axisCount, int smoothWindow) {
-            _lastRpm = new double[axisCount];
-            _smoothSum = new double[axisCount];
-            _smoothBuf = new double[axisCount, smoothWindow];
+            _lastRpm = new decimal[axisCount];
+            _smoothSum = new decimal[axisCount];
+            _smoothBuf = new decimal[axisCount, smoothWindow];
             _smoothCount = new int[axisCount];
             _smoothIndex = new int[axisCount];
             _out = new AxisRpm[axisCount];
@@ -170,13 +170,13 @@ namespace ZakYip.Singulation.Core.Planning {
         /// <param name="axisIndex">轴索引（0..AxisCount-1），用于读取直径/齿比。</param>
         /// <returns>换算得到的电机转速（RPM）。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private double LinearSpeedToRpm(double beltMetersPerSec, int axisIndex) {
+        private decimal LinearSpeedToRpm(decimal beltMetersPerSec, int axisIndex) {
             var d = _cfg.BeltDiameter[axisIndex]; // 皮带直径（米）
             var gr = _cfg.GearRatio[axisIndex];    // 齿轮比（电机：皮带）
-            if (d <= 0) return 0.0;
+            if (d <= 0) return 0.0m;
 
-            var revPerSec = (beltMetersPerSec / (Math.PI * d)) * gr;
-            return revPerSec * 60.0;
+            var revPerSec = (beltMetersPerSec / (decimal)(Math.PI * d)) * (decimal)gr;
+            return revPerSec * 60.0m;
         }
 
         /// <summary>
@@ -186,12 +186,12 @@ namespace ZakYip.Singulation.Core.Planning {
         /// <param name="axisIndex">轴索引（0..AxisCount-1），用于读取硬件上/下限。</param>
         /// <returns>考虑硬件限制后的 RPM。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private double ClampByHardwareSpeedLimit(double rpm, int axisIndex) {
+        private decimal ClampByHardwareSpeedLimit(decimal rpm, int axisIndex) {
             var maxV = _cfg.MaxBeltSpeed;
             if (maxV <= 0) return rpm;
 
-            var maxRpmHw = LinearSpeedToRpm(maxV, axisIndex);
-            var minRpmHw = _cfg.MinBeltSpeed > 0 ? LinearSpeedToRpm(_cfg.MinBeltSpeed, axisIndex) : 0.0;
+            var maxRpmHw = LinearSpeedToRpm((decimal)maxV, axisIndex);
+            var minRpmHw = _cfg.MinBeltSpeed > 0 ? LinearSpeedToRpm((decimal)_cfg.MinBeltSpeed, axisIndex) : 0.0m;
 
             if (rpm > maxRpmHw) rpm = maxRpmHw;
             if (rpm < minRpmHw) rpm = minRpmHw;
@@ -205,7 +205,7 @@ namespace ZakYip.Singulation.Core.Planning {
         /// <param name="value">当前周期欲输出的 RPM 值（未平滑）。</param>
         /// <returns>平滑后的 RPM 值。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private double Smooth(int axis, double value) {
+        private decimal Smooth(int axis, decimal value) {
             var cap = _smoothBuf.GetLength(1);
             if (cap <= 1) return value;
 
@@ -237,7 +237,7 @@ namespace ZakYip.Singulation.Core.Planning {
         /// <param name="dt">当前控制周期时长（秒）。</param>
         /// <returns>应用斜率限制后的 RPM。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private double RampLimit(int axis, double target, double maxAccelRpmPerSec, double dt) {
+        private decimal RampLimit(int axis, decimal target, decimal maxAccelRpmPerSec, decimal dt) {
             if (maxAccelRpmPerSec <= 0) return target;
 
             var current = _lastRpm[axis];

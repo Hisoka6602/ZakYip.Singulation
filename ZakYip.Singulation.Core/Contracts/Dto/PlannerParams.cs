@@ -16,19 +16,19 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
         /// 允许的最大转速（单位：RPM）。
         /// 用于限幅，超过此值会被截断。
         /// </summary>
-        public double MaxRpm { get; init; } = 3000;
+        public decimal MaxRpm { get; init; } = 3000;
 
         /// <summary>
         /// 允许的最小转速（单位：RPM）。
         /// 常用于防止电机进入负转或失控。
         /// </summary>
-        public double MinRpm { get; init; } = 0;
+        public decimal MinRpm { get; init; } = 0;
 
         /// <summary>
         /// 最大加速度限制（单位：RPM 每秒）。
         /// 决定转速斜坡的陡峭程度，过大可能导致电机冲击。
         /// </summary>
-        public double MaxAccelRpmPerSec { get; init; } = 1000;
+        public decimal MaxAccelRpmPerSec { get; init; } = 1000;
 
         /// <summary>
         /// 平滑窗口大小（单位：采样点数）。

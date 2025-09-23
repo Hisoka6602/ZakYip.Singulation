@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Leadshine;
-using ZakYip.Singulation.Drivers.Simulated;
 using static System.Net.Mime.MediaTypeNames;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
@@ -15,11 +14,12 @@ internal static class Program {
     private static void Main(string[] args) {
         // ===== 手动配置区（改这些变量就行） =====
         var axisCount = 24;           // 轴数
-        double targetRpm = 1000;        // 目标转速 (rpm)
+        decimal targetRpm = 1000;        // 目标转速 (rpm)
         ushort cardNo = 8;           // 控制器卡号
         var controllerIp = "192.168.5.11";          // 留空=本地初始化；填IP=以太网初始化，如 "192.168.1.10"
         var rpmTo60FfScale = 1.0;         // rpm → 0x60FF 单位比例（不清楚就先用 1.0）
         var holdSeconds = 0;          // 运行保持时间（秒）；设 0 则按任意键停止
+        var port = 2;
         // =====================================
 
         // 1) 初始化 LTDMC
@@ -54,27 +54,16 @@ internal static class Program {
                 }
             } while (errcode != 0);
 
-            // 2) 准备驱动（NodeID = 1000 + i，axisNo = i，EtherCAT端口=2 在驱动内部固定）
-            var opts = new DriverOptions {
-                MaxRpm = Math.Max(100, Math.Abs(targetRpm)) + 500,
-                MaxAccelRpmPerSec = 5000,
-                CommandMinInterval = TimeSpan.FromMilliseconds(5),
-                MaxRetries = 3,
-                MaxBackoff = TimeSpan.FromSeconds(5)
-            };
-
             var drives = new IAxisDrive[axisCount];
             for (int i = 1; i <= axisCount; i++) {
-                drives[i - 1] = new LeadshineLtdmcAxisDrive(
-                    cardNo: cardNo,
-                    axisNo: (ushort)i,
-                    nodeIndex: (ushort)i,
-                    axisId: new AxisId(i),
-                    opts: opts,
-                    rpmTo60ff: rpmTo60FfScale,
-                    i % 2 != 0,
-                    0.4
-                );
+                drives[i - 1] = new LeadshineLtdmcAxisDrive(new DriverOptions {
+                    Card = cardNo,
+                    Port = (ushort)port,
+                    NodeId = (byte)(i + 1000),
+                    GearRatio = 0.4m,
+                    IsReverse = i % 2 != 0,
+                    PulleyPitchDiameterMm = 76.0m,
+                });
             }
 
             // 3) 使能

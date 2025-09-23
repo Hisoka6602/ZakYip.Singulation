@@ -7,13 +7,21 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Polly" Version="8.6.3" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\ZakYip.Singulation.Core\ZakYip.Singulation.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="Leadshine\LTDMC.dll">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </None>
+		<None Update="Leadshine\LTDMC.dll">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Simulated\" />
 	</ItemGroup>
 
 </Project>

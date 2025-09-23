@@ -30,7 +30,7 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
         /// 顺序对应物理布局，长度与 AxisCount 一致。
         /// 采用 ReadOnlyMemory 以减少复制开销。
         /// </summary>
-        public ReadOnlyMemory<double> SegmentSpeeds { get; init; }
+        public ReadOnlyMemory<decimal> SegmentSpeeds { get; init; }
 
         /// <summary>
         /// 当前速度值的单位（例如 m/s 或 RPM）。
