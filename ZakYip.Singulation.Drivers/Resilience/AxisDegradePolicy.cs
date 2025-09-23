@@ -45,7 +45,7 @@ namespace ZakYip.Singulation.Drivers.Resilience {
             };
 
             return new ResiliencePipelineBuilder<short>()
-                .AddRetry(retry)
+                //不重试
                 .AddCircuitBreaker(breaker)
                 .Build();
         }

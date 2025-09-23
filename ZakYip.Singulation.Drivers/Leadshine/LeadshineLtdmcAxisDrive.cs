@@ -103,6 +103,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         public event EventHandler<AxisSpeedFeedbackEventArgs>? SpeedFeedback;
 
+        public event EventHandler<AxisCommandIssuedEventArgs>? CommandIssued;
+
         public AxisId Axis { get; }
         public DriverStatus Status => _status;
 
@@ -381,33 +383,29 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
                 // 读取 Numerator (0x6092:01)
                 var retNum = LTDMC.nmc_get_node_od(
-                    (ushort)_opts.Card,
-                     _opts.Port,
-                    _opts.NodeId,
+                    (ushort)_opts.Card, _opts.Port, _opts.NodeId,
                     idx,
                     LeadshineProtocolMap.SubIndex.Numerator,
                     LeadshineProtocolMap.BitLen.FeedConstant,
                     ref numerator
                 );
+                OnCommandIssued("nmc_get_node_od", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {idx} , {LeadshineProtocolMap.SubIndex.Numerator} , {LeadshineProtocolMap.BitLen.FeedConstant} , {numerator}", retNum);
                 if (retNum != 0) {
-                    OnAxisFaulted(new InvalidOperationException(
-                        $"read 0x{idx:X4}:01 (Numerator) failed, ret={retNum}"));
+                    OnAxisFaulted(new InvalidOperationException($"read 0x{idx:X4}:01 (Numerator) failed, ret={retNum}"));
                     return 0;
                 }
 
                 // 读取 Denominator (0x6092:02)
                 var retDen = LTDMC.nmc_get_node_od(
-                    (ushort)_opts.Card,
-                     _opts.Port,
-                    _opts.NodeId,
+                    (ushort)_opts.Card, _opts.Port, _opts.NodeId,
                     idx,
                     LeadshineProtocolMap.SubIndex.Denominator,
                     LeadshineProtocolMap.BitLen.FeedConstant,
                     ref denominator
                 );
+                OnCommandIssued("nmc_get_node_od", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {idx} , {LeadshineProtocolMap.SubIndex.Denominator} , {LeadshineProtocolMap.BitLen.FeedConstant} , {denominator}", retDen);
                 if (retDen != 0) {
-                    OnAxisFaulted(new InvalidOperationException(
-                        $"read 0x{idx:X4}:02 (Denominator) failed, ret={retDen}"));
+                    OnAxisFaulted(new InvalidOperationException($"read 0x{idx:X4}:02 (Denominator) failed, ret={retDen}"));
                     return 0;
                 }
 
@@ -486,40 +484,50 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         }
 
         private short WriteRxPdoCore(ushort index, object value, byte subIndex = LeadshineProtocolMap.SubIndex.Root) {
-            // 针对常见整数类型快速路径
             if (value is int i32) {
                 var buf = GetTxBuffer(4);
                 BinaryPrimitives.WriteInt32LittleEndian(buf, i32);
-                return LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
+                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
+                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {i32}", ret);
+                return ret;
             }
             if (value is uint u32) {
                 var buf = GetTxBuffer(4);
                 BinaryPrimitives.WriteUInt32LittleEndian(buf, u32);
-                return LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
+                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
+                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {u32}", ret);
+                return ret;
             }
             if (value is short i16) {
                 var buf = GetTxBuffer(2);
                 BinaryPrimitives.WriteInt16LittleEndian(buf, i16);
-                return LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
+                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
+                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {i16}", ret);
+                return ret;
             }
             if (value is ushort u16) {
                 var buf = GetTxBuffer(2);
                 BinaryPrimitives.WriteUInt16LittleEndian(buf, u16);
-                return LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
+                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
+                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {u16}", ret);
+                return ret;
             }
             if (value is byte b8) {
                 var buf = GetTxBuffer(1);
                 buf[0] = b8;
-                return LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 8, buf);
+                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 8, buf);
+                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 8 , {b8}", ret);
+                return ret;
             }
 
-            // 兜底：其它类型（不推荐），使用 BitConverter（会分配，尽量避免）
-            // TODO：如有需要可扩展 long/ulong/float 等
             var bytes = value switch {
                 sbyte s8 => new[] { unchecked((byte)s8) },
                 _ => throw new NotSupportedException($"不支持的写入类型：{value.GetType().Name}")
             };
-            return LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, (ushort)(bytes.Length * 8), bytes);
+            var bitLen = (ushort)(bytes.Length * 8);
+            var retFallback = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, bitLen, bytes);
+            OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {value}", retFallback);
+            return retFallback;
         }
 
         /// <summary>
@@ -528,27 +536,24 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         private short ReadTxPdo<T>(ushort index, out T value, byte subIndex = LeadshineProtocolMap.SubIndex.Root) {
             value = default!;
-
-            // 1) 映射位宽
             ushort bitLen;
             switch (index) {
                 case LeadshineProtocolMap.Index.StatusWord: bitLen = (ushort)LeadshineProtocolMap.BitLen.StatusWord; break;
                 case LeadshineProtocolMap.Index.ModeOfOperation: bitLen = (ushort)LeadshineProtocolMap.BitLen.ModeOfOperation; break;
                 case LeadshineProtocolMap.Index.ActualVelocity: bitLen = (ushort)LeadshineProtocolMap.BitLen.ActualVelocity; break;
-                case LeadshineProtocolMap.Index.FeedConstant: bitLen = 32; break; // :01/:02 一般 32bit
+                case LeadshineProtocolMap.Index.FeedConstant: bitLen = 32; break;
                 case LeadshineProtocolMap.Index.GearRatio: bitLen = 32; break;
                 default:
                     OnAxisFaulted(new InvalidOperationException($"Index 0x{index:X4} not mapped to BitLen."));
                     return -1;
             }
 
-            // 2) 调用底层读取
             var byteLen = (bitLen + 7) / 8;
             var buf = new byte[byteLen];
             var ret = LTDMC.nmc_read_txpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, bitLen, buf);
+            OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", ret);
             if (ret != 0) return ret;
 
-            // 3) 小端解码
             object? boxed =
                 typeof(T) == typeof(byte) ? buf[0] :
                 typeof(T) == typeof(sbyte) ? unchecked((sbyte)buf[0]) :
@@ -565,6 +570,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             }
 
             value = (T)boxed;
+
+            // 可选：再发一条带解码值的备注（result=0）
+            OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", 0,
+                note: $"decoded={boxed}");
+
             return 0;
         }
 
@@ -684,14 +694,32 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         }
 
         //用便捷封装
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnAxisFaulted(Exception ex) =>
             FireEachNonBlocking(AxisFaulted, this, new AxisErrorEventArgs(Axis, ex));
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnDriverNotLoaded(string lib, string msg) =>
             FireEachNonBlocking(DriverNotLoaded, this, new DriverNotLoadedEventArgs(lib, msg));
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnAxisDisconnected(string reason) =>
             FireEachNonBlocking(AxisDisconnected, this, new AxisDisconnectedEventArgs(Axis, reason));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnCommandIssued(AxisCommandIssuedEventArgs e) =>
+            FireEachNonBlocking(CommandIssued, this, e);
+
+        // 便捷重载：函数名 + 参数串 + 结果码 → 直接构造 Invocation 并广播
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void OnCommandIssued(string function, string argListWithSpaces, int result, string? note = null) =>
+            FireEachNonBlocking(CommandIssued, this, new AxisCommandIssuedEventArgs {
+                Axis = Axis,
+                Invocation = $"{function}( {argListWithSpaces} )",
+                Result = result,
+                Timestamp = DateTimeOffset.UtcNow,
+                Note = note
+            });
     }
 
     internal static class LTDMC {

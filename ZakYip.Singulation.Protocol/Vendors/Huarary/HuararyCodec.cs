@@ -35,15 +35,15 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             if (frame.Length < 1 + 1 + 2 + 1 + 1) return false;
             if (frame[0] != HuararyControl.Start || frame[^1] != HuararyControl.End) return false;
 
-            byte ctrl = frame[1];
+            var ctrl = frame[1];
             if (ctrl != HuararyControl.CtrlSpeed) return false;
 
             // 长度一致性
-            ushort len = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(2, 2));
+            var len = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(2, 2));
             if (len != frame.Length) return false;
 
             // XOR 校验（从起始到 payload 末尾）
-            int checksumIndex = frame.Length - 2;
+            var checksumIndex = frame.Length - 2;
             byte xor = 0;
             for (int i = 0; i < checksumIndex; i++) xor ^= frame[i];
             if (xor != frame[checksumIndex]) return false;
@@ -52,7 +52,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             var payload = frame.Slice(4, frame.Length - 6);
             if (payload.Length % 4 != 0) return false;
 
-            int n = payload.Length / 4;
+            var n = payload.Length / 4;
             var all = new int[n];
             for (int i = 0, off = 0; i < n; i++, off += 4)
                 all[i] = BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4)); // mm/s

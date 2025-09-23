@@ -16,12 +16,12 @@
 
 	<ItemGroup>
 		<None Update="Leadshine\LTDMC.dll">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Simulated\" />
+		<Folder Include="Simulated\" />
 	</ItemGroup>
 
 </Project>

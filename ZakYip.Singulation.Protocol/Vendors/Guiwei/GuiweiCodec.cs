@@ -54,13 +54,13 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
 
         /// <inheritdoc />
         public bool TryDecodePositions(ReadOnlySpan<byte> frame, out IReadOnlyList<ParcelPose> poses) {
-            poses = Array.Empty<ParcelPose>();
+            poses = [];
             return false; // 归位速度优先，位置/状态如需对接可扩展。
         }
 
         /// <inheritdoc />
         public bool TryDecodeStatus(ReadOnlySpan<byte> frame, out StatusSnapshot status) {
-            status = new StatusSnapshot(false, 0, Array.Empty<(string, byte)>(), VisionAlarm.None);
+            status = new StatusSnapshot(false, 0, [], VisionAlarm.None);
             return false;
         }
 

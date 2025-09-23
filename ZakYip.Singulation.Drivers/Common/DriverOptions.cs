@@ -18,7 +18,7 @@ namespace ZakYip.Singulation.Drivers.Common {
         public required ushort Port { get; init; }
 
         /// <summary>节点 ID（驱动器从站地址）。</summary>
-        public required byte NodeId { get; init; }
+        public required ushort NodeId { get; init; }
 
         /// <summary>齿轮比（电机轴:负载轴），例如 2.5 表示电机转 2.5 圈，负载 1 圈。</summary>
         public required decimal GearRatio { get; init; } = 1m;

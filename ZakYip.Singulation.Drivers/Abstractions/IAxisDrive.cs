@@ -42,6 +42,11 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         event EventHandler<AxisSpeedFeedbackEventArgs>? SpeedFeedback;
 
         /// <summary>
+        /// 函数调用事件(可用于输出/日志记录)
+        /// </summary>
+        event EventHandler<AxisCommandIssuedEventArgs>? CommandIssued;
+
+        /// <summary>
         /// 轴标识（不可变）。
         /// </summary>
         AxisId Axis { get; }

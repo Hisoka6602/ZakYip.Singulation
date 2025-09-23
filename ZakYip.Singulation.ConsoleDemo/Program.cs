@@ -59,7 +59,7 @@ internal static class Program {
                 drives[i - 1] = new LeadshineLtdmcAxisDrive(new DriverOptions {
                     Card = cardNo,
                     Port = (ushort)port,
-                    NodeId = (byte)(i + 1000),
+                    NodeId = (ushort)(i + 1000),
                     GearRatio = 0.4m,
                     IsReverse = i % 2 != 0,
                     PulleyPitchDiameterMm = 76.0m,
