@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 
 namespace ZakYip.Singulation.Host.Dto {
-    public record class ControllerResourceDto {
+    public record class ControllerResponseDto {
         /// <summary>
         /// 控制器发现到的轴数量。
         /// </summary>

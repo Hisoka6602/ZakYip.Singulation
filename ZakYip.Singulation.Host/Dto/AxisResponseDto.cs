@@ -14,7 +14,7 @@ namespace ZakYip.Singulation.Host.Dto {
     /// 可在此 DTO 中扩展对应字段。
     /// </para>
     /// </summary>
-    public record AxisResourceDto {
+    public record AxisResponseDto {
         /// <summary>
         /// 轴 ID（字符串形式）。
         /// <para>

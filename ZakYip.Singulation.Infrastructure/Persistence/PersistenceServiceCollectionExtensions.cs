@@ -19,7 +19,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
         /// <param name="filePath">数据库文件路径。</param>
         public static IServiceCollection AddLiteDbAxisSettings(this IServiceCollection services, string filePath = "singulation.db") {
             services.AddSingleton<ILiteDatabase>(_ => new LiteDatabase($"Filename={filePath};Mode=Shared"));
-            services.AddSingleton<IAxisSettingsStore, LiteDbAxisSettingsStore>();
+            services.AddSingleton<IControllerOptionsStore, LiteDbControllerOptionsStore>();
             return services;
         }
 

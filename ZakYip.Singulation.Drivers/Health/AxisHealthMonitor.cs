@@ -26,7 +26,7 @@ namespace ZakYip.Singulation.Drivers.Health {
                     try {
                         if (await _ping(ct).ConfigureAwait(false)) {
                             Stop();
-                            Recovered?.Invoke(); // ★ 新增：恢复事件
+                            Recovered?.Invoke();
                             break;
                         }
                     }

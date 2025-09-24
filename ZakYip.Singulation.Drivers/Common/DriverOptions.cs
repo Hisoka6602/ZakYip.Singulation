@@ -21,36 +21,36 @@ namespace ZakYip.Singulation.Drivers.Common {
         public required ushort NodeId { get; init; }
 
         /// <summary>齿轮比（电机轴:负载轴），例如 2.5 表示电机转 2.5 圈，负载 1 圈。</summary>
-        public required decimal GearRatio { get; init; } = 1m;
+        public required decimal GearRatio { get; set; } = 1m;
         /// <summary>是否反转</summary>
         public bool IsReverse { get; init; }
         /// <summary>丝杠螺距 (mm/转)</summary>
-        public decimal ScrewPitchMm { get; init; }
+        public decimal ScrewPitchMm { get; set; }
 
         /// <summary>皮带轮直径 (mm)</summary>
-        public decimal PulleyDiameterMm { get; init; }
+        public decimal PulleyDiameterMm { get; set; }
         /// <summary>辊筒直径 (mm)</summary>
-        public required decimal PulleyPitchDiameterMm { get; init; }
+        public required decimal PulleyPitchDiameterMm { get; set; }
 
         /// <summary>最大转速 (rpm)。写速前限幅。</summary>
-        public decimal MaxRpm { get; init; } = 1813m;
+        public decimal MaxRpm { get; set; } = 1813m;
 
         /// <summary>最大加速度 (rpm/s)。写 0x6083 前限幅。</summary>
-        public decimal MaxAccelRpmPerSec { get; init; } = 1511m;
+        public decimal MaxAccelRpmPerSec { get; set; } = 1511m;
 
         /// <summary>最大减速度 (rpm/s)。写 0x6084 前限幅。</summary>
-        public decimal MaxDecelRpmPerSec { get; init; } = 1511m;
+        public decimal MaxDecelRpmPerSec { get; set; } = 1511m;
 
         /// <summary>写速度命令最小间隔（节流防抖）。</summary>
-        public TimeSpan MinWriteInterval { get; init; } = TimeSpan.FromMilliseconds(5);
+        public TimeSpan MinWriteInterval { get; set; } = TimeSpan.FromMilliseconds(5);
 
         /// <summary>连续失败次数阈值，超过后触发降级/断线。</summary>
-        public int ConsecutiveFailThreshold { get; init; } = 5;
+        public int ConsecutiveFailThreshold { get; set; } = 5;
 
         /// <summary>启用健康监测（进入降级后启动 Ping 循环）。</summary>
-        public bool EnableHealthMonitor { get; init; } = true;
+        public bool EnableHealthMonitor { get; set; } = true;
 
         /// <summary>健康监测 Ping 间隔。</summary>
-        public TimeSpan HealthPingInterval { get; init; } = TimeSpan.FromMilliseconds(500);
+        public TimeSpan HealthPingInterval { get; set; } = TimeSpan.FromMilliseconds(500);
     }
 }

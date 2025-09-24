@@ -105,7 +105,7 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <param name="mmPerSec"></param>
         /// <param name="ct"></param>
         /// <returns></returns>
-        ValueTask WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default);
+        Task WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default);
 
         /// <summary>
         /// 设置速度模式下的加速度/减速度（单位：RPM/s）。
@@ -120,7 +120,8 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// </summary>
         /// <param name="accelRpmPerSec">加速度（RPM/s）。</param>
         /// <param name="decelRpmPerSec">减速度（RPM/s）。</param>
-        ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default);
+        /// <param name="ct"></param>
+        Task SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default);
 
         /// <summary>
         /// 设置速度模式下的加速度/减速度（单位：mm/s²）。
@@ -143,6 +144,29 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// </summary>
         /// <param name="ct"></param>
         /// <returns></returns>
-        ValueTask EnableAsync(CancellationToken ct = default);
+        Task EnableAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// 更新线速度/加减速度的限幅（单位均为 mm/s 或 mm/s²）。
+        /// <para>实现要求：仅更新内存缓存与后续命令的限幅逻辑，不得外抛异常；若需要持久化由上层仓储处理。</para>
+        /// </summary>
+        /// <param name="maxLinearMmps">最大线速度 (mm/s)。传入非正值应当被拒绝（返回 false），或钳制到最小合理值。</param>
+        /// <param name="maxAccelMmps2">最大线加速度 (mm/s²)。同上。</param>
+        /// <param name="maxDecelMmps2">最大线减速度 (mm/s²)。同上。</param>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>操作是否接受并已生效（不抛异常，失败返回 false）。</returns>
+        Task UpdateLinearLimitsAsync(decimal maxLinearMmps, decimal maxAccelMmps2, decimal maxDecelMmps2,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// 更新机械参数（滚筒直径/齿轮比/PPR）。仅更新内存缓存与换算系数，后续命令按新系数生效。
+        /// <para>齿轮比约定：motor:roller（电机轴:滚筒轴）。</para>
+        /// </summary>
+        /// <param name="rollerDiameterMm">滚筒直径 (mm)，必须 &gt; 0。</param>
+        /// <param name="gearRatio">齿轮比 (motor:roller)，必须 &gt; 0。</param>
+        /// <param name="ppr">每转脉冲数 PPR，必须 &gt; 0。</param>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>操作是否接受并已生效（不抛异常，失败返回 false）。</returns>
+        Task UpdateMechanicsAsync(decimal rollerDiameterMm, decimal gearRatio, int ppr, CancellationToken ct = default);
     }
 }

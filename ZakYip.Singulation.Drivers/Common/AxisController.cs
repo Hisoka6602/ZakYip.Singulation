@@ -50,7 +50,7 @@ namespace ZakYip.Singulation.Drivers.Common {
         }
 
         public async Task EnableAllAsync(CancellationToken ct = default) {
-            await Task.WhenAll(_drives.Select(d => d.EnableAsync(ct).AsTask()));
+            await Task.WhenAll(_drives.Select(d => d.EnableAsync(ct)));
         }
 
         public async Task SetAccelDecelAllAsync(decimal accelMmPerSec2, decimal decelMmPerSec2, CancellationToken ct = default) {
@@ -58,7 +58,7 @@ namespace ZakYip.Singulation.Drivers.Common {
         }
 
         public async Task WriteSpeedAllAsync(decimal mmPerSec, CancellationToken ct = default) {
-            await Task.WhenAll(_drives.Select(d => d.WriteSpeedAsync(mmPerSec, ct).AsTask()));
+            await Task.WhenAll(_drives.Select(d => d.WriteSpeedAsync(mmPerSec, ct)));
         }
 
         public async Task StopAllAsync(CancellationToken ct = default) {

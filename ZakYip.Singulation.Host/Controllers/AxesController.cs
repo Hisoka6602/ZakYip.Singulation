@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using Polly.Caching;
+using System.Numerics;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
@@ -19,23 +21,46 @@ namespace ZakYip.Singulation.Host.Controllers {
     [Route("api/[controller]")]
     public sealed class AxesController : ControllerBase {
         private readonly IDriveRegistry _registry;
-        private readonly IBusAdapter _bus;
         private readonly IAxisLayoutStore _layoutStore;
         private readonly IAxisController _axisController;
-        private readonly AxisUnitConverter _conv = new();
+        private readonly IControllerOptionsStore _ctrlOptsStore;
 
-        public AxesController(IDriveRegistry registry, IBusAdapter bus,
-            IAxisLayoutStore layoutStore, IAxisController axisController) {
+        /// <summary>
+        /// 通过依赖注入构造控制器。
+        /// </summary>
+        public AxesController(
+            IDriveRegistry registry,
+            IAxisLayoutStore layoutStore,
+            IAxisController axisController,
+            IControllerOptionsStore ctrlOptsStore) {
             _registry = registry;
-            _bus = bus;
+
             _layoutStore = layoutStore;
             _axisController = axisController;
+            _ctrlOptsStore = ctrlOptsStore;
+        }
+
+        /// <summary>读取控制器模板（vendor + driver options）。</summary>
+        [HttpGet("controller/options")]
+        public async Task<ActionResult<ControllerOptionsDto>> GetControllerOptions(CancellationToken ct) {
+            var dto = await _ctrlOptsStore.GetAsync(ct);
+            return dto is null ? NotFound() : Ok(dto);
+        }
+
+        /// <summary>写入/更新控制器模板。</summary>
+        [HttpPut("controller/options")]
+        public async Task<IActionResult> PutControllerOptions([FromBody] ControllerOptionsDto dto, CancellationToken ct) {
+            if (string.IsNullOrWhiteSpace(dto.Vendor)) return BadRequest("Vendor is required.");
+            await _ctrlOptsStore.UpsertAsync(dto, ct);
+            return NoContent();
         }
 
         // ================= 网格布局单例资源 =================
+
         /// <summary>
         /// 获取当前的轴网格布局（单例资源）。
         /// </summary>
+        /// <param name="ct">取消令牌。</param>
         [HttpGet("topology")]
         public async Task<ActionResult<AxisGridLayoutDto>> GetTopology(CancellationToken ct) {
             var dto = await _layoutStore.GetAsync(ct);
@@ -44,9 +69,10 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 全量更新/覆盖轴网格布局（单例资源）。
-        /// 注意：该操作会替换 Rows/Cols 与 Placements。
+        /// 全量覆盖轴网格布局（单例资源）。
         /// </summary>
+        /// <param name="req">新的布局定义（Rows/Cols/Placements）。</param>
+        /// <param name="ct">取消令牌。</param>
         [HttpPut("topology")]
         public async Task<IActionResult> PutTopology([FromBody] AxisGridLayoutDto req, CancellationToken ct) {
             if (req.Rows < 1 || req.Cols < 1)
@@ -59,6 +85,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <summary>
         /// 删除当前的轴网格布局（恢复为空）。
         /// </summary>
+        /// <param name="ct">取消令牌。</param>
         [HttpDelete("topology")]
         public async Task<IActionResult> DeleteTopology(CancellationToken ct) {
             await _layoutStore.DeleteAsync(ct);
@@ -67,24 +94,44 @@ namespace ZakYip.Singulation.Host.Controllers {
 
         // ================= 控制器（总线）单例资源 =================
 
-        // GET /api/v1/controller
+        /// <summary>
+        /// 查询控制器（总线）状态与轴数量。
+        /// </summary>
+        /// <param name="ct">取消令牌。</param>
         [HttpGet("controller")]
-        public async Task<ActionResult<ControllerResourceDto>> GetController(CancellationToken ct) {
-            var count = await _bus.GetAxisCountAsync(ct);
-            var err = await _bus.GetErrorCodeAsync(ct);
-            return Ok(new ControllerResourceDto { AxisCount = count, ErrorCode = err, Initialized = count > 0 && err == 0 });
+        public async Task<ActionResult<ControllerResponseDto>> GetController(CancellationToken ct) {
+            var count = await _axisController.Bus.GetAxisCountAsync(ct);
+            var err = await _axisController.Bus.GetErrorCodeAsync(ct);
+            return Ok(new ControllerResponseDto {
+                AxisCount = count,
+                ErrorCode = err,
+                Initialized = count > 0 && err == 0
+            });
         }
 
+        /// <summary>
+        /// 控制器复位（冷/热）。
+        /// 冷复位：调用 <see cref="_bus.ResetAsync"/>；
+        /// 热复位：默认 Close → Initialize（如有专用软复位 API 可替换）。
+        /// </summary>
+        /// <param name="req">复位类型（硬/软）。</param>
+        /// <param name="ct">取消令牌。</param>
         [HttpPost("controller/reset")]
         public async Task<ActionResult<object>> ResetController([FromBody] ControllerResetRequestDto req, CancellationToken ct) {
+            // 1) 取模板
+            var opt = await _ctrlOptsStore.GetAsync(ct);
+            if (opt is null) return BadRequest("Controller options not set. PUT /api/axes/controller/options first.");
+
+            var vendor = opt.Vendor;
+            var tpl = MapToDriverOptions(opt.Template);
             var ok = await Safe(async () => {
                 if (req.Type == ControllerResetType.Hard) {
-                    await _bus.ResetAsync(ct); // 冷复位
+                    await _axisController.Bus.ResetAsync(ct); // 冷复位
                 }
                 else if (req.Type == ControllerResetType.Soft) {
                     // 若有专门软复位 API，请替换为 _bus.SoftResetAsync(ct)
-                    await _bus.CloseAsync(ct);
-                    await _bus.InitializeAsync(ct);
+                    await _axisController.Bus.CloseAsync(ct);
+                    await _axisController.InitializeAsync(vendor, tpl, opt.OverrideAxisCount, ct);
                 }
                 else {
                     throw new ArgumentException("type must be 'hard' or 'soft'");
@@ -93,60 +140,154 @@ namespace ZakYip.Singulation.Host.Controllers {
             return Ok(new { Accepted = ok });
         }
 
-        // GET /api/v1/controller/errors
+        /// <summary>
+        /// 获取控制器当前错误码（0 表示无错）。
+        /// </summary>
+        /// <param name="ct">取消令牌。</param>
         [HttpGet("controller/errors")]
         public async Task<object> GetControllerErrors(CancellationToken ct) {
-            var err = await _bus.GetErrorCodeAsync(ct);
+            var err = await _axisController.Bus.GetErrorCodeAsync(ct);
             return new { ErrorCode = err };
         }
 
-        // DELETE /api/v1/controller/errors
+        /// <summary>
+        /// 清空控制器错误（通常通过复位实现）。
+        /// </summary>
+        /// <param name="ct">取消令牌。</param>
         [HttpDelete("controller/errors")]
         public async Task<object> ClearControllerErrors(CancellationToken ct) {
-            var ok = await Safe(() => _bus.ResetAsync(ct)); // 常见：复位清错
+            var ok = await Safe(() => _axisController.Bus.ResetAsync(ct)); // 常见：复位清错
             return new { Accepted = ok };
         }
 
         // ================= 轴集合资源：/axes =================
 
-        // GET /api/v1/axes
+        /// <summary>
+        /// 列举当前注册的所有轴资源快照。
+        /// </summary>
         [HttpGet("axes")]
-        public ActionResult<IEnumerable<AxisResourceDto>> ListAxes() {
+        public ActionResult<IEnumerable<AxisResponseDto>> ListAxes() {
             var drives = _axisController.Drives;
             return Ok(drives.Select(ToAxisResource));
         }
 
-        // GET /api/v1/axes/{id}
+        /// <summary>
+        /// 获取指定轴的资源快照。
+        /// </summary>
+        /// <param name="axisId">轴的整数 ID（与 AxisId.Value 对齐）。</param>
         [HttpGet("axes/{axisId}")]
-        public ActionResult<AxisResourceDto> GetAxis(int axisId) {
+        public ActionResult<AxisResponseDto> GetAxis(int axisId) {
             var axisDrive = _axisController.Drives.FirstOrDefault(f => f.Axis.Value.Equals(axisId));
             if (axisDrive is null) return NotFound();
             return Ok(ToAxisResource(axisDrive));
         }
 
-        // PATCH /api/v1/axes          （批量部分更新，主用）
+        /// <summary>
+        /// 批量部分更新（启停、目标线速度、加减速、限幅、机械参数等）。
+        /// 目标轴通过查询参数 axisIds 传入，例如：PATCH /api/axes?axisIds=1&axisIds=2。
+        /// 若未传 axisIds（或为空），则对“全部轴”生效。
+        /// </summary>
+        /// <param name="axisIds">要更新的轴 ID 列表；为空/缺省表示全部轴。</param>
+        /// <param name="req">批量更新请求体（不包含轴 ID）。</param>
+        /// <param name="ct">取消令牌。</param>
         [HttpPatch("axes")]
-        public async Task<ActionResult<BatchCommandResponse>> PatchAxes([FromBody] AxesPatchRequest req, CancellationToken ct) {
-            var targets = ResolveTargets(req.Targets);
+        public async Task<ActionResult<BatchCommandResponseDto>> PatchAxes(
+            [FromQuery] int[]? axisIds,
+            [FromBody] AxisPatchRequestDto req,
+            CancellationToken ct) {
+            // 解析目标轴：null/空 => 全部
+            var targets = ResolveTargets(axisIds);
+            if (targets.Count == 0)
+                return NotFound("No matching axis found for given axisIds (or no axes registered).");
+
+            // 逐轴执行
             var results = await ForEachAxis(targets, async d => await ApplyAxisPatch(d, req, ct));
-            return Ok(new BatchCommandResponse { Results = results });
+            return Ok(new BatchCommandResponseDto { Results = results });
         }
 
-        // PATCH /api/v1/axes/{id}     （单轴部分更新）
+        /// <summary>
+        /// 单轴部分更新（启停、目标线速度、加减速、限幅、机械参数等）。
+        /// </summary>
+        /// <param name="axisId">轴标识（字符串形式，与注册表 key 一致）。</param>
+        /// <param name="req">部分更新请求。</param>
+        /// <param name="ct">取消令牌。</param>
         [HttpPatch("axes/{axisId}")]
-        public async Task<ActionResult<AxisCommandResult>> PatchAxis(string axisId, [FromBody] AxisPatchRequest req, CancellationToken ct) {
-            var d = _registry.Get(axisId);
-            if (d is null) return NotFound();
-            var accepted = await ApplyAxisPatch(d, req, ct);
-            return Ok(new AxisCommandResult { AxisId = d.Axis.ToString(), Accepted = accepted, LastError = d.LastErrorMessage });
+        public async Task<ActionResult<AxisCommandResultDto>> PatchAxis(int axisId, [FromBody] AxisPatchRequestDto req, CancellationToken ct) {
+            var axisDrive = _axisController.Drives.FirstOrDefault(f => f.Axis.Value.Equals(axisId));
+            if (axisDrive is null) return NotFound();
+            var accepted = await ApplyAxisPatch(axisDrive, req, ct);
+            return Ok(new AxisCommandResultDto { AxisId = axisDrive.Axis.ToString(), Accepted = accepted, LastError = axisDrive.LastErrorMessage });
+        }
+
+        /// <summary>
+        /// 批量使能轴（Enable）。
+        /// 未传 axisIds 或为空时，对全部轴生效。
+        /// </summary>
+        /// <param name="axisIds">要操作的轴 ID；缺省/空 = 全部轴。</param>
+        /// <param name="ct">取消令牌。</param>
+        [HttpPost("axes/enable")]
+        public async Task<ActionResult<BatchCommandResponseDto>> EnableAxes(
+            [FromQuery] int[]? axisIds,
+            CancellationToken ct) {
+            var targets = ResolveTargets(axisIds);
+            if (targets.Count == 0)
+                return NotFound("No matching axis found for given axisIds (or no axes registered).");
+
+            var results = await ForEachAxis(targets, d => Safe(() => d.EnableAsync(ct)));
+            return Ok(new BatchCommandResponseDto { Results = results });
+        }
+
+        /// <summary>
+        /// 批量释放/禁用轴（Disable）。
+        /// 未传 axisIds 或为空时，对全部轴生效。
+        /// </summary>
+        /// <param name="axisIds">要操作的轴 ID；缺省/空 = 全部轴。</param>
+        /// <param name="ct">取消令牌。</param>
+        [HttpPost("axes/disable")]
+        public async Task<ActionResult<BatchCommandResponseDto>> DisableAxes(
+            [FromQuery] int[]? axisIds,
+            CancellationToken ct) {
+            var targets = ResolveTargets(axisIds);
+            if (targets.Count == 0)
+                return NotFound("No matching axis found for given axisIds (or no axes registered).");
+
+            // 要求 IAxisDrive 提供 DisableAsync；若旧驱动暂未实现，可在实现里降级为 StopAsync。
+            var results = await ForEachAxis(targets, d =>
+                Safe(() => {
+                    var task = d.DisposeAsync();
+                    return task.AsTask();
+                }));
+            return Ok(new BatchCommandResponseDto { Results = results });
+        }
+
+        /// <summary>
+        ///— 批量设置轴速度（线速度，单位 mm/s）。
+        /// 未传 axisIds 或为空时，对全部轴生效。
+        /// </summary>
+        /// <param name="axisIds">要操作的轴 ID；缺省/空 = 全部轴。</param>
+        /// <param name="req">目标线速度请求体（mm/s）。</param>
+        /// <param name="ct">取消令牌。</param>
+        [HttpPost("axes/speed")]
+        public async Task<ActionResult<BatchCommandResponseDto>> SetAxesSpeed(
+            [FromQuery] int[]? axisIds,
+            [FromBody] SetSpeedRequestDto req,
+            CancellationToken ct) {
+            var targets = ResolveTargets(axisIds);
+            if (targets.Count == 0)
+                return NotFound("No matching axis found for given axisIds (or no axes registered).");
+
+            // 使用 IAxisDrive 的线速度写入重载：WriteSpeedAsync(mm/s)
+            var results = await ForEachAxis(targets, d => Safe(() => d.WriteSpeedAsync((decimal)req.LinearMmps, ct)));
+            return Ok(new BatchCommandResponseDto { Results = results });
         }
 
         // ================= 内部实现 =================
 
-        private static AxisResourceDto ToAxisResource(IAxisDrive d) {
-            // 尽可能从快照接口读取（最近一次目标/反馈、使能、错误等）
-
-            return new AxisResourceDto {
+        /// <summary>
+        /// 将驱动实例映射为对外资源 DTO（尽量走驱动的快照字段；保持前向兼容的可空设计）。
+        /// </summary>
+        private static AxisResponseDto ToAxisResource(IAxisDrive d) {
+            return new AxisResponseDto {
                 AxisId = d.Axis.ToString(),
                 Status = d.Status,
 
@@ -159,76 +300,76 @@ namespace ZakYip.Singulation.Host.Controllers {
             };
         }
 
-        private IEnumerable<IAxisDrive> ResolveTargets(List<string> targets) {
-            if (targets.Count == 1 && targets[0].Equals("all", StringComparison.OrdinalIgnoreCase))
-                return _registry.GetAll();
-            return targets.Select(id => _registry.Get(id)).Where(d => d is not null)!;
+        /// <summary>
+        /// 根据一组轴 ID 解析为驱动集合；
+        /// - 传入 null 或空数组 ⇒ 返回全部轴；
+        /// - 仅返回存在的轴实例（忽略无效 ID）。</summary>
+        private List<IAxisDrive> ResolveTargets(int[]? axisIds) {
+            if (axisIds is null || axisIds.Length == 0)
+                return _axisController.Drives.ToList();
+
+            var set = new HashSet<int>(axisIds);
+            return _axisController.Drives.Where(d => set.Contains(d.Axis.Value)).ToList();
         }
 
-        private async Task<List<AxisCommandResult>> ForEachAxis(IEnumerable<IAxisDrive> drives, Func<IAxisDrive, Task<bool>> act) {
-            var list = new List<AxisCommandResult>();
+        /// <summary>
+        /// 遍历执行驱动命令并收集结果（不抛异常，异常通过 Safe → false）。
+        /// </summary>
+        private async Task<List<AxisCommandResultDto>> ForEachAxis(IEnumerable<IAxisDrive> drives, Func<IAxisDrive, Task<bool>> act) {
+            var list = new List<AxisCommandResultDto>();
             foreach (var d in drives) {
                 var ok = await act(d);
-                list.Add(new AxisCommandResult { AxisId = d.Axis.ToString(), Accepted = ok, LastError = d.LastErrorMessage });
+                list.Add(new AxisCommandResultDto { AxisId = d.Axis.ToString(), Accepted = ok, LastError = d.LastErrorMessage });
             }
             return list;
         }
 
-        // 统一将“更新请求”映射为驱动层调用；只更新请求里出现的字段
-        private async Task<bool> ApplyAxisPatch(IAxisDrive d, AxisPatchRequest req, CancellationToken ct) {
+        /// <summary>
+        /// 将“部分更新请求”映射为具体驱动调用；只更新请求中显式出现的字段。
+        /// </summary>
+        private async Task<bool> ApplyAxisPatch(IAxisDrive d, AxisPatchRequestDto req, CancellationToken ct) {
             var ok = true;
 
-            if (req.Enabled.HasValue) {
-                ok &= await Safe(() => req.Enabled.Value ? d.EnableAsync(ct) : d.DisableAsync(ct));
+            if (req is { AccelMmps2: not null, DecelMmps2: not null }) {
+                ok &= await Safe(() => d.SetAccelDecelAsync(req.AccelMmps2.Value, req.DecelMmps2.Value, ct));
             }
-            if (req.TargetLinearMmps.HasValue) {
-                ok &= await Safe(() => d.WriteSpeedLinearAsync(req.TargetLinearMmps.Value, ct));
+            if (req.Limits is { MaxLinearMmps: not null, MaxAccelMmps2: not null, MaxDecelMmps2: not null }) {
+                ok &= await Safe(() => d.UpdateLinearLimitsAsync(req.Limits.MaxLinearMmps.Value,
+                    req.Limits.MaxAccelMmps2.Value, req.Limits.MaxDecelMmps2.Value, ct));
             }
-            if (req.AccelMmps2.HasValue || req.DecelMmps2.HasValue) {
-                var a = req.AccelMmps2 ?? d.Options.MaxAccelLinearMmps2;
-                var b = req.DecelMmps2 ?? d.Options.MaxDecelLinearMmps2;
-                ok &= await Safe(() => d.SetAccelDecelAsync(a, b, ct));
-            }
-            if (req.Limits is not null &&
-                (req.Limits.MaxLinearMmps.HasValue || req.Limits.MaxAccelMmps2.HasValue || req.Limits.MaxDecelMmps2.HasValue)) {
-                var vmax = req.Limits.MaxLinearMmps ?? _conv.RpmToLinearMmps((double)d.Options.MaxRpm, d.Mechanics);
-                var amax = req.Limits.MaxAccelMmps2 ?? d.Options.MaxAccelLinearMmps2;
-                var dmax = req.Limits.MaxDecelMmps2 ?? d.Options.MaxDecelLinearMmps2;
-                ok &= await Safe(() => d.UpdateLinearLimitsAsync(vmax, amax, dmax, ct));
-            }
-            if (req.Mechanics is not null &&
-                (req.Mechanics.RollerDiameterMm.HasValue || req.Mechanics.GearRatio.HasValue || req.Mechanics.Ppr.HasValue)) {
-                var dia = req.Mechanics.RollerDiameterMm ?? d.Mechanics.RollerDiameterMm;
-                var gr = req.Mechanics.GearRatio ?? d.Mechanics.GearRatio;
-                var ppr = req.Mechanics.Ppr ?? d.Mechanics.Ppr;
-                ok &= await Safe(() => d.UpdateMechanicsAsync(dia, gr, ppr, ct));
+            if (req.Mechanics is { RollerDiameterMm: not null, GearRatio: not null, Ppr: not null }) {
+                ok &= await Safe(() => d.UpdateMechanicsAsync(req.Mechanics.RollerDiameterMm.Value,
+                    req.Mechanics.GearRatio.Value, req.Mechanics.Ppr.Value, ct));
             }
 
             return ok;
         }
 
-        private Task<bool> ApplyAxisPatch(IAxisDrive d, AxesPatchRequest req, CancellationToken ct)
-            => ApplyAxisPatch(d, new AxisPatchRequest {
-                Enabled = req.Enabled,
-                TargetLinearMmps = req.TargetLinearMmps,
-                AccelMmps2 = req.AccelMmps2,
-                DecelMmps2 = req.DecelMmps2,
-                Limits = req.Limits is null ? null : new AxisPatchRequest.LimitsPatch {
-                    MaxLinearMmps = req.Limits.MaxLinearMmps,
-                    MaxAccelMmps2 = req.Limits.MaxAccelMmps2,
-                    MaxDecelMmps2 = req.Limits.MaxDecelMmps2
-                },
-                Mechanics = req.Mechanics is null ? null : new AxisPatchRequest.MechanicsPatch {
-                    RollerDiameterMm = req.Mechanics.RollerDiameterMm,
-                    GearRatio = req.Mechanics.GearRatio,
-                    Ppr = req.Mechanics.Ppr
-                }
-            }, ct);
+        private static DriverOptions MapToDriverOptions(DriverOptionsTemplateDto t) => new() {
+            // 注意：Card/Port/NodeId/IsReverse 在 InitializeAsync 内按轴设置，这里不填
+            GearRatio = t.GearRatio,
+            ScrewPitchMm = t.ScrewPitchMm,
+            PulleyDiameterMm = t.PulleyDiameterMm,
+            PulleyPitchDiameterMm = t.PulleyPitchDiameterMm,
+            MaxRpm = t.MaxRpm,
+            MaxAccelRpmPerSec = t.MaxAccelRpmPerSec,
+            MaxDecelRpmPerSec = t.MaxDecelRpmPerSec,
+            MinWriteInterval = t.MinWriteInterval,
+            ConsecutiveFailThreshold = t.ConsecutiveFailThreshold,
+            EnableHealthMonitor = t.EnableHealthMonitor,
+            HealthPingInterval = t.HealthPingInterval,
+            Card = t.Card,
+            Port = t.Port,
+            NodeId = 0
+        };
 
+        /// <summary>
+        /// 安全执行某个异步动作：吞掉异常并返回 false；具体异常信息由驱动层事件和 LastErrorMessage 负责记录。
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static async Task<bool> Safe(Func<Task> act) {
             try { await act(); return true; }
-            catch { return false; } // 具体错误已在驱动层事件与 LastErrorMessage 中记录
+            catch { return false; }
         }
     }
 }

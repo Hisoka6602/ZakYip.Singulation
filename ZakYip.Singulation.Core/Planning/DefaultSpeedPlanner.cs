@@ -76,58 +76,6 @@ namespace ZakYip.Singulation.Core.Planning {
             }
         }
 
-        /// <summary>
-        /// 执行一次速度规划：将 <see cref="SpeedSet"/>（mm/s）经限幅/平滑/斜率后，
-        /// 按轴几何换算为 RPM 输出，以便直接写入驱动（0x60FF）。
-        /// </summary>
-        /// <param name="topology">输送拓扑（轴顺序与数量）。</param>
-        /// <param name="input">上游速度集合（mm/s）。</param>
-        /// <returns>与 <paramref name="topology"/> 顺序一致的各轴目标 RPM。</returns>
-        public ReadOnlyMemory<AxisRpm> Plan(ConveyorTopology topology, in SpeedSet input) {
-            if (topology is null) throw new ArgumentNullException(nameof(topology));
-
-            // 拼接输入 mm/s：分离段 + 疏散段 ⇒ 与拓扑轴数一致
-            var n = topology.Axes.Count;
-            var mmps = GetConcatenatedMmps(input, n); // mm/s
-
-            if (n != _cfg.AxisCount || mmps.Length != n)
-                throw new ArgumentException("Topology/Axes count or input speed length mismatch.");
-
-            var p = Volatile.Read(ref _params);
-            var dt = Math.Max(1e-6, p.SamplingPeriod.TotalSeconds);
-
-            UpdateStatusBySeq(input.Sequence);
-
-            for (int i = 0; i < n; i++) {
-                // 1) 一次限幅（按运行参数的 mm/s 上/下限）
-                var v = Math.Clamp(mmps[i], p.MinMmps, p.MaxMmps);
-
-                // 2) Degraded 时的缺帧策略
-                if (_status == PlannerStatus.Degraded && p.HoldOnNoFrame)
-                    v = _lastMmps[i];
-
-                // 3) 平滑（滑动平均）
-                v = Smooth(i, v);
-
-                // 4) 斜率限制（mm/s² × dt）
-                v = RampLimit(i, v, p.MaxAccelMmps2, (decimal)dt);
-
-                // 5) 叠加硬件线速度上限（mm/s）后的二次限幅（避免异常输入）
-                v = ClampByHardwareSpeedLimitMmps(v, i);
-
-                // 6) 出口换算为 RPM（Axis i）
-                var rpm = MmpsToRpm(v, i);
-
-                _outRpm[i] = new AxisRpm(rpm);
-                _lastMmps[i] = v;
-            }
-
-            if (_status == PlannerStatus.Idle)
-                _status = PlannerStatus.Running;
-
-            return _outRpm;
-        }
-
         /// <summary>释放资源（当前无非托管资源）。</summary>
         public void Dispose() { /* 预留 */ }
 

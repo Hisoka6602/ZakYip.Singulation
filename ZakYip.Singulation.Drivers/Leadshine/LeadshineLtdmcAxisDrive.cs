@@ -123,7 +123,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             }
         }
 
-        public async ValueTask WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default) {
+        public async Task WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default) {
             await ThrottleAsync(ct);
 
             // 取 PPR（带缓存）
@@ -159,7 +159,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// 写入类型通常为 U32（4字节，非负）；这里对负值一律量化为 0。
         /// </remarks>
         /// </summary>
-        public async ValueTask SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default) {
+        public async Task SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec,
+            CancellationToken ct = default) {
             await ThrottleAsync(ct);
 
             // 记录原始请求值（用于事件说明）
@@ -301,7 +302,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         }
 
         /// <summary>上电/使能（可选：调用后再写速度）</summary>
-        public async ValueTask EnableAsync(CancellationToken ct = default) {
+        public async Task EnableAsync(CancellationToken ct = default) {
             // 节流，避免过快写总线
             await ThrottleAsync(ct);
 
@@ -463,6 +464,47 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 SetError(0, null);
             }
             catch { /* 忽略收尾失败 */ }
+        }
+
+        /// <summary>
+        /// 更新线速度/加减速度限幅（mm/s, mm/s²）。
+        /// 仅更新 DriverOptions 中的对应字段，并立即对“后续命令”的限幅生效。
+        /// 如需立即收敛当前目标，可在成功后对当前目标做一次钳制重写。
+        /// </summary>
+        public Task UpdateLinearLimitsAsync(decimal maxLinearMmps, decimal maxAccelMmps2, decimal maxDecelMmps2,
+            CancellationToken ct = default) {
+            if (maxLinearMmps <= 0 || maxAccelMmps2 <= 0 || maxDecelMmps2 <= 0) return Task.FromResult(false);
+
+            try {
+                _opts.MaxRpm = maxLinearMmps;
+                _opts.MaxAccelRpmPerSec = maxAccelMmps2;
+                _opts.MaxDecelRpmPerSec = maxDecelMmps2;
+
+                return Task.FromResult(true);
+            }
+            catch {
+                return Task.FromResult(false);
+            }
+        }
+
+        /// <summary>
+        /// 更新机械参数（滚筒直径/齿轮比/PPR），并重算“量化系数”（如 _rpmTo60FF、_accelTo6083）。
+        /// 不外抛异常；失败返回 false。单位：mm, (motor:roller), PPR。
+        /// </summary>
+        public Task UpdateMechanicsAsync(decimal rollerDiameterMm, decimal gearRatio, int ppr,
+            CancellationToken ct = default) {
+            if (rollerDiameterMm <= 0 || gearRatio <= 0 || ppr <= 0) return Task.FromResult(false);
+
+            try {
+                // 1) 更新 Mechanics——这应是驱动内的“唯一真源”
+                _opts.PulleyPitchDiameterMm = rollerDiameterMm;
+                _opts.GearRatio = gearRatio;
+
+                return Task.FromResult(true);
+            }
+            catch {
+                return Task.FromResult(false);
+            }
         }
 
         private async ValueTask ThrottleAsync(CancellationToken ct) {
