@@ -37,22 +37,5 @@ namespace ZakYip.Singulation.Core.Contracts {
         /// </summary>
         /// <param name="params">新的运行参数。</param>
         void Configure(LinearPlannerParams @params);
-
-        /// <summary>
-        /// 执行一次速度规划。
-        /// 内部应根据配置完成限幅、平滑、斜率限制等步骤，
-        /// 并将输入的 <see cref="SpeedSet"/> 转换为每个轴的目标 RPM。
-        /// </summary>
-        /// <param name="topology">
-        /// 输送机拓扑，描述系统有哪些轴、顺序如何排列。
-        /// 输出结果的顺序必须与此拓扑一致。
-        /// </param>
-        /// <param name="input">
-        /// 上游视觉给出的速度集合，包括帧号、时间戳、各段速度。
-        /// </param>
-        /// <returns>
-        /// 与 <paramref name="topology"/> 的轴数量一致的转速序列（单位：RPM）。
-        /// </returns>
-        ReadOnlyMemory<AxisRpm> Plan(ConveyorTopology topology, in SpeedSet input);
     }
 }

@@ -58,6 +58,36 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         DriverStatus Status { get; }
 
         /// <summary>
+        /// 最近一次下发的目标线速度 (mm/s)。
+        /// <para>值为 null 表示尚未下发过速度命令。</para>
+        /// </summary>
+        decimal? LastTargetMmps { get; }
+
+        /// <summary>
+        /// 最近一次驱动反馈的线速度 (mm/s)。
+        /// <para>值为 null 表示尚未接收到反馈。</para>
+        /// </summary>
+        decimal? LastFeedbackMmps { get; }
+
+        /// <summary>
+        /// 当前驱动是否处于“已使能”状态。
+        /// <para>true 表示已使能，可以响应速度命令；false 表示未使能或被禁用。</para>
+        /// </summary>
+        bool IsEnabled { get; }
+
+        /// <summary>
+        /// 最近错误码（由驱动器/总线提供）。
+        /// <para>0 表示正常；非 0 表示存在错误。</para>
+        /// </summary>
+        int LastErrorCode { get; }
+
+        /// <summary>
+        /// 最近错误消息（人类可读描述）。
+        /// <para>可能为 null 或空字符串，表示当前无错误或驱动未提供详细信息。</para>
+        /// </summary>
+        string? LastErrorMessage { get; }
+
+        /// <summary>
         /// 写入目标转速（RPM）。
         /// <list type="bullet">
         /// <item>实现可在内部做单位换算、限幅、同值去重与命令节流。</item>

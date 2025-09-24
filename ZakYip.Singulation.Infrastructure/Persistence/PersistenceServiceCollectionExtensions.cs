@@ -22,5 +22,11 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             services.AddSingleton<IAxisSettingsStore, LiteDbAxisSettingsStore>();
             return services;
         }
+
+        /// <summary>注册轴布局存储（与设置共享同一 LiteDB）。</summary>
+        public static IServiceCollection AddLiteDbAxisLayout(this IServiceCollection services) {
+            services.AddSingleton<IAxisLayoutStore, LiteDbAxisLayoutStore>();
+            return services;
+        }
     }
 }

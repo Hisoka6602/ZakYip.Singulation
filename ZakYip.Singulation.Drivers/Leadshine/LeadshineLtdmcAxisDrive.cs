@@ -108,11 +108,19 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         public AxisId Axis { get; }
         public DriverStatus Status => _status;
+        public decimal? LastTargetMmps { get; private set; }
+        public decimal? LastFeedbackMmps { get; private set; }
+        public bool IsEnabled { get; private set; }
+        public int LastErrorCode { get; private set; }
+        public string? LastErrorMessage { get; private set; }
 
         [System.Obsolete("默认单位为 mm/s；建议改用 WriteSpeedAsync(mmPerSec)。此方法仅为兼容入口。")]
         public async ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default) {
             await ThrottleAsync(ct);
-            await WriteTargetVelocityFromRpmAsync(rpm.Value, ct);
+            var rpmAsync = await WriteTargetVelocityFromRpmAsync(rpm.Value, ct);
+            if (rpmAsync) {
+                LastTargetMmps = rpm.ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio);
+            }
         }
 
         public async ValueTask WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default) {
@@ -134,9 +142,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             if (_opts.IsReverse) deviceVal = -deviceVal;
             var ret = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, deviceVal);
-            if (ret != 0) { OnAxisFaulted(new InvalidOperationException($"write TargetVelocity failed, ret={ret}")); return; }
+            if (ret != 0) { SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return; }
 
             _status = DriverStatus.Connected;
+            LastTargetMmps = mmPerSec;
         }
 
         /// <summary>
@@ -199,15 +208,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             // 4) 写寄存器（0x6083 / 0x6084），失败仅事件，不抛异常
             var r1 = WriteRxPdo(LeadshineProtocolMap.Index.ProfileAcceleration, accDev);
             if (r1 != 0) {
-                OnAxisFaulted(new InvalidOperationException(
-                    $"write 0x6083 (ProfileAcceleration) failed, ret={r1}, accDev={accDev}"));
-                return;
+                SetErrorFromRet("write 0x6083 (ProfileAcceleration)", r1);
+                OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return;
             }
 
             var r2 = WriteRxPdo(LeadshineProtocolMap.Index.ProfileDeceleration, decDev);
             if (r2 != 0) {
-                OnAxisFaulted(new InvalidOperationException(
-                    $"write 0x6084 (ProfileDeceleration) failed, ret={r2}, decDev={decDev}"));
+                SetErrorFromRet("write 0x6084 (ProfileDeceleration)", r2);
+                OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return;
             }
         }
 
@@ -255,33 +263,39 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         public async Task<bool> PingAsync(CancellationToken ct = default) {
             if (!EnsureNativeLibLoaded()) { _status = DriverStatus.Degraded; return false; }
-            if (ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort _) != 0) {
+            var ret = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort _);
+            if (ret != 0) {
+                SetErrorFromRet("read 0x6041 (StatusWord)", ret);
                 _status = DriverStatus.Degraded;
-                OnAxisDisconnected("Ping failed or device not responding");
+                OnAxisDisconnected(LastErrorMessage!);
                 return false;
             }
 
             _status = DriverStatus.Connected;
 
+            ret = ReadTxPdo(LeadshineProtocolMap.Index.ActualVelocity, out int actualRpm);
+            if (ret != 0) {
+                SetErrorFromRet("read 0x606C (ActualVelocity)", ret);
+                return false;
+            }
+
             // 读实际速度（RPM）并发布反馈
-            if (ReadTxPdo(LeadshineProtocolMap.Index.ActualVelocity, out int actualRpm) == 0) {
-                var stamp = Stopwatch.GetTimestamp();
+            var stamp = Stopwatch.GetTimestamp();
 
-                // 方向在阈值判断中只应用一次
-                var rpmVal = _opts.IsReverse ? -actualRpm : actualRpm;
+            // 方向在阈值判断中只应用一次
+            var rpmVal = _opts.IsReverse ? -actualRpm : actualRpm;
 
-                // 用 mm/s 做一等公民的节流/阈值判断
-                var mmps = new AxisRpm(rpmVal).ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio);
+            // 用 mm/s 做一等公民的节流/阈值判断
+            var mmps = new AxisRpm(rpmVal).ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio);
 
-                if (ShouldPublishFeedbackMmps(mmps, stamp)) {
-                    int ppr = 0;
-                    try { ppr = await GetPprCachedAsync(ct).ConfigureAwait(false); } catch { /* 忽略：无 PPR 仍可发布反馈 */ }
+            if (ShouldPublishFeedbackMmps(mmps, stamp)) {
+                var ppr = 0;
+                try { ppr = await GetPprCachedAsync(ct).ConfigureAwait(false); } catch { /* 忽略：无 PPR 仍可发布反馈 */ }
 
-                    // 发布时交给 PublishSpeedFeedbackFromActualRpm 统一做方向/单位换算
-                    PublishSpeedFeedbackFromActualRpm(actualRpm, ppr);
+                // 发布时交给 PublishSpeedFeedbackFromActualRpm 统一做方向/单位换算
+                PublishSpeedFeedbackFromActualRpm(actualRpm, ppr);
 
-                    CommitFeedbackMmps(mmps, stamp);
-                }
+                CommitFeedbackMmps(mmps, stamp);
             }
             return true;
         }
@@ -293,8 +307,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             // 简化封装：写 ControlWord 并可选延时
             async Task<bool> WriteCtrlAsync(ushort value, int delayMs) {
-                var r = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, value);
-                if (r != 0) { OnAxisFaulted(new InvalidOperationException($"CtrlWord=0x{value:X4} failed, ret={r}")); return false; }
+                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, value);
+                if (ret != 0) {
+                    SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
+                    OnAxisFaulted(new InvalidOperationException(LastErrorMessage!));
+                    return false;
+                }
                 if (delayMs > 0) await Task.Delay(delayMs, ct);
                 return true;
             }
@@ -332,6 +350,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 }
             }
             _status = DriverStatus.Connected;
+            IsEnabled = true;
         }
 
         public async ValueTask DisableAsync(CancellationToken ct = default) {
@@ -339,16 +358,17 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             // 1) 先做一次安全停机：目标速度=0 + QuickStop（bit2）
             _ = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, 0);
-            var qs = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0002);
-            if (qs != 0) {
-                OnAxisFaulted(new InvalidOperationException($"Disable: QuickStop failed, ret={qs}"));
-                // 继续尝试往下退状态，尽量别卡住
+            var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0002);
+            if (ret != 0) {
+                SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
+                OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return;
             }
             await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, ct);
 
             // 2) 退回到“Switch On Disabled”：Shutdown（0x0006）
             var cw = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.Shutdown);
             if (cw != 0) {
+                SetErrorFromRet("write 0x6040 (ControlWord:<step>)", cw);
                 OnAxisFaulted(new InvalidOperationException($"Disable: write ControlWord=Shutdown(0x0006) failed, ret={cw}"));
             }
             await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, ct);
@@ -361,6 +381,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             _status = DriverStatus.Disconnected;
             Volatile.Write(ref _lastFbStamp, 0);
             _lastFbMmps = 0;
+            IsEnabled = false;
         }
 
         /// <summary>
@@ -437,7 +458,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         }
 
         public async ValueTask DisposeAsync() {
-            try { await DisableAsync(CancellationToken.None); }
+            try {
+                await DisableAsync(CancellationToken.None);
+                SetError(0, null);
+            }
             catch { /* 忽略收尾失败 */ }
         }
 
@@ -612,7 +636,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             // 2) 用 AxisRpm 统一做换算
             var rpm = new AxisRpm(rpmVal);
             var speedMmps = rpm.ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio);
-
+            LastFeedbackMmps = speedMmps;
             // pps：考虑齿比（电机轴:负载轴）
             decimal pps = 0;
             if (pulsesPerRev > 0) {
@@ -656,6 +680,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             Volatile.Write(ref _lastFbStamp, nowStamp);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetError(int code, string? message) { LastErrorCode = code; LastErrorMessage = message; }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SetErrorFromRet(string action, int ret) { LastErrorCode = ret; LastErrorMessage = $"{action} failed, ret={ret}"; }
+
         private async ValueTask<bool> WriteTargetVelocityFromRpmAsync(decimal rpm, CancellationToken ct) {
             var max = Math.Abs(_opts.MaxRpm);
             var targetRpm = Math.Max(-max, Math.Min(max, rpm));
@@ -677,7 +707,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             if (_opts.IsReverse) deviceVal = -deviceVal;
 
             var ret = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, deviceVal);
-            if (ret != 0) { OnAxisFaulted(new InvalidOperationException($"write TargetVelocity failed, ret={ret}")); return false; }
+            if (ret != 0) { SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return false; }
 
             _status = DriverStatus.Connected;
             return true;

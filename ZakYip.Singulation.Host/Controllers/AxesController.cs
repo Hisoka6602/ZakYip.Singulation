@@ -4,8 +4,14 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using ZakYip.Singulation.Host.Dto;
+using ZakYip.Singulation.Core.Enums;
 using System.Runtime.CompilerServices;
+using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Drivers.Common;
+using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
+using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -14,34 +20,68 @@ namespace ZakYip.Singulation.Host.Controllers {
     public sealed class AxesController : ControllerBase {
         private readonly IDriveRegistry _registry;
         private readonly IBusAdapter _bus;
+        private readonly IAxisLayoutStore _layoutStore;
+        private readonly IAxisController _axisController;
         private readonly AxisUnitConverter _conv = new();
 
-        public AxesController(IDriveRegistry registry, IBusAdapter bus) {
+        public AxesController(IDriveRegistry registry, IBusAdapter bus,
+            IAxisLayoutStore layoutStore, IAxisController axisController) {
             _registry = registry;
             _bus = bus;
+            _layoutStore = layoutStore;
+            _axisController = axisController;
+        }
+
+        // ================= 网格布局单例资源 =================
+        /// <summary>
+        /// 获取当前的轴网格布局（单例资源）。
+        /// </summary>
+        [HttpGet("topology")]
+        public async Task<ActionResult<AxisGridLayoutDto>> GetTopology(CancellationToken ct) {
+            var dto = await _layoutStore.GetAsync(ct);
+            if (dto is null) return NotFound();
+            return Ok(dto);
+        }
+
+        /// <summary>
+        /// 全量更新/覆盖轴网格布局（单例资源）。
+        /// 注意：该操作会替换 Rows/Cols 与 Placements。
+        /// </summary>
+        [HttpPut("topology")]
+        public async Task<IActionResult> PutTopology([FromBody] AxisGridLayoutDto req, CancellationToken ct) {
+            if (req.Rows < 1 || req.Cols < 1)
+                return BadRequest("Rows/Cols must be >= 1.");
+
+            await _layoutStore.UpsertAsync(req, ct);
+            return NoContent();
+        }
+
+        /// <summary>
+        /// 删除当前的轴网格布局（恢复为空）。
+        /// </summary>
+        [HttpDelete("topology")]
+        public async Task<IActionResult> DeleteTopology(CancellationToken ct) {
+            await _layoutStore.DeleteAsync(ct);
+            return NoContent();
         }
 
         // ================= 控制器（总线）单例资源 =================
 
         // GET /api/v1/controller
         [HttpGet("controller")]
-        public async Task<ActionResult<ControllerResource>> GetController(CancellationToken ct) {
+        public async Task<ActionResult<ControllerResourceDto>> GetController(CancellationToken ct) {
             var count = await _bus.GetAxisCountAsync(ct);
             var err = await _bus.GetErrorCodeAsync(ct);
-            return Ok(new ControllerResource { AxisCount = count, ErrorCode = err });
+            return Ok(new ControllerResourceDto { AxisCount = count, ErrorCode = err, Initialized = count > 0 && err == 0 });
         }
 
-        // POST /api/v1/controller/reset   { "type": "hard" | "soft" }
-        public sealed class ControllerResetRequest { public string Type { get; init; } }
-
         [HttpPost("controller/reset")]
-        public async Task<ActionResult<object>> ResetController([FromBody] ControllerResetRequest req, CancellationToken ct) {
+        public async Task<ActionResult<object>> ResetController([FromBody] ControllerResetRequestDto req, CancellationToken ct) {
             var ok = await Safe(async () => {
-                var type = req.Type?.Trim().ToLowerInvariant();
-                if (type == "hard") {
+                if (req.Type == ControllerResetType.Hard) {
                     await _bus.ResetAsync(ct); // 冷复位
                 }
-                else if (type == "soft") {
+                else if (req.Type == ControllerResetType.Soft) {
                     // 若有专门软复位 API，请替换为 _bus.SoftResetAsync(ct)
                     await _bus.CloseAsync(ct);
                     await _bus.InitializeAsync(ct);
@@ -71,17 +111,17 @@ namespace ZakYip.Singulation.Host.Controllers {
 
         // GET /api/v1/axes
         [HttpGet("axes")]
-        public ActionResult<IEnumerable<AxisResource>> ListAxes() {
-            var drives = _registry.GetAll();
+        public ActionResult<IEnumerable<AxisResourceDto>> ListAxes() {
+            var drives = _axisController.Drives;
             return Ok(drives.Select(ToAxisResource));
         }
 
         // GET /api/v1/axes/{id}
         [HttpGet("axes/{axisId}")]
-        public ActionResult<AxisResource> GetAxis(string axisId) {
-            var d = _registry.Get(axisId);
-            if (d is null) return NotFound();
-            return Ok(ToAxisResource(d));
+        public ActionResult<AxisResourceDto> GetAxis(int axisId) {
+            var axisDrive = _axisController.Drives.FirstOrDefault(f => f.Axis.Value.Equals(axisId));
+            if (axisDrive is null) return NotFound();
+            return Ok(ToAxisResource(axisDrive));
         }
 
         // PATCH /api/v1/axes          （批量部分更新，主用）
@@ -101,61 +141,21 @@ namespace ZakYip.Singulation.Host.Controllers {
             return Ok(new AxisCommandResult { AxisId = d.Axis.ToString(), Accepted = accepted, LastError = d.LastErrorMessage });
         }
 
-        // GET /api/v1/axes/{id}/stream  （只读子资源：事件流）
-        [HttpGet("axes/{axisId}/stream")]
-        public async Task Stream(string axisId, CancellationToken ct) {
-            var d = _registry.Get(axisId);
-            if (d is null) { Response.StatusCode = 404; return; }
-
-            Response.Headers.Add("Content-Type", "text/event-stream");
-            Response.Headers.Add("Cache-Control", "no-cache");
-            Response.Headers.Add("X-Accel-Buffering", "no");
-
-            await WriteSse($"event: hello\ndata: {axisId}\n\n", ct);
-
-            void OnFeedback(object? s, Drivers.Abstractions.Events.AxisSpeedFeedbackEventArgs e) {
-                var mmps = _conv.RpmToLinearMmps(e.FeedbackRpm, d.Mechanics);
-                _ = WriteSse($"event: feedback\ndata: {mmps:F3}\n\n", ct);
-            }
-            void OnError(object? s, Drivers.Abstractions.Events.AxisErrorEventArgs e) {
-                _ = WriteSse($"event: error\ndata: {e.ErrorCode}:{e.Message}\n\n", ct);
-            }
-
-            d.AxisSpeedFeedback += OnFeedback;
-            d.AxisFaulted += OnError;
-            try { while (!ct.IsCancellationRequested) await Task.Delay(1000, ct); }
-            catch (TaskCanceledException) { }
-            finally { d.AxisSpeedFeedback -= OnFeedback; d.AxisFaulted -= OnError; }
-
-            async Task WriteSse(string payload, CancellationToken token) {
-                var bytes = Encoding.UTF8.GetBytes(payload);
-                await Response.Body.WriteAsync(bytes, 0, bytes.Length, token);
-                await Response.Body.FlushAsync(token);
-            }
-        }
-
         // ================= 内部实现 =================
 
-        private AxisResource ToAxisResource(IAxisDrive d) {
-            var limits = new LimitsDto {
-                MaxLinearMmps = _conv.RpmToLinearMmps((double)d.Options.MaxRpm, d.Mechanics),
-                MaxAccelMmps2 = d.Options.MaxAccelLinearMmps2,
-                MaxDecelMmps2 = d.Options.MaxDecelLinearMmps2
-            };
-            var mech = new MechanicsDto {
-                RollerDiameterMm = d.Mechanics.RollerDiameterMm,
-                GearRatio = d.Mechanics.GearRatio,
-                Ppr = d.Mechanics.Ppr
-            };
-            return new AxisResource {
+        private static AxisResourceDto ToAxisResource(IAxisDrive d) {
+            // 尽可能从快照接口读取（最近一次目标/反馈、使能、错误等）
+
+            return new AxisResourceDto {
                 AxisId = d.Axis.ToString(),
-                Enabled = d.IsEnabled,
-                TargetLinearMmps = _conv.RpmToLinearMmps(d.TargetRpm, d.Mechanics),
-                FeedbackLinearMmps = _conv.RpmToLinearMmps(d.FeedbackRpm, d.Mechanics),
-                DriverStatus = d.Status.ToString(),
-                LastErrorCode = d.LastErrorCode,
-                Limits = limits,
-                Mechanics = mech
+                Status = d.Status,
+
+                // 快照存在则映射；否则置为 null，保持 API 的前向兼容
+                Enabled = d?.IsEnabled,
+                TargetLinearMmps = d?.LastTargetMmps.HasValue == true ? (double?)d.LastTargetMmps.Value : null,
+                FeedbackLinearMmps = d?.LastFeedbackMmps.HasValue == true ? (double?)d.LastFeedbackMmps.Value : null,
+                LastErrorCode = d?.LastErrorCode,
+                LastErrorMessage = d?.LastErrorMessage
             };
         }
 

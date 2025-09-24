@@ -19,7 +19,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Dto\" />
 		<Folder Include="SwaggerOptions\" />
 		<Folder Include="Extensions\" />
 	</ItemGroup>
