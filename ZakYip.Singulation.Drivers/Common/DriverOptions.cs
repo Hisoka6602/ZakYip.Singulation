@@ -23,7 +23,7 @@ namespace ZakYip.Singulation.Drivers.Common {
         /// <summary>齿轮比（电机轴:负载轴），例如 2.5 表示电机转 2.5 圈，负载 1 圈。</summary>
         public required decimal GearRatio { get; init; } = 1m;
         /// <summary>是否反转</summary>
-        public required bool IsReverse { get; init; }
+        public bool IsReverse { get; init; }
         /// <summary>丝杠螺距 (mm/转)</summary>
         public decimal ScrewPitchMm { get; init; }
 

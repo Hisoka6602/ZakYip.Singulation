@@ -100,5 +100,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             // 若传入已是 1000+，保持不变（防止重复映射）
             return logicalNodeId >= 1000 ? logicalNodeId : (ushort)(1000 + logicalNodeId);
         }
+
+        public bool ShouldReverse(ushort logicalNodeId) {
+            // 奇数 NodeId 反转
+            return logicalNodeId % 2 == 1;
+        }
     }
 }

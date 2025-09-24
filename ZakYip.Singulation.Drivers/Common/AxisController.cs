@@ -16,10 +16,12 @@ namespace ZakYip.Singulation.Drivers.Common {
         private readonly IAxisEventAggregator _aggregator;
         private readonly List<IAxisDrive> _drives = new();
 
+        public event EventHandler<string>? ControllerFaulted;
+
         public AxisController(IBusAdapter bus, IDriveRegistry registry, IAxisEventAggregator aggregator) {
-            Bus = bus ?? throw new ArgumentNullException(nameof(bus));
-            _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-            _aggregator = aggregator ?? throw new ArgumentNullException(nameof(aggregator));
+            Bus = bus;
+            _registry = registry;
+            _aggregator = aggregator;
         }
 
         public IBusAdapter Bus { get; }
@@ -28,15 +30,20 @@ namespace ZakYip.Singulation.Drivers.Common {
         public async Task InitializeAsync(string vendor, DriverOptions template, int? overrideAxisCount = null, CancellationToken ct = default) {
             await Bus.InitializeAsync(ct);
 
-            // 轴数：优先外部覆盖，其次总线查询，再次模板 NodeId 范围
             var count = overrideAxisCount ?? await Bus.GetAxisCountAsync(ct);
-            if (count <= 0) throw new InvalidOperationException("Axis count must be > 0.");
+            if (count <= 0) {
+                OnControllerFaulted("Axis count must be > 0.");
+                return;
+            }
 
             _drives.Clear();
             for (ushort i = 1; i <= count; i++) {
                 var axisId = new AxisId(Bus.TranslateNodeId(i));
-                var opts = template with { NodeId = (ushort)axisId.Value };
-                var drive = _registry.Create(vendor, axisId, port: null!, opts); // 若有 IAxisPort 决定是否传入
+                var opts = template with {
+                    NodeId = (ushort)axisId.Value,
+                    IsReverse = Bus.ShouldReverse((ushort)axisId.Value)
+                };
+                var drive = _registry.Create(vendor, axisId, port: null!, opts);
                 _drives.Add(drive);
                 _aggregator.Attach(drive);
             }
@@ -69,6 +76,11 @@ namespace ZakYip.Singulation.Drivers.Common {
                 _drives.Clear();
                 await Bus.CloseAsync(ct);
             }
+        }
+
+        private void OnControllerFaulted(string msg) {
+            // 不抛异常，直接触发事件
+            ControllerFaulted?.Invoke(this, msg);
         }
     }
 }

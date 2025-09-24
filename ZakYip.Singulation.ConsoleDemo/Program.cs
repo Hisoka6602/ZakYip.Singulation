@@ -78,7 +78,6 @@ internal static class Program {
             Port = portNo,
             PulleyPitchDiameterMm = drumDiameterMm,
             GearRatio = gearRatio,
-            IsReverse = false,
             EnableHealthMonitor = true,
             HealthPingInterval = TimeSpan.FromMilliseconds(50),
             ConsecutiveFailThreshold = 3,
@@ -118,7 +117,7 @@ internal static class Program {
                 controller.DisposeAllAsync(CancellationToken.None).GetAwaiter().GetResult();
             }
             catch { /* 忽略收尾异常 */ }
-            (provider as IDisposable)?.Dispose();
+            provider?.Dispose();
         }
     }
 }

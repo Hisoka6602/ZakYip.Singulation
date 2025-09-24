@@ -17,4 +17,11 @@
 		<ProjectReference Include="..\ZakYip.Singulation.Protocol\ZakYip.Singulation.Protocol.csproj" />
 		<ProjectReference Include="..\ZakYip.Singulation.Transport\ZakYip.Singulation.Transport.csproj" />
 	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Controllers\" />
+		<Folder Include="Dto\" />
+		<Folder Include="SwaggerOptions\" />
+		<Folder Include="Filters\" />
+	</ItemGroup>
 </Project>

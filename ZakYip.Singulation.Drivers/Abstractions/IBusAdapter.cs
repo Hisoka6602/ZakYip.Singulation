@@ -42,5 +42,16 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <param name="logicalNodeId">逻辑层的 NodeId（如 1001）。</param>
         /// <returns>物理层的 NodeId（如 1）。</returns>
         ushort TranslateNodeId(ushort logicalNodeId);
+
+        /// <summary>
+        /// 根据厂商/拓扑规则判断指定轴是否需要反转。
+        /// <para>
+        /// 例如：某些设备是奇数反转、偶数正转；
+        /// 也可能完全不反转；或者有更复杂的映射表。
+        /// </para>
+        /// </summary>
+        /// <param name="logicalNodeId">逻辑层的 NodeId（如 1001）。</param>
+        /// <returns>true 表示需要反转；false 表示保持模板默认方向。</returns>
+        bool ShouldReverse(ushort logicalNodeId);
     }
 }
