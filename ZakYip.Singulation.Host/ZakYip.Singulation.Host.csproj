@@ -19,9 +19,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Folder Include="Controllers\" />
 		<Folder Include="Dto\" />
 		<Folder Include="SwaggerOptions\" />
-		<Folder Include="Filters\" />
+		<Folder Include="Extensions\" />
 	</ItemGroup>
 </Project>

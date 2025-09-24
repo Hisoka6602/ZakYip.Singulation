@@ -27,6 +27,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Demo", "Demo", "{9985423F-4
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.ConsoleDemo", "ZakYip.Singulation.ConsoleDemo\ZakYip.Singulation.ConsoleDemo.csproj", "{445D90E1-A619-4338-AADE-AD50FCF0BFF4}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastructure", "{7B1C774D-41C5-435E-AE83-591056619A35}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Infrastructure", "ZakYip.Singulation.Infrastructure\ZakYip.Singulation.Infrastructure.csproj", "{EB2902B1-0A41-408B-9538-5E910EA52C8C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +61,10 @@ Global
 		{445D90E1-A619-4338-AADE-AD50FCF0BFF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{445D90E1-A619-4338-AADE-AD50FCF0BFF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{445D90E1-A619-4338-AADE-AD50FCF0BFF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB2902B1-0A41-408B-9538-5E910EA52C8C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB2902B1-0A41-408B-9538-5E910EA52C8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB2902B1-0A41-408B-9538-5E910EA52C8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB2902B1-0A41-408B-9538-5E910EA52C8C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -68,6 +76,7 @@ Global
 		{4EA37FA6-5032-428A-BAF8-CD8C7FF0B2D5} = {49354E2A-FB7A-4210-B84F-AF3BD756BC29}
 		{04AAADF8-9D6F-414C-873A-E0DAEF0B47C1} = {9A12F129-9237-433E-B718-9286A804205D}
 		{445D90E1-A619-4338-AADE-AD50FCF0BFF4} = {9985423F-4A36-4C9D-8297-33BEECA1EE72}
+		{EB2902B1-0A41-408B-9538-5E910EA52C8C} = {7B1C774D-41C5-435E-AE83-591056619A35}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6DDFE0F1-0377-435D-981C-79DE92661182}
