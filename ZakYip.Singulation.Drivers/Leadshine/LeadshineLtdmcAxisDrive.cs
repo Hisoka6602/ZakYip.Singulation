@@ -1,4 +1,5 @@
 ﻿using System;
+using csLTDMC;
 using System.Linq;
 using System.Text;
 using System.Diagnostics;
@@ -720,17 +721,5 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 Timestamp = DateTimeOffset.UtcNow,
                 Note = note
             });
-    }
-
-    internal static class LTDMC {
-
-        [System.Runtime.InteropServices.DllImport("LTDMC.dll")]
-        public static extern short nmc_write_rxpdo(ushort cardno, ushort portnum, ushort slave_station_addr, ushort index, ushort subindex, ushort bitlength, byte[] data);
-
-        [System.Runtime.InteropServices.DllImport("LTDMC.dll")]
-        public static extern short nmc_read_txpdo(ushort cardNo, ushort portnum, ushort slave_station_addr, ushort index, ushort subindex, ushort bitlength, byte[] data);
-
-        [System.Runtime.InteropServices.DllImport("LTDMC.dll")]
-        public static extern short nmc_get_node_od(ushort cardNo, ushort portNum, ushort nodenum, ushort index, ushort subindex, ushort valuelength, ref int value);
     }
 }

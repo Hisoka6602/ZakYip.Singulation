@@ -107,5 +107,12 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <param name="ct">取消令牌。</param>
         /// <returns>异步任务。</returns>
         ValueTask StopAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// 轴使能
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        ValueTask EnableAsync(CancellationToken ct = default);
     }
 }
