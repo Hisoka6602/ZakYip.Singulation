@@ -48,7 +48,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
             Array.Copy(all, 0, main, 0, main.Length);
             if (eject.Length > 0) Array.Copy(all, _mainCount, eject, 0, eject.Length);
 
-            set = new SpeedSet(DateTime.UtcNow, 0, main, eject);
+            set = new SpeedSet(DateTime.Now, 0, main, eject);
             return true;
         }
 

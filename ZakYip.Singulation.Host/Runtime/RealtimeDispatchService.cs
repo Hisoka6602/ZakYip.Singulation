@@ -30,7 +30,7 @@ namespace ZakYip.Singulation.Host.Runtime {
                     var envelope = new {
                         v = 1,
                         type = item.Payload.GetType().Name,
-                        ts = DateTimeOffset.UtcNow,
+                        ts = DateTimeOffset.Now,
                         channel = item.Channel,
                         data = item.Payload,
                         traceId = Activity.Current?.Id,

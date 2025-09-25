@@ -790,7 +790,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 Axis = Axis,
                 Invocation = $"{function}( {argListWithSpaces} )",
                 Result = result,
-                Timestamp = DateTimeOffset.UtcNow,
+                Timestamp = DateTimeOffset.Now,
                 Note = note
             });
     }

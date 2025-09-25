@@ -22,6 +22,7 @@ using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Host.SwaggerOptions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using Microsoft.AspNetCore.ResponseCompression;
+using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Infrastructure.Persistence;
 
 ThreadPool.SetMinThreads(128, 128);
@@ -129,7 +130,7 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- SignalR ----------
         services.AddSingulationSignalR();
         // ---------- 配置存储 ----------
-        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout();
+        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb();
         // ---------- 设备相关注入 ----------
         services.AddSingleton<IDriveRegistry, DefaultDriveRegistry>();
 
@@ -180,6 +181,11 @@ var host = Host.CreateDefaultBuilder(args)
         });
         services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
         services.AddSingleton<IAxisController, AxisController>();
+        // ---------- 上游数据连接Tcp相关注入 ----------
+        services.AddUpstreamTcpFromLiteDb();
+
+        // ---------- 事件泵 ----------
+        services.AddHostedService<TransportEventPump>();
     })
     // ---------- 日志 ----------
     .ConfigureLogging(logging => {

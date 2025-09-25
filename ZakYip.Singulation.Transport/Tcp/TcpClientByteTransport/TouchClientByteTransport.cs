@@ -7,7 +7,9 @@ using TouchSocket.Core;
 using TouchSocket.Sockets;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Transport.Enums;
+using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
 
 namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
@@ -24,21 +26,37 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
         private Task? _connectLoopTask;              // 后台连接/重连循环
         private readonly object _gate = new();       // 保护状态与字段
         private volatile bool _stopping;             // Stop 标志，避免“关停时重连”
+        private TransportConnectionState _connState; // IByteTransport 的连接状态
 
+        /// <summary>你的运行层状态（保持兼容）。</summary>
         public TransportStatus Status { get; private set; } = TransportStatus.Stopped;
 
-        /// <summary>推模式：收到任意字节即回调。</summary>
+        /// <summary>IByteTransport 要求的连接状态（与上面 Status 并行维护）。</summary>
+        TransportConnectionState IByteTransport.Status => _connState;
+
+        /// <summary>推模式：收到任意字节即回调（轻量）。</summary>
         public event Action<ReadOnlyMemory<byte>>? Data;
+
+        /// <summary>带元信息的字节事件（端口、时间戳）。</summary>
+        public event EventHandler<BytesReceivedEventArgs>? BytesReceived;
+
+        /// <summary>连接生命周期事件：Connecting/Connected/Retrying/Disconnected/Stopped。</summary>
+        public event EventHandler<TransportStateChangedEventArgs>? StateChanged;
+
+        /// <summary>错误/告警事件：不外抛异常。</summary>
+        public event EventHandler<TransportErrorEventArgs>? Error;
 
         public TouchClientByteTransport(TcpClientOptions opt) => _opt = opt;
 
         public Task StartAsync(CancellationToken ct = default) {
             lock (_gate) {
-                if (Status == TransportStatus.Running || Status == TransportStatus.Starting)
+                if (Status is TransportStatus.Running or TransportStatus.Starting)
                     return Task.CompletedTask;
 
                 _stopping = false;
                 Status = TransportStatus.Starting;
+                SetConnState(TransportConnectionState.Connecting, reason: "start");
+
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 _connectLoopTask = Task.Run(() => ConnectLoopAsync(_cts.Token), _cts.Token);
             }
@@ -53,6 +71,8 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
 
                 _stopping = true;
                 Status = TransportStatus.Stopped;
+                SetConnState(TransportConnectionState.Stopped, reason: "stop requested");
+
                 try { _cts?.Cancel(); } catch { /* ignore */ }
                 loop = _connectLoopTask;
 
@@ -81,80 +101,122 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
         // 内部：连接/重连循环
         // =========================
         private async Task ConnectLoopAsync(CancellationToken token) {
+            var endpoint = $"{_opt.Host}:{_opt.Port}";
+
             var retry = new ResiliencePipelineBuilder()
                 .AddRetry(new RetryStrategyOptions {
                     ShouldHandle = new PredicateBuilder().Handle<Exception>(),
-                    // 指数退避 + 抖动，最大 10s
+                    MaxRetryAttempts = int.MaxValue,
+                    // 指数退避 + 抖动，最大 10s，并在这里上报 Retrying（attempt/nextDelay）
                     DelayGenerator = args => {
-                        var exp = Math.Min(Math.Pow(2, args.AttemptNumber), 20); // 2^n * 500ms
+                        var exp = Math.Min(Math.Pow(2, args.AttemptNumber), 20); // 0.5,1,2,4,8,16, ...
                         var delay = TimeSpan.FromMilliseconds(500 * exp);
                         if (delay > TimeSpan.FromSeconds(10)) delay = TimeSpan.FromSeconds(10);
-                        var jitterMs = new Random().Next(0, 500);
-                        return new ValueTask<TimeSpan?>(delay + TimeSpan.FromMilliseconds(jitterMs));
-                    },
-                    MaxRetryAttempts = int.MaxValue
+                        var jitter = TimeSpan.FromMilliseconds(Random.Shared.Next(0, 500));
+                        var next = delay + jitter;
+
+                        RaiseState(TransportConnectionState.Retrying, endpoint, attempt: args.AttemptNumber, nextDelay: next, reason: "retry scheduled");
+                        return new ValueTask<TimeSpan?>(next);
+                    }
                 })
                 .Build();
 
-            while (!token.IsCancellationRequested && !_stopping) {
-                try {
-                    await retry.ExecuteAsync(async ct => {
-                        var client = new TcpClient();
+            try {
+                while (!token.IsCancellationRequested && !_stopping) {
+                    try {
+                        await retry.ExecuteAsync(async ct => {
+                            TcpClient? client = null; // 未交接前局部持有，finally 兜底释放
+                            var closedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                        // ① 为“被动断开”准备一个一次性信号
-                        var closedTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                            try {
+                                SetConnState(TransportConnectionState.Connecting, reason: "dial");
 
-                        client.Connected = (c, e) => {
-                            SetStatus(TransportStatus.Running);
-                            return EasyTask.CompletedTask;
-                        };
+                                client = new TcpClient();
 
-                        client.Closed = (c, e) => {
-                            // 标记断开 → 触发下一次重连
-                            if (!_stopping) {
-                                SetStatus(TransportStatus.Faulted);
-                                closedTcs.TrySetResult();
+                                client.Connected = (c, e) => {
+                                    SetStatus(TransportStatus.Running);
+                                    SetConnState(TransportConnectionState.Connected, endpoint, reason: "connected");
+                                    return EasyTask.CompletedTask;
+                                };
+
+                                client.Closed = (c, e) => {
+                                    // 被动断开：进入 Faulted，并触发下一轮重连
+                                    if (!_stopping) {
+                                        SetStatus(TransportStatus.Faulted);
+                                        SetConnState(TransportConnectionState.Disconnected, endpoint, reason: "closed by remote", passive: true);
+                                        closedTcs.TrySetResult();
+                                    }
+                                    return EasyTask.CompletedTask;
+                                };
+
+                                client.Received = (c, e) => {
+                                    // 这里为了安全与简单，采用 ToArray(); 若要零分配，可换 ArrayPool 方案
+                                    var payload = e.ByteBlock.Span.ToArray();
+
+                                    // 轻量 Data（无元信息）
+                                    RaiseData(payload);
+
+                                    // 带元信息事件
+                                    RaiseBytesReceived(payload, _opt.Port);
+
+                                    return EasyTask.CompletedTask;
+                                };
+
+                                await client.SetupAsync(new TouchSocketConfig()
+                                    .SetRemoteIPHost(new IPHost(endpoint))
+                                ).ConfigureAwait(false);
+
+                                // 若偏好由外部取消控制超时，也可改为 await client.ConnectAsync(ct);
+                                await client.ConnectAsync(1000, ct).ConfigureAwait(false);
+
+                                // 交接生命周期到字段，并关闭旧连接
+                                lock (_gate) {
+                                    SafeCloseClient();
+                                    _client = client;
+                                    client = null; // 避免 finally 二次释放
+                                }
+
+                                // 等待：被动断开 或 取消
+                                var finished = await Task.WhenAny(
+                                    closedTcs.Task,
+                                    Task.Delay(Timeout.Infinite, ct)
+                                ).ConfigureAwait(false);
+
+                                if (finished == closedTcs.Task) {
+                                    // 触发 Retry：抛出受理异常
+                                    throw new Exception("Disconnected");
+                                }
                             }
-                            return EasyTask.CompletedTask;
-                        };
+                            finally {
+                                // 仅当未成功交接到 _client 时才兜底释放
+                                if (client is not null) {
+                                    try { client.Close(); } catch { /* ignore */ }
+                                    try { client.Dispose(); } catch { /* ignore */ }
+                                }
+                            }
+                        }, token).ConfigureAwait(false);
+                    }
+                    catch (OperationCanceledException) {
+                        break; // 正常退出
+                    }
+                    catch (Exception ex) {
+                        if (token.IsCancellationRequested || _stopping) break;
 
-                        client.Received = (c, e) => {
-                            var payload = e.ByteBlock.Span.ToArray();
-                            Data?.Invoke(payload);
-                            return EasyTask.CompletedTask;
-                        };
-
-                        await client.SetupAsync(new TouchSocketConfig()
-                            .SetRemoteIPHost(new IPHost($"{_opt.Host}:{_opt.Port}"))
-
-                        );
-
-                        // 建议用无超时的 ConnectAsync(ct)；若你确实要 1000ms 超时，可保留你原来的重载
-                        await client.ConnectAsync(1000, ct);
-
-                        lock (_gate) {
-                            SafeCloseClient();   // 防御性关闭旧实例
-                            _client = client;
-                        }
-
-                        // ② 等待“被动断开”或取消信号，一旦发生就抛异常让 Retry 接管
-                        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                        var finished = await Task.WhenAny(closedTcs.Task, Task.Delay(Timeout.Infinite, linked.Token));
-                        if (finished == closedTcs.Task) {
-                            throw new Exception("Disconnected"); // 进入下一轮重连
-                        }
-                    }, token).ConfigureAwait(false);
-                }
-                catch (OperationCanceledException) {
-                    break; // 正常退出
-                }
-                catch {
-                    if (token.IsCancellationRequested || _stopping) break;
-                    SetStatus(TransportStatus.Faulted);
-                    // 无需额外延时，这里马上由 Retry 策略安排下一次尝试
+                        SetStatus(TransportStatus.Faulted);
+                        RaiseError($"connect/retry failed: {ex.Message}", ex, transient: true, endpoint: endpoint, port: _opt.Port);
+                        // Retry 策略会安排下一次尝试，这里无需额外延时
+                    }
                 }
             }
+            finally {
+                // 退出循环：宣告停止
+                SetConnState(TransportConnectionState.Stopped, endpoint, reason: "loop exit");
+            }
         }
+
+        // =========================
+        // 内部：通用工具
+        // =========================
 
         private void SafeCloseClient() {
             try { _client?.Close(); } catch { /* ignore */ }
@@ -166,6 +228,87 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
             // 保持状态机单调合理：Stop 时不再跳回 Running
             if (_stopping && s != TransportStatus.Stopped) return;
             Status = s;
+        }
+
+        private void SetConnState(TransportConnectionState s, string? endpoint = null, string? reason = null, bool passive = false) {
+            _connState = s;
+            RaiseState(s, endpoint, reason: reason, passive: passive);
+        }
+
+        private void RaiseState(TransportConnectionState s, string? endpoint = null, string? reason = null,
+                                Exception? ex = null, int? attempt = null, TimeSpan? nextDelay = null, bool passive = false) {
+            var handler = StateChanged;
+            if (handler is null) return;
+
+            var args = new TransportStateChangedEventArgs {
+                State = s,
+                Endpoint = endpoint,
+                Reason = reason,
+                Exception = ex,
+                Attempt = attempt,
+                NextDelay = nextDelay,
+                PassiveClose = passive
+            };
+
+            // 隔离订阅方：每个订阅者在独立任务中执行，互不影响
+            foreach (var @delegate in handler.GetInvocationList()) {
+                var single = (EventHandler<TransportStateChangedEventArgs>)@delegate;
+                _ = Task.Run(() => {
+                    try { single(this, args); } catch { /* 吃掉订阅方异常，避免影响主循环 */ }
+                });
+            }
+        }
+
+        private void RaiseData(ReadOnlyMemory<byte> payload) {
+            var d = Data;
+            if (d is null) return;
+
+            foreach (var @delegate in d.GetInvocationList()) {
+                var single = (Action<ReadOnlyMemory<byte>>)@delegate;
+                var mem = payload; // 捕获到闭包中
+                _ = Task.Run(() => {
+                    try { single(mem); } catch { /* ignore */ }
+                });
+            }
+        }
+
+        private void RaiseBytesReceived(ReadOnlyMemory<byte> payload, int port) {
+            var handler = BytesReceived;
+            if (handler is null) return;
+
+            var args = new BytesReceivedEventArgs {
+                Buffer = payload,
+                Port = port,
+                TimestampUtc = DateTime.UtcNow
+            };
+
+            foreach (var @delegate in handler.GetInvocationList()) {
+                var single = (EventHandler<BytesReceivedEventArgs>)@delegate;
+                _ = Task.Run(() => {
+                    try { single(this, args); } catch { /* ignore */ }
+                });
+            }
+        }
+
+        private void RaiseError(string message, Exception? ex = null, bool transient = true, string? endpoint = null, int? port = null) {
+            var handler = Error;
+            if (handler is null) return;
+
+            var args = new TransportErrorEventArgs {
+                Message = message,
+                Exception = ex,
+                IsTransient = transient,
+                Endpoint = endpoint,
+                Port = port,
+                TimestampUtc = DateTime.UtcNow
+            };
+
+            foreach (var @delegate in handler.GetInvocationList()) {
+                var single = (EventHandler<TransportErrorEventArgs>)@delegate;
+                _ = Task.Run(() => {
+                    try { single(this, args); } catch { /* ignore */ }
+                });
+            }
         }
     }
 }
