@@ -11,6 +11,7 @@ using ZakYip.Singulation.Core.Enums;
 using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Common;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
@@ -44,15 +45,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpGet("controller/options")]
         public async Task<ActionResult<ControllerOptionsDto>> GetControllerOptions(CancellationToken ct) {
             var dto = await _ctrlOptsStore.GetAsync(ct);
-            return dto is null ? NotFound() : Ok(dto);
+            return dto is null
+                ? NotFound(ApiResponse<ControllerOptionsDto>.NotFound("未找到控制器配置"))
+                : Ok(ApiResponse<ControllerOptionsDto>.Success(dto, "获取成功"));
         }
 
         /// <summary>写入/更新控制器模板。</summary>
         [HttpPut("controller/options")]
         public async Task<IActionResult> PutControllerOptions([FromBody] ControllerOptionsDto dto, CancellationToken ct) {
-            if (string.IsNullOrWhiteSpace(dto.Vendor)) return BadRequest("Vendor is required.");
+            if (string.IsNullOrWhiteSpace(dto.Vendor))
+                return BadRequest(ApiResponse<object>.Invalid("Vendor 为必填项"));
+
             await _ctrlOptsStore.UpsertAsync(dto, ct);
-            return NoContent();
+            return Ok(ApiResponse<object>.Success(data: new { }, msg: "控制器模板已更新"));
         }
 
         // ================= 网格布局单例资源 =================
@@ -64,8 +69,9 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpGet("topology")]
         public async Task<ActionResult<AxisGridLayoutDto>> GetTopology(CancellationToken ct) {
             var dto = await _layoutStore.GetAsync(ct);
-            if (dto is null) return NotFound();
-            return Ok(dto);
+            return dto is null
+                ? NotFound(ApiResponse<AxisGridLayoutDto>.NotFound("未找到轴布局"))
+                : Ok(ApiResponse<AxisGridLayoutDto>.Success(dto, "获取布局成功"));
         }
 
         /// <summary>
@@ -76,10 +82,10 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpPut("topology")]
         public async Task<IActionResult> PutTopology([FromBody] AxisGridLayoutDto req, CancellationToken ct) {
             if (req.Rows < 1 || req.Cols < 1)
-                return BadRequest("Rows/Cols must be >= 1.");
+                return BadRequest(ApiResponse<object>.Invalid("行列数必须大于等于1"));
 
             await _layoutStore.UpsertAsync(req, ct);
-            return NoContent();
+            return Ok(ApiResponse<object>.Success(new { }, "布局更新成功"));
         }
 
         /// <summary>
@@ -89,7 +95,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpDelete("topology")]
         public async Task<IActionResult> DeleteTopology(CancellationToken ct) {
             await _layoutStore.DeleteAsync(ct);
-            return NoContent();
+            return Ok(ApiResponse<object>.Success(new { }, "布局已删除"));
         }
 
         // ================= 控制器（总线）单例资源 =================
@@ -102,11 +108,12 @@ namespace ZakYip.Singulation.Host.Controllers {
         public async Task<ActionResult<ControllerResponseDto>> GetController(CancellationToken ct) {
             var count = await _axisController.Bus.GetAxisCountAsync(ct);
             var err = await _axisController.Bus.GetErrorCodeAsync(ct);
-            return Ok(new ControllerResponseDto {
+            var data = new ControllerResponseDto {
                 AxisCount = count,
                 ErrorCode = err,
                 Initialized = count > 0 && err == 0
-            });
+            };
+            return Ok(ApiResponse<ControllerResponseDto>.Success(data, "获取控制器状态成功"));
         }
 
         /// <summary>
@@ -120,24 +127,35 @@ namespace ZakYip.Singulation.Host.Controllers {
         public async Task<ActionResult<object>> ResetController([FromBody] ControllerResetRequestDto req, CancellationToken ct) {
             // 1) 取模板
             var opt = await _ctrlOptsStore.GetAsync(ct);
-            if (opt is null) return BadRequest("Controller options not set. PUT /api/axes/controller/options first.");
+            if (opt is null)
+                return BadRequest(ApiResponse<object>.Invalid("请先设置控制器模板", new { Hint = "PUT /api/axes/controller/options" }));
 
             var vendor = opt.Vendor;
             var tpl = MapToDriverOptions(opt.Template);
             var ok = await Safe(async () => {
-                if (req.Type == ControllerResetType.Hard) {
-                    await _axisController.Bus.ResetAsync(ct); // 冷复位
+                switch (req.Type) {
+                    case ControllerResetType.Hard:
+                        await _axisController.Bus.ResetAsync(ct);
+                        break;
+
+                    case ControllerResetType.Soft:
+                        await _axisController.Bus.CloseAsync(ct);
+                        await _axisController.InitializeAsync(vendor, tpl, opt.OverrideAxisCount, ct);
+                        break;
+
+                    default:
+                        throw new ArgumentException("type must be 'hard' or 'soft'");
                 }
-                else if (req.Type == ControllerResetType.Soft) {
-                    // 若有专门软复位 API，请替换为 _bus.SoftResetAsync(ct)
-                    await _axisController.Bus.CloseAsync(ct);
-                    await _axisController.InitializeAsync(vendor, tpl, opt.OverrideAxisCount, ct);
-                }
-                else {
-                    throw new ArgumentException("type must be 'hard' or 'soft'");
+
+                if (!_axisController.Bus.IsInitialized) {
+                    throw new Exception("控制器复位失败");
                 }
             });
-            return Ok(new { Accepted = ok });
+
+            if (!ok)
+                return StatusCode(500, ApiResponse<object>.Fail("控制器复位失败", new { ResetType = req.Type }));
+
+            return Ok(ApiResponse<object>.Success(new { Accepted = true }, "控制器复位成功"));
         }
 
         /// <summary>
@@ -147,7 +165,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpGet("controller/errors")]
         public async Task<object> GetControllerErrors(CancellationToken ct) {
             var err = await _axisController.Bus.GetErrorCodeAsync(ct);
-            return new { ErrorCode = err };
+            return Ok(ApiResponse<object>.Success(new { ErrorCode = err }, "获取错误码成功"));
         }
 
         /// <summary>
@@ -156,8 +174,11 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <param name="ct">取消令牌。</param>
         [HttpDelete("controller/errors")]
         public async Task<object> ClearControllerErrors(CancellationToken ct) {
-            var ok = await Safe(() => _axisController.Bus.ResetAsync(ct)); // 常见：复位清错
-            return new { Accepted = ok };
+            var ok = await Safe(() => _axisController.Bus.ResetAsync(ct));
+            if (!ok)
+                return StatusCode(500, ApiResponse<object>.Fail("清除错误失败"));
+
+            return Ok(ApiResponse<object>.Success(new { Accepted = true }, "错误已清除"));
         }
 
         // ================= 轴集合资源：/axes =================
@@ -168,7 +189,8 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpGet("axes")]
         public ActionResult<IEnumerable<AxisResponseDto>> ListAxes() {
             var drives = _axisController.Drives;
-            return Ok(drives.Select(ToAxisResource));
+            var data = drives.Select(ToAxisResource).ToList();
+            return Ok(ApiResponse<IEnumerable<AxisResponseDto>>.Success(data, "获取轴列表成功"));
         }
 
         /// <summary>
@@ -178,8 +200,10 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpGet("axes/{axisId}")]
         public ActionResult<AxisResponseDto> GetAxis(int axisId) {
             var axisDrive = _axisController.Drives.FirstOrDefault(f => f.Axis.Value.Equals(axisId));
-            if (axisDrive is null) return NotFound();
-            return Ok(ToAxisResource(axisDrive));
+            if (axisDrive is null)
+                return NotFound(ApiResponse<AxisResponseDto>.NotFound("轴未找到"));
+
+            return Ok(ApiResponse<AxisResponseDto>.Success(ToAxisResource(axisDrive), "获取轴成功"));
         }
 
         /// <summary>
@@ -195,14 +219,14 @@ namespace ZakYip.Singulation.Host.Controllers {
             [FromQuery] int[]? axisIds,
             [FromBody] AxisPatchRequestDto req,
             CancellationToken ct) {
-            // 解析目标轴：null/空 => 全部
             var targets = ResolveTargets(axisIds);
             if (targets.Count == 0)
-                return NotFound("No matching axis found for given axisIds (or no axes registered).");
+                return NotFound(ApiResponse<BatchCommandResponseDto>.NotFound("未找到匹配的轴"));
 
-            // 逐轴执行
             var results = await ForEachAxis(targets, async d => await ApplyAxisPatch(d, req, ct));
-            return Ok(new BatchCommandResponseDto { Results = results });
+            var response = new BatchCommandResponseDto { Results = results };
+
+            return Ok(ApiResponse<BatchCommandResponseDto>.Success(response, "批量更新完成"));
         }
 
         /// <summary>
@@ -214,9 +238,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpPatch("axes/{axisId}")]
         public async Task<ActionResult<AxisCommandResultDto>> PatchAxis(int axisId, [FromBody] AxisPatchRequestDto req, CancellationToken ct) {
             var axisDrive = _axisController.Drives.FirstOrDefault(f => f.Axis.Value.Equals(axisId));
-            if (axisDrive is null) return NotFound();
+            if (axisDrive is null)
+                return NotFound(ApiResponse<AxisCommandResultDto>.NotFound("轴未找到"));
+
             var accepted = await ApplyAxisPatch(axisDrive, req, ct);
-            return Ok(new AxisCommandResultDto { AxisId = axisDrive.Axis.ToString(), Accepted = accepted, LastError = axisDrive.LastErrorMessage });
+            var result = new AxisCommandResultDto {
+                AxisId = axisDrive.Axis.ToString(),
+                Accepted = accepted,
+                LastError = axisDrive.LastErrorMessage
+            };
+
+            return accepted
+                ? Ok(ApiResponse<AxisCommandResultDto>.Success(result, "轴参数更新成功"))
+                : BadRequest(ApiResponse<AxisCommandResultDto>.Fail("轴参数更新失败", result));
         }
 
         /// <summary>
@@ -231,10 +265,12 @@ namespace ZakYip.Singulation.Host.Controllers {
             CancellationToken ct) {
             var targets = ResolveTargets(axisIds);
             if (targets.Count == 0)
-                return NotFound("No matching axis found for given axisIds (or no axes registered).");
+                return NotFound(ApiResponse<BatchCommandResponseDto>.NotFound("未找到匹配的轴"));
 
             var results = await ForEachAxis(targets, d => Safe(() => d.EnableAsync(ct)));
-            return Ok(new BatchCommandResponseDto { Results = results });
+            var response = new BatchCommandResponseDto { Results = results };
+
+            return Ok(ApiResponse<BatchCommandResponseDto>.Success(response, "批量使能完成"));
         }
 
         /// <summary>
@@ -249,15 +285,17 @@ namespace ZakYip.Singulation.Host.Controllers {
             CancellationToken ct) {
             var targets = ResolveTargets(axisIds);
             if (targets.Count == 0)
-                return NotFound("No matching axis found for given axisIds (or no axes registered).");
+                return NotFound(ApiResponse<BatchCommandResponseDto>.NotFound("未找到匹配的轴"));
 
             // 要求 IAxisDrive 提供 DisableAsync；若旧驱动暂未实现，可在实现里降级为 StopAsync。
             var results = await ForEachAxis(targets, d =>
-                Safe(() => {
-                    var task = d.DisposeAsync();
-                    return task.AsTask();
+                Safe(async () => {
+                    await d.DisposeAsync().AsTask();
                 }));
-            return Ok(new BatchCommandResponseDto { Results = results });
+
+            var response = new BatchCommandResponseDto { Results = results };
+
+            return Ok(ApiResponse<BatchCommandResponseDto>.Success(response, "批量禁用完成"));
         }
 
         /// <summary>
@@ -274,11 +312,17 @@ namespace ZakYip.Singulation.Host.Controllers {
             CancellationToken ct) {
             var targets = ResolveTargets(axisIds);
             if (targets.Count == 0)
-                return NotFound("No matching axis found for given axisIds (or no axes registered).");
+                return NotFound(ApiResponse<BatchCommandResponseDto>.NotFound("未找到匹配的轴"));
 
-            // 使用 IAxisDrive 的线速度写入重载：WriteSpeedAsync(mm/s)
-            var results = await ForEachAxis(targets, d => Safe(() => d.WriteSpeedAsync((decimal)req.LinearMmps, ct)));
-            return Ok(new BatchCommandResponseDto { Results = results });
+            // 要求 IAxisDrive 提供 DisableAsync；若旧驱动暂未实现，可在实现里降级为 StopAsync。
+            var results = await ForEachAxis(targets, d =>
+                Safe(async () => {
+                    await d.DisposeAsync().AsTask();
+                }));
+
+            var response = new BatchCommandResponseDto { Results = results };
+
+            return Ok(ApiResponse<BatchCommandResponseDto>.Success(response, "批量禁用完成"));
         }
 
         // ================= 内部实现 =================
@@ -354,10 +398,10 @@ namespace ZakYip.Singulation.Host.Controllers {
             MaxRpm = t.MaxRpm,
             MaxAccelRpmPerSec = t.MaxAccelRpmPerSec,
             MaxDecelRpmPerSec = t.MaxDecelRpmPerSec,
-            MinWriteInterval = t.MinWriteInterval,
+            MinWriteInterval = TimeSpan.FromMilliseconds(t.MinWriteInterval),
             ConsecutiveFailThreshold = t.ConsecutiveFailThreshold,
             EnableHealthMonitor = t.EnableHealthMonitor,
-            HealthPingInterval = t.HealthPingInterval,
+            HealthPingInterval = TimeSpan.FromMilliseconds(t.HealthPingInterval),
             Card = t.Card,
             Port = t.Port,
             NodeId = 0

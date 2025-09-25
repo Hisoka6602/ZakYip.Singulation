@@ -106,10 +106,10 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
                 MaxAccelRpmPerSec = d.MaxAccelRpmPerSec,
                 MaxDecelRpmPerSec = d.MaxDecelRpmPerSec,
 
-                MinWriteIntervalTicks = d.MinWriteInterval.Ticks,
+                MinWriteIntervalTicks = TimeSpan.FromMilliseconds(d.MinWriteInterval).Ticks,
                 ConsecutiveFailThreshold = d.ConsecutiveFailThreshold,
                 EnableHealthMonitor = d.EnableHealthMonitor,
-                HealthPingIntervalTicks = d.HealthPingInterval.Ticks
+                HealthPingIntervalTicks = TimeSpan.FromMilliseconds(d.HealthPingInterval).Ticks
             };
 
             public DriverOptionsTemplateDto ToDto() {
@@ -125,10 +125,10 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
                         MaxAccelRpmPerSec = MaxAccelRpmPerSec,
                         MaxDecelRpmPerSec = MaxDecelRpmPerSec,
 
-                        MinWriteInterval = new TimeSpan(MinWriteIntervalTicks),
+                        MinWriteInterval = new TimeSpan(MinWriteIntervalTicks).Milliseconds,
                         ConsecutiveFailThreshold = ConsecutiveFailThreshold,
                         EnableHealthMonitor = EnableHealthMonitor,
-                        HealthPingInterval = new TimeSpan(HealthPingIntervalTicks)
+                        HealthPingInterval = new TimeSpan(HealthPingIntervalTicks).Milliseconds
                     };
                 }
 
@@ -163,10 +163,10 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
                     MaxAccelRpmPerSec = arps,
                     MaxDecelRpmPerSec = drps,
 
-                    MinWriteInterval = minInterval,
+                    MinWriteInterval = minInterval.Milliseconds,
                     ConsecutiveFailThreshold = ConsecutiveFailThreshold == 0 ? 5 : ConsecutiveFailThreshold,
                     EnableHealthMonitor = EnableHealthMonitor,
-                    HealthPingInterval = healthPing
+                    HealthPingInterval = healthPing.Milliseconds
                 };
             }
         }

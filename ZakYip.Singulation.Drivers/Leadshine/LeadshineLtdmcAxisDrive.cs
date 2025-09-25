@@ -13,8 +13,8 @@ using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Health;
 using ZakYip.Singulation.Drivers.Resilience;
 using ZakYip.Singulation.Drivers.Abstractions;
+using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
-using ZakYip.Singulation.Drivers.Abstractions.Events;
 
 namespace ZakYip.Singulation.Drivers.Leadshine {
 

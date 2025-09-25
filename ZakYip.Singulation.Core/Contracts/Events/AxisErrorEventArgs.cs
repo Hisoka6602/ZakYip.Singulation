@@ -1,11 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using ZakYip.Singulation.Core.Contracts.ValueObjects;
+﻿using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
-namespace ZakYip.Singulation.Drivers.Abstractions.Events {
+namespace ZakYip.Singulation.Core.Contracts.Events {
 
     /// <summary>
     /// 轴运行异常事件参数。

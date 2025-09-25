@@ -12,7 +12,7 @@ namespace ZakYip.Singulation.Drivers.Enums {
     /// 轴驱动的运行状态（互斥态）。用于对外可观测的“生命体征”。
     /// </summary>
 
-    public enum DriverStatus : byte {
+    public enum DriverStatus {
 
         /// <summary>离线：未建立通信或已掉线。</summary>
         [Description("离线")]

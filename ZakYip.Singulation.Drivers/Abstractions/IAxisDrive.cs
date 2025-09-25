@@ -4,8 +4,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Drivers.Enums;
+using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
-using ZakYip.Singulation.Drivers.Abstractions.Events;
 
 namespace ZakYip.Singulation.Drivers.Abstractions {
 

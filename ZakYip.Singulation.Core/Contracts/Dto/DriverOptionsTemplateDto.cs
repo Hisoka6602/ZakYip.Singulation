@@ -37,7 +37,7 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
         public decimal MaxDecelRpmPerSec { get; init; } = 1511m;
 
         /// <summary>写速度命令最小间隔。</summary>
-        public TimeSpan MinWriteInterval { get; init; } = TimeSpan.FromMilliseconds(5);
+        public int MinWriteInterval { get; init; } = 5;
 
         /// <summary>连续失败次数阈值。</summary>
         public int ConsecutiveFailThreshold { get; init; } = 5;
@@ -46,6 +46,6 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
         public bool EnableHealthMonitor { get; init; } = true;
 
         /// <summary>健康监测 Ping 间隔。</summary>
-        public TimeSpan HealthPingInterval { get; init; } = TimeSpan.FromMilliseconds(500);
+        public int HealthPingInterval { get; init; } = 500;
     }
 }

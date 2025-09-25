@@ -8,18 +8,27 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="8.0.20" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="9.0.9" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.9" />
+		<PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.9" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="8.1.4" />
+		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="8.1.4" />
+		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="8.1.4" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\ZakYip.Singulation.Core\ZakYip.Singulation.Core.csproj" />
 		<ProjectReference Include="..\ZakYip.Singulation.Drivers\ZakYip.Singulation.Drivers.csproj" />
+		<ProjectReference Include="..\ZakYip.Singulation.Infrastructure\ZakYip.Singulation.Infrastructure.csproj" />
 		<ProjectReference Include="..\ZakYip.Singulation.Protocol\ZakYip.Singulation.Protocol.csproj" />
 		<ProjectReference Include="..\ZakYip.Singulation.Transport\ZakYip.Singulation.Transport.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="SwaggerOptions\" />
-		<Folder Include="Extensions\" />
+		<None Include="..\ZakYip.Singulation.Drivers\Leadshine\LTDMC.dll">
+			<Link>LTDMC.dll</Link>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 </Project>

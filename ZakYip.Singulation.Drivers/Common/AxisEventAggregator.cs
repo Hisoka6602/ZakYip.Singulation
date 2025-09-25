@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Drivers.Abstractions;
-using ZakYip.Singulation.Drivers.Abstractions.Events;
+using ZakYip.Singulation.Core.Contracts.Events;
 
 namespace ZakYip.Singulation.Drivers.Common {
 

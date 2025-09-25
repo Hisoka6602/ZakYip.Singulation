@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Drivers.Abstractions.Events;
+using ZakYip.Singulation.Core.Contracts.Events;
 
 namespace ZakYip.Singulation.Drivers.Abstractions {
 

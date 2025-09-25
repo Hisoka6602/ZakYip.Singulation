@@ -1,10 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-
-namespace ZakYip.Singulation.Drivers.Abstractions.Events {
+﻿namespace ZakYip.Singulation.Core.Contracts.Events {
 
     /// <summary>
     /// 驱动库未加载事件参数。

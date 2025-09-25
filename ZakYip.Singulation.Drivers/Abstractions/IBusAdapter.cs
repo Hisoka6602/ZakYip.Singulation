@@ -11,8 +11,17 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
     /// </summary>
     public interface IBusAdapter {
 
-        /// <summary>初始化控制器或通信总线（幂等）。</summary>
-        Task InitializeAsync(CancellationToken ct = default);
+        /// <summary>
+        /// 是否已复位
+        /// </summary>
+        bool IsInitialized { get; }
+
+        /// <summary>
+        /// 初始化控制器或通信总线（幂等）。
+        /// </summary>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>如果初始化成功返回 true；否则返回 false。</returns>
+        Task<bool> InitializeAsync(CancellationToken ct = default);
 
         /// <summary>关闭/释放控制器资源（幂等）。</summary>
         Task CloseAsync(CancellationToken ct = default);

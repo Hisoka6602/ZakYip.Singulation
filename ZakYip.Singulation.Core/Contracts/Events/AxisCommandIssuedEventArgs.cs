@@ -1,11 +1,6 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using ZakYip.Singulation.Core.Contracts.ValueObjects;
+﻿using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
-namespace ZakYip.Singulation.Drivers.Abstractions.Events {
+namespace ZakYip.Singulation.Core.Contracts.Events {
     /// <summary>
     /// 函数发送事件参数：用于记录一次底层驱动库函数调用（如 nmc_write_rxpdo / nmc_get_node_od）。
     /// </summary>
