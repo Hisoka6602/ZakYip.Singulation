@@ -25,6 +25,9 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
         private TransportConnectionState _status;
         public TransportStatus Status { get; private set; } = TransportStatus.Stopped;
+        public string? RemoteIp { get; private set; }
+        public int RemotePort { get; private set; }
+        public bool IsServer { get; }
         TransportConnectionState IByteTransport.Status => _status;
 
         public event Action<ReadOnlyMemory<byte>>? Data;
@@ -35,7 +38,10 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
         public event EventHandler<TransportErrorEventArgs>? Error;
 
-        public TcpServerByteTransport(TcpServerOptions opt) => _opt = opt;
+        public TcpServerByteTransport(TcpServerOptions opt) {
+            _opt = opt;
+            IsServer = true;
+        }
 
         public Task StartAsync(CancellationToken ct = default) {
             lock (_gate) {
@@ -81,6 +87,25 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
             ctsLocal?.Dispose();
             return Task.CompletedTask;
+        }
+
+        public async Task RestartAsync(CancellationToken ct = default) {
+            var endpoint = $"{_opt.Address}:{_opt.Port}";
+            try {
+                await StopAsync(ct).ConfigureAwait(false);
+                try { await Task.Delay(200, ct).ConfigureAwait(false); } catch { /* ignore */ }
+                await StartAsync(ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                SafeQueue(() => Error?.Invoke(this, new TransportErrorEventArgs {
+                    Message = $"server restart failed: {ex.Message}",
+                    Exception = ex,
+                    IsTransient = true,
+                    Endpoint = endpoint,
+                    Port = _opt.Port,
+                    TimestampUtc = DateTime.UtcNow
+                }));
+            }
         }
 
         public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);
@@ -142,7 +167,13 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
                 _activeClient = client;
                 _activeStream = client.GetStream();
-
+                try {
+                    if (client.Client?.RemoteEndPoint is System.Net.IPEndPoint ep) {
+                        RemoteIp = ep.Address.ToString();
+                        RemotePort = ep.Port;
+                    }
+                }
+                catch { /* ignore */ }
                 SetConnState(TransportConnectionState.Connected);
             }
 

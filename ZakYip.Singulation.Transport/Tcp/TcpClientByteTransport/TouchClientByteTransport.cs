@@ -31,6 +31,10 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
         /// <summary>你的运行层状态（保持兼容）。</summary>
         public TransportStatus Status { get; private set; } = TransportStatus.Stopped;
 
+        public string? RemoteIp { get; }
+        public int RemotePort { get; }
+        public bool IsServer { get; }
+
         /// <summary>IByteTransport 要求的连接状态（与上面 Status 并行维护）。</summary>
         TransportConnectionState IByteTransport.Status => _connState;
 
@@ -46,7 +50,12 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
         /// <summary>错误/告警事件：不外抛异常。</summary>
         public event EventHandler<TransportErrorEventArgs>? Error;
 
-        public TouchClientByteTransport(TcpClientOptions opt) => _opt = opt;
+        public TouchClientByteTransport(TcpClientOptions opt) {
+            _opt = opt;
+            RemoteIp = opt.Host;
+            RemotePort = opt.Port;
+            IsServer = false;
+        }
 
         public Task StartAsync(CancellationToken ct = default) {
             lock (_gate) {
@@ -92,6 +101,19 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                 _cts?.Dispose();
                 _cts = null;
                 _connectLoopTask = null;
+            }
+        }
+
+        public async Task RestartAsync(CancellationToken ct = default) {
+            try {
+                await StopAsync(ct).ConfigureAwait(false);
+                // 客户端通常不需要额外延时；如需可加 50~100ms
+                await StartAsync(ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                // 按你的风格：不抛异常，事件上报
+                RaiseError($"client restart failed: {ex.Message}", ex, transient: true,
+                    endpoint: $"{_opt.Host}:{_opt.Port}", port: _opt.Port);
             }
         }
 

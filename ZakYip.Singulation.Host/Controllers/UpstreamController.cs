@@ -1,22 +1,45 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using TouchSocket.Sockets;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using ZakYip.Singulation.Host.Dto;
+using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Abstractions;
+using System.ComponentModel.DataAnnotations;
+using ZakYip.Singulation.Transport.Abstractions;
+using ZakYip.Singulation.Core.Contracts.Dto.Transport;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
     [ApiController]
     [Route("api/[controller]")]
     public class UpstreamController : ControllerBase {
+        private readonly ILogger<UpstreamController> _logger;
+        private readonly IUpstreamOptionsStore _store;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly IEnumerable<IByteTransport> _transports;
+
+        public UpstreamController(ILogger<UpstreamController> logger,
+            IUpstreamOptionsStore store,
+            IServiceProvider serviceProvider,
+            IEnumerable<IByteTransport> transports) {
+            _logger = logger;
+            _store = store;
+            _serviceProvider = serviceProvider;
+            _transports = transports;
+        }
 
         /// <summary>
         /// 获取所有上游 TCP 配置
         /// GET /api/upstream/configs
         /// </summary>
         [HttpGet("configs")]
-        public async Task<ActionResult<IEnumerable<UpstreamConfigDto>>> GetAllConfigs(CancellationToken ct) {
+        public async Task<ApiResponse<UpstreamOptionsDto>> GetAllAsync(CancellationToken ct) {
+            var optionsDto = await _store.GetAsync(ct);
+            return ApiResponse<UpstreamOptionsDto>.Success(optionsDto);
         }
 
         /// <summary>
@@ -24,7 +47,9 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// PUT /api/upstream/configs/{id}
         /// </summary>
         [HttpPut("configs")]
-        public async Task<ActionResult> UpdateConfig(int id, [FromBody] UpstreamConfigDto dto, CancellationToken ct) {
+        public async Task<ApiResponse<string>> UpsertAsync([FromBody] UpstreamOptionsDto dto, CancellationToken ct) {
+            await _store.SaveAsync(dto, ct);
+            return ApiResponse<string>.Success("配置已保存");
         }
 
         /// <summary>
@@ -32,20 +57,38 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// GET /api/upstream/connections
         /// </summary>
         [HttpGet("connections")]
-        public async Task<ActionResult<IEnumerable<UpstreamConnectionStatusDto>>> GetConnections(CancellationToken ct) {
-            var connections = await _connectionManager.GetAllStatusesAsync(ct);
-            return Ok(connections);
+        public Task<ApiResponse<UpstreamConnectionsDto>> GetConnectionsAsync(CancellationToken ct) {
+            try {
+                var items = _transports.Select((t, i) => new UpstreamConnectionDto {
+                    Ip = t.RemoteIp,
+                    Port = t.RemotePort,
+                    IsServer = t.IsServer,
+                    State = t.Status.ToString(),
+                    Impl = t.GetType().Name,
+                    Index = i + 1
+                }).ToList();
+
+                var data = new UpstreamConnectionsDto {
+                    Enabled = items.Count > 0,
+                    Items = items
+                };
+
+                return Task.FromResult(ApiResponse<UpstreamConnectionsDto>.Success(data));
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "GetConnections failed.");
+                return Task.FromResult(ApiResponse<UpstreamConnectionsDto>.Fail(ex.Message));
+            }
         }
 
-        /// <summary>
-        /// 立即重启/重连指定的上游 TCP
-        /// POST /api/upstream/connections/{id}/reconnect
-        /// </summary>
-        [HttpPost("connections/{id}/reconnect")]
-        public async Task<ActionResult> Reconnect(int id, CancellationToken ct) {
-            var success = await _connectionManager.ReconnectAsync(id, ct);
-            if (!success) return NotFound();
-            return NoContent();
+        [HttpPost("connections/{index}/reconnect")]
+        public async Task<ApiResponse<string>> Reconnect(int index, CancellationToken ct) {
+            var t = _transports?.ElementAtOrDefault(index);
+            if (t is null)
+                return ApiResponse<string>.NotFound($"连接 {index} 不存在");
+
+            await t.RestartAsync(ct);
+            return ApiResponse<string>.Success("reconnect", "重启/重连请求已执行");
         }
     }
 }

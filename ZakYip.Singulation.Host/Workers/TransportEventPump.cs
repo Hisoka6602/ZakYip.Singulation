@@ -12,25 +12,27 @@ namespace ZakYip.Singulation.Host.Workers {
 
     public sealed class TransportEventPump : BackgroundService {
         private readonly ILogger<TransportEventPump> _log;
-        private readonly IReadOnlyList<(string Name, IByteTransport Transport)> _transports;
+        private readonly List<(string Name, IByteTransport Transport)> _transports = new();
         private readonly Channel<TransportEvent> _channel;
+        private readonly IServiceProvider _sp;
 
-        public TransportEventPump(
-            ILogger<TransportEventPump> log,
-            IEnumerable<IByteTransport> transports // 通过 DI 注入多路 IByteTransport
-        ) {
+        public TransportEventPump(ILogger<TransportEventPump> log, IServiceProvider sp) {
             _log = log;
-            _transports = transports
-                .Select((t, idx) => ($"{t.GetType().Name}#{idx + 1}", t))
-                .ToList();
+            _sp = sp;
 
-            // 有界通道：控制内存；满了就丢最旧（可按需改为等待）
-            var opt = new BoundedChannelOptions(capacity: 4096) {
+            _channel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(4096) {
                 SingleReader = true,
                 SingleWriter = false,
                 FullMode = BoundedChannelFullMode.DropOldest
-            };
-            _channel = Channel.CreateBounded<TransportEvent>(opt);
+            });
+
+            // 你可以从配置/数据库动态生成 keys；这里举例：
+            var keys = new[] { "speed", "position", "heartbeat" };
+
+            foreach (var key in keys) {
+                var t = _sp.GetKeyedService<IByteTransport>(key); // 找不到 => null，不会抛
+                if (t != null) _transports.Add((key, t));
+            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -52,6 +54,7 @@ namespace ZakYip.Singulation.Host.Workers {
                         case TransportEventType.Data:
                             // TODO: 在这里做协议解码/路由/聚合/转发（SignalR、gRPC、队列等）
                             // DecodeAndDispatch(ev.Source, ev.Payload.Span);
+                            Console.WriteLine(BitConverter.ToString(ev.Payload.ToArray()).Replace("-", " "));
                             break;
 
                         case TransportEventType.BytesReceived:

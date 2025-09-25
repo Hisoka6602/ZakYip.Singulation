@@ -30,6 +30,9 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
 
         private TransportConnectionState _status;
         public TransportStatus Status { get; private set; } = TransportStatus.Stopped;
+        public string? RemoteIp { get; }
+        public int RemotePort { get; }
+        public bool IsServer { get; }
         TransportConnectionState IByteTransport.Status => _status;
 
         public event Action<ReadOnlyMemory<byte>>? Data;
@@ -40,7 +43,12 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
 
         public event EventHandler<TransportErrorEventArgs>? Error;
 
-        public TcpClientByteTransport(TcpClientOptions opt) => _opt = opt;
+        public TcpClientByteTransport(TcpClientOptions opt) {
+            _opt = opt;
+            RemoteIp = opt.Host;
+            RemotePort = opt.Port;
+            IsServer = false;
+        }
 
         public Task StartAsync(CancellationToken ct = default) {
             lock (_gate) {
@@ -83,6 +91,18 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
 
             ctsLocal?.Dispose();
             return Task.CompletedTask;
+        }
+
+        public async Task RestartAsync(CancellationToken ct = default) {
+            try {
+                await StopAsync(ct).ConfigureAwait(false);
+                // 客户端通常不需要额外延时；如需可加 50~100ms
+                await StartAsync(ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                // 按你的风格：不抛异常，事件上报
+                PublishError(ex);
+            }
         }
 
         public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);

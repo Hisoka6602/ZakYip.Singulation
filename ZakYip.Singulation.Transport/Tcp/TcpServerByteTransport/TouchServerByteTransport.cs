@@ -25,6 +25,9 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
         private TransportConnectionState _connState;     // 连接状态（IByteTransport）
 
         public TransportStatus Status { get; private set; } = TransportStatus.Stopped;
+        public string? RemoteIp { get; private set; }
+        public int RemotePort { get; private set; }
+        public bool IsServer { get; }
 
         TransportConnectionState IByteTransport.Status => _connState;
 
@@ -37,7 +40,10 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
         public event EventHandler<TransportErrorEventArgs>? Error;
 
-        public TouchServerByteTransport(TcpServerOptions opt) => _opt = opt;
+        public TouchServerByteTransport(TcpServerOptions opt) {
+            _opt = opt;
+            IsServer = true;
+        }
 
         public async Task StartAsync(CancellationToken ct = default) {
             lock (_gate) {
@@ -55,6 +61,13 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
             // 连接建立
             service.Connected = (client, e) => {
+                try {
+                    if (client.MainSocket?.RemoteEndPoint is System.Net.IPEndPoint ep) {
+                        RemoteIp = ep.Address.ToString();
+                        RemotePort = ep.Port;
+                    }
+                }
+                catch { /* ignore */ }
                 var n = Interlocked.Increment(ref _connCount);
                 if (n == 1) // 首个客户端上来
                 {
@@ -136,6 +149,22 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
                 Interlocked.Exchange(ref _connCount, 0);
                 SetConnState(TransportConnectionState.Stopped, $"{_opt.Address}:{_opt.Port}", reason: "stopped");
                 _stopping = false;
+            }
+        }
+
+        public async Task RestartAsync(CancellationToken ct = default) {
+            var endpoint = $"{_opt.Address}:{_opt.Port}";
+            try {
+                await StopAsync(ct).ConfigureAwait(false);
+
+                // 服务端重启给个很小的间隔，降低端口复用抖动（TIME_WAIT 等）
+                try { await Task.Delay(200, ct).ConfigureAwait(false); } catch { /* ignore */ }
+
+                await StartAsync(ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) {
+                RaiseError($"server restart failed: {ex.Message}", ex, transient: true,
+                    endpoint: endpoint, port: _opt.Port);
             }
         }
 
