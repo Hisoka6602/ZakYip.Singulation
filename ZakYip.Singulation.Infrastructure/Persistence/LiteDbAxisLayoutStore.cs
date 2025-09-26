@@ -6,50 +6,35 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Infrastructure.Configs.Entities;
+using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
 namespace ZakYip.Singulation.Infrastructure.Persistence {
 
     /// <summary>
-    /// 基于 LiteDB 的轴布局存储（简化版）：直接存 AxisGridLayoutDto。
-    /// 使用固定主键 "singleton" 表示唯一布局文档。
+    /// 基于 LiteDB 的轴布局存储：单文档（Id = "singleton"）。
     /// </summary>
     public sealed class LiteDbAxisLayoutStore : IAxisLayoutStore {
-        private const string DocId = "singleton";
-        private readonly ILiteDatabase _db;
+        private const string Key = "singleton";
         private readonly ILiteCollection<AxisGridLayoutDoc> _coll;
 
-        private sealed class AxisGridLayoutDoc {
-            [BsonId] public string Id { get; set; } = DocId;
-            public int Rows { get; set; }
-            public int Cols { get; set; }
-        }
-
         public LiteDbAxisLayoutStore(ILiteDatabase db) {
-            _db = db;
-            _coll = _db.GetCollection<AxisGridLayoutDoc>("axis_layout");
+            _coll = db.GetCollection<AxisGridLayoutDoc>("axis_layout");
+            _coll.EnsureIndex(x => x.Id, unique: true);
+            if (_coll.FindById(Key) is null)
+                _coll.Upsert(new AxisGridLayoutDoc { Id = Key, Rows = 0, Cols = 0 });
         }
 
-        public Task<AxisGridLayoutDto?> GetAsync(CancellationToken ct = default) {
-            var doc = _coll.FindById(DocId);
-            if (doc is null) return Task.FromResult<AxisGridLayoutDto?>(null);
-            return Task.FromResult<AxisGridLayoutDto?>(new AxisGridLayoutDto {
-                Rows = doc.Rows,
-                Cols = doc.Cols,
-            });
-        }
+        public Task<AxisGridLayoutDto?> GetAsync(CancellationToken ct = default)
+            => Task.FromResult(_coll.FindById(Key)?.ToDto());
 
         public Task UpsertAsync(AxisGridLayoutDto layout, CancellationToken ct = default) {
-            var doc = new AxisGridLayoutDoc {
-                Id = DocId,
-                Rows = layout.Rows,
-                Cols = layout.Cols,
-            };
-            _coll.Upsert(doc);
+            _coll.Upsert(layout.ToDoc());
             return Task.CompletedTask;
         }
 
         public Task DeleteAsync(CancellationToken ct = default) {
-            _coll.Delete(DocId);
+            _coll.Delete(Key);
             return Task.CompletedTask;
         }
     }
