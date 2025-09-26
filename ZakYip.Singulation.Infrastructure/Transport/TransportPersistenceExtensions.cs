@@ -22,6 +22,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
         /// </summary>
         public static IServiceCollection AddUpstreamFromLiteDb(this IServiceCollection services, string filePath = "singulation.db") {
             services.AddSingleton<IUpstreamOptionsStore, LiteDbUpstreamOptionsStore>();
+            services.AddSingleton<IUpstreamCodecOptionsStore, LiteDbUpstreamCodecOptionsStore>();
             return services;
         }
 

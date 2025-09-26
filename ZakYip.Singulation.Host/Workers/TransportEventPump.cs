@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using System.Threading.Tasks;
 using System.Threading.Channels;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Transport.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
@@ -15,10 +18,13 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly List<(string Name, IByteTransport Transport)> _transports = new();
         private readonly Channel<TransportEvent> _channel;
         private readonly IServiceProvider _sp;
+        private readonly IUpstreamCodec _upstreamCodec;
 
-        public TransportEventPump(ILogger<TransportEventPump> log, IServiceProvider sp) {
+        public TransportEventPump(ILogger<TransportEventPump> log, IServiceProvider sp,
+            IUpstreamCodec upstreamCodec) {
             _log = log;
             _sp = sp;
+            _upstreamCodec = upstreamCodec;
 
             _channel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(4096) {
                 SingleReader = true,
@@ -55,6 +61,8 @@ namespace ZakYip.Singulation.Host.Workers {
                             // TODO: 在这里做协议解码/路由/聚合/转发（SignalR、gRPC、队列等）
                             // DecodeAndDispatch(ev.Source, ev.Payload.Span);
                             Console.WriteLine(BitConverter.ToString(ev.Payload.ToArray()).Replace("-", " "));
+                            _upstreamCodec.TryDecodeSpeed(ev.Payload.Span, out var speedSet);
+                            Console.WriteLine(JsonConvert.SerializeObject(speedSet));
                             break;
 
                         case TransportEventType.BytesReceived:

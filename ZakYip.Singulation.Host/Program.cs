@@ -22,7 +22,9 @@ using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Host.SwaggerOptions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using Microsoft.AspNetCore.ResponseCompression;
+using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Infrastructure.Transport;
+using ZakYip.Singulation.Protocol.Vendors.Huarary;
 using ZakYip.Singulation.Infrastructure.Persistence;
 
 ThreadPool.SetMinThreads(128, 128);
@@ -183,6 +185,21 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<IAxisController, AxisController>();
         // ---------- 上游数据连接Tcp相关注入 ----------
         services.AddUpstreamTcpFromLiteDb();
+        // ---------- 解码器相关注入 ----------
+        services.AddSingleton<IUpstreamCodec>(provider => {
+            var store = provider.GetRequiredService<IUpstreamCodecOptionsStore>();
+
+            // 获取配置（若不存在则返回默认）
+            var options = store.GetAsync().GetAwaiter().GetResult();
+
+            // 如果你想确保第一次启动时一定存入数据库
+            store.UpsertAsync(options).GetAwaiter().GetResult();
+
+            return new HuararyCodec(
+                mainCount: options.MainCount,
+                ejectCount: options.EjectCount
+            );
+        });
 
         // ---------- 事件泵 ----------
         services.AddHostedService<TransportEventPump>();
