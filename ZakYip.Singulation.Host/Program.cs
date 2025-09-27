@@ -8,8 +8,9 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
-using ZakYip.Singulation.Host.Workers;
 using ZakYip.Singulation.Core.Configs;
+using ZakYip.Singulation.Host.Runtime;
+using ZakYip.Singulation.Host.Workers;
 using Microsoft.AspNetCore.Diagnostics;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using ZakYip.Singulation.Core.Contracts;
@@ -26,6 +27,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Protocol.Vendors.Huarary;
+using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Persistence;
 
 ThreadPool.SetMinThreads(128, 128);
@@ -204,6 +206,11 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ---------- 事件泵 ----------
         services.AddHostedService<TransportEventPump>();
+
+        // ---------- 日志泵 ----------
+        services.AddSingleton<LogEventBus>();
+        services.AddSingleton<ILogEventWriter>(sp => sp.GetRequiredService<LogEventBus>());
+        services.AddHostedService<LogEventPump>();
     })
     // ---------- 日志 ----------
     .ConfigureLogging(logging => {
