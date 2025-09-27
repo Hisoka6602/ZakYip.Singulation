@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
 using ZakYip.Singulation.Host.Dto;
+using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Abstractions;
 using System.ComponentModel.DataAnnotations;
 using ZakYip.Singulation.Transport.Abstractions;
-using ZakYip.Singulation.Core.Contracts.Dto.Transport;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -37,9 +37,9 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// GET /api/upstream/configs
         /// </summary>
         [HttpGet("configs")]
-        public async Task<ApiResponse<UpstreamOptionsDto>> GetAllAsync(CancellationToken ct) {
+        public async Task<ApiResponse<UpstreamOptions>> GetAllAsync(CancellationToken ct) {
             var optionsDto = await _store.GetAsync(ct);
-            return ApiResponse<UpstreamOptionsDto>.Success(optionsDto);
+            return ApiResponse<UpstreamOptions>.Success(optionsDto);
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// PUT /api/upstream/configs/{id}
         /// </summary>
         [HttpPut("configs")]
-        public async Task<ApiResponse<string>> UpsertAsync([FromBody] UpstreamOptionsDto dto, CancellationToken ct) {
+        public async Task<ApiResponse<string>> UpsertAsync([FromBody] UpstreamOptions dto, CancellationToken ct) {
             await _store.SaveAsync(dto, ct);
             return ApiResponse<string>.Success("配置已保存");
         }

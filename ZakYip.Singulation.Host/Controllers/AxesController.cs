@@ -9,10 +9,10 @@ using System.Collections.Generic;
 using ZakYip.Singulation.Host.Dto;
 using ZakYip.Singulation.Core.Enums;
 using System.Runtime.CompilerServices;
+using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Core.Abstractions;
-using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
@@ -43,16 +43,16 @@ namespace ZakYip.Singulation.Host.Controllers {
 
         /// <summary>读取控制器模板（vendor + driver options）。</summary>
         [HttpGet("controller/options")]
-        public async Task<ActionResult<ControllerOptionsDto>> GetControllerOptions(CancellationToken ct) {
+        public async Task<ActionResult<ControllerOptions>> GetControllerOptions(CancellationToken ct) {
             var dto = await _ctrlOptsStore.GetAsync(ct);
             return dto is null
-                ? NotFound(ApiResponse<ControllerOptionsDto>.NotFound("未找到控制器配置"))
-                : Ok(ApiResponse<ControllerOptionsDto>.Success(dto, "获取成功"));
+                ? NotFound(ApiResponse<ControllerOptions>.NotFound("未找到控制器配置"))
+                : Ok(ApiResponse<ControllerOptions>.Success(dto, "获取成功"));
         }
 
         /// <summary>写入/更新控制器模板。</summary>
         [HttpPut("controller/options")]
-        public async Task<IActionResult> PutControllerOptions([FromBody] ControllerOptionsDto dto, CancellationToken ct) {
+        public async Task<IActionResult> PutControllerOptions([FromBody] ControllerOptions dto, CancellationToken ct) {
             if (string.IsNullOrWhiteSpace(dto.Vendor))
                 return BadRequest(ApiResponse<object>.Invalid("Vendor 为必填项"));
 
@@ -67,11 +67,11 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         [HttpGet("topology")]
-        public async Task<ActionResult<AxisGridLayoutDto>> GetTopology(CancellationToken ct) {
+        public async Task<ActionResult<AxisGridLayoutOptions>> GetTopology(CancellationToken ct) {
             var dto = await _layoutStore.GetAsync(ct);
             return dto is null
-                ? NotFound(ApiResponse<AxisGridLayoutDto>.NotFound("未找到轴布局"))
-                : Ok(ApiResponse<AxisGridLayoutDto>.Success(dto, "获取布局成功"));
+                ? NotFound(ApiResponse<AxisGridLayoutOptions>.NotFound("未找到轴布局"))
+                : Ok(ApiResponse<AxisGridLayoutOptions>.Success(dto, "获取布局成功"));
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <param name="req">新的布局定义（Rows/Cols/Placements）。</param>
         /// <param name="ct">取消令牌。</param>
         [HttpPut("topology")]
-        public async Task<IActionResult> PutTopology([FromBody] AxisGridLayoutDto req, CancellationToken ct) {
+        public async Task<IActionResult> PutTopology([FromBody] AxisGridLayoutOptions req, CancellationToken ct) {
             if (req.Rows < 1 || req.Cols < 1)
                 return BadRequest(ApiResponse<object>.Invalid("行列数必须大于等于1"));
 
@@ -389,7 +389,7 @@ namespace ZakYip.Singulation.Host.Controllers {
             return ok;
         }
 
-        private static DriverOptions MapToDriverOptions(DriverOptionsTemplateDto t) => new() {
+        private static DriverOptions MapToDriverOptions(DriverOptionsTemplateOptions t) => new() {
             // 注意：Card/Port/NodeId/IsReverse 在 InitializeAsync 内按轴设置，这里不填
             GearRatio = t.GearRatio,
             ScrewPitchMm = t.ScrewPitchMm,

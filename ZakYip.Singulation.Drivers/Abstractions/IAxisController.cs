@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Drivers.Common;
+using ZakYip.Singulation.Core.Contracts.Dto;
 
 namespace ZakYip.Singulation.Drivers.Abstractions {
 
@@ -77,5 +78,12 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <para>执行后 <see cref="Drives"/> 集合会被清空。</para>
         /// </summary>
         Task DisposeAllAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// 将视觉上游解析出的速度集一次性下发到各轴（单位：mm/s）。
+        /// 不抛异常；长度不匹配与单轴失败通过 ControllerFaulted 事件与日志呈现。
+        /// 约定：Main 段在前，Eject 段在后，按拓扑顺序依次贴到轴 0..N-1。
+        /// </summary>
+        Task ApplySpeedSetAsync(SpeedSet set, CancellationToken ct = default);
     }
 }

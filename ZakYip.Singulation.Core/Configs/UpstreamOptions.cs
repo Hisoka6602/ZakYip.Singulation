@@ -5,12 +5,12 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
 
-namespace ZakYip.Singulation.Core.Contracts.Dto.Transport {
+namespace ZakYip.Singulation.Core.Configs {
 
     /// <summary>
     /// 上游 TCP 连接参数（LiteDB 单文档存储）。
     /// </summary>
-    public sealed class UpstreamOptionsDto {
+    public sealed class UpstreamOptions {
 
         /// <summary>
         /// 固定主键，单文档模式使用常量 Id 避免多条记录。

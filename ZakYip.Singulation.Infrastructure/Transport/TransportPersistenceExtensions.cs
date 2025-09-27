@@ -4,11 +4,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ZakYip.Singulation.Infrastructure.Persistence;
-using ZakYip.Singulation.Core.Contracts.Dto.Transport;
 
 namespace ZakYip.Singulation.Infrastructure.Transport {
 
@@ -36,7 +36,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             if (!sec.Exists()) return;
 
             var store = sp.GetRequiredService<IUpstreamOptionsStore>();
-            var dto = await store.GetAsync(ct) ?? new UpstreamOptionsDto();
+            var dto = await store.GetAsync(ct) ?? new UpstreamOptions();
 
             // 读取配置并合并（不存在则保留当前值）
             dto.Host = sec["Host"] ?? dto.Host;

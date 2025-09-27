@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts.Dto;
-using ZakYip.Singulation.Core.Contracts.Dto.Transport;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 
 namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
@@ -13,7 +12,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
     public static class ConfigMappings {
 
         // ====== 已有：UpstreamOptions ======
-        public static UpstreamOptionsDto ToDto(this UpstreamOptionsDoc d) => new() {
+        public static UpstreamOptions ToDto(this UpstreamOptionsDoc d) => new() {
             Host = d.Host,
             SpeedPort = d.SpeedPort,
             PositionPort = d.PositionPort,
@@ -22,7 +21,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Role = d.Role
         };
 
-        public static UpstreamOptionsDoc ToDoc(this UpstreamOptionsDto dto) => new() {
+        public static UpstreamOptionsDoc ToDoc(this UpstreamOptions dto) => new() {
             Host = dto.Host,
             SpeedPort = dto.SpeedPort,
             PositionPort = dto.PositionPort,
@@ -43,11 +42,11 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
         };
 
         // ====== 补全：ControllerOptions（含 DriverOptionsTemplate 全字段） ======
-        public static ControllerOptionsDto ToDto(this ControllerOptionsDoc d) => new() {
+        public static ControllerOptions ToDto(this ControllerOptionsDoc d) => new() {
             Vendor = d.Vendor,
             OverrideAxisCount = d.OverrideAxisCount,
             ControllerIp = d.ControllerIp,
-            Template = new DriverOptionsTemplateDto {
+            Template = new DriverOptionsTemplateOptions {
                 // 机构/传动
                 GearRatio = d.Template.GearRatio,
                 ScrewPitchMm = d.Template.ScrewPitchMm,
@@ -71,7 +70,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             }
         };
 
-        public static ControllerOptionsDoc ToDoc(this ControllerOptionsDto dto, string id = "default") => new() {
+        public static ControllerOptionsDoc ToDoc(this ControllerOptions dto, string id = "default") => new() {
             Id = id,
             Vendor = dto.Vendor,
             OverrideAxisCount = dto.OverrideAxisCount,
@@ -100,8 +99,8 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             }
         };
 
-        public static AxisGridLayoutDto ToDto(this AxisGridLayoutDoc d) => new() { Rows = d.Rows, Cols = d.Cols };
+        public static AxisGridLayoutOptions ToDto(this AxisGridLayoutDoc d) => new() { Rows = d.Rows, Cols = d.Cols };
 
-        public static AxisGridLayoutDoc ToDoc(this AxisGridLayoutDto dto) => new() { Rows = dto.Rows, Cols = dto.Cols };
+        public static AxisGridLayoutDoc ToDoc(this AxisGridLayoutOptions dto) => new() { Rows = dto.Rows, Cols = dto.Cols };
     }
 }

@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Core.Contracts.Dto.Transport;
+using ZakYip.Singulation.Core.Configs;
 
 namespace ZakYip.Singulation.Core.Contracts {
 
@@ -14,10 +14,10 @@ namespace ZakYip.Singulation.Core.Contracts {
     public interface IUpstreamOptionsStore {
 
         /// <summary>读取配置（若不存在则返回 null）。</summary>
-        Task<UpstreamOptionsDto?> GetAsync(CancellationToken ct = default);
+        Task<UpstreamOptions?> GetAsync(CancellationToken ct = default);
 
         /// <summary>写入配置（存在则更新，不存在则插入）。</summary>
-        Task SaveAsync(UpstreamOptionsDto dto, CancellationToken ct = default);
+        Task SaveAsync(UpstreamOptions dto, CancellationToken ct = default);
 
         /// <summary>删除配置（恢复“无配置”状态）。</summary>
         Task DeleteAsync(CancellationToken ct = default);

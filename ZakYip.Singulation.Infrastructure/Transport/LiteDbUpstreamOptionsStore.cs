@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
-using ZakYip.Singulation.Core.Contracts.Dto.Transport;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
@@ -29,10 +29,10 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             }
         }
 
-        public Task<UpstreamOptionsDto?> GetAsync(CancellationToken ct = default) =>
+        public Task<UpstreamOptions?> GetAsync(CancellationToken ct = default) =>
             Task.Run(() => _col.FindById(Key)?.ToDto(), ct);
 
-        public Task SaveAsync(UpstreamOptionsDto dto, CancellationToken ct = default) =>
+        public Task SaveAsync(UpstreamOptions dto, CancellationToken ct = default) =>
             Task.Run(() => {
                 lock (_gate) {
                     var doc = dto.ToDoc();

@@ -4,8 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
-using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
@@ -25,10 +25,10 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
                 _coll.Upsert(new AxisGridLayoutDoc { Id = Key, Rows = 0, Cols = 0 });
         }
 
-        public Task<AxisGridLayoutDto?> GetAsync(CancellationToken ct = default)
+        public Task<AxisGridLayoutOptions?> GetAsync(CancellationToken ct = default)
             => Task.FromResult(_coll.FindById(Key)?.ToDto());
 
-        public Task UpsertAsync(AxisGridLayoutDto layout, CancellationToken ct = default) {
+        public Task UpsertAsync(AxisGridLayoutOptions layout, CancellationToken ct = default) {
             _coll.Upsert(layout.ToDoc());
             return Task.CompletedTask;
         }

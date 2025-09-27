@@ -1,11 +1,11 @@
 ﻿using System.Net;
 using Microsoft.Extensions.Hosting;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Transport.Tcp;
 using ZakYip.Singulation.Core.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using ZakYip.Singulation.Transport.Abstractions;
-using ZakYip.Singulation.Core.Contracts.Dto.Transport;
 using ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport;
 using ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport;
 
@@ -22,7 +22,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             // 注意：确保你在此之前已经调用了 AddUpstreamFromLiteDb(...) 注册 IUpstreamOptionsStore
             using var temp = services.BuildServiceProvider();
             var store = temp.GetRequiredService<IUpstreamOptionsStore>();
-            var dto = store.GetAsync().GetAwaiter().GetResult() ?? new UpstreamOptionsDto();
+            var dto = store.GetAsync().GetAwaiter().GetResult() ?? new UpstreamOptions();
 
             // ---- speed ----
             if (dto.SpeedPort > 0) {

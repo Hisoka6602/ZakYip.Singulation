@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
@@ -75,6 +76,35 @@ namespace ZakYip.Singulation.Drivers.Common {
             finally {
                 _drives.Clear();
                 await Bus.CloseAsync(ct);
+            }
+        }
+
+        public async Task ApplySpeedSetAsync(SpeedSet set, CancellationToken ct = default) {
+            var main = set.MainMmps ?? [];
+            var eject = set.EjectMmps ?? [];
+            var totalAx = _drives.Count;
+
+            if (totalAx == 0) return;
+            if (main.Count == 0 && eject.Count == 0) return;
+
+            var axis = 0;
+
+            // 1) 先写 Main；若超过轴数自动截断
+            for (var i = 0; axis < totalAx && i < main.Count; i++, axis++) {
+                if (ct.IsCancellationRequested) return;
+                await _drives[axis].WriteSpeedAsync((decimal)main[i], ct);
+            }
+
+            // 2) 再用 Eject 补齐；同样不越界
+            for (var i = 0; axis < totalAx && i < eject.Count; i++, axis++) {
+                if (ct.IsCancellationRequested) return;
+                await _drives[axis].WriteSpeedAsync((decimal)eject[i], ct);
+            }
+
+            // 3) 还不够就补零到 totalAx
+            for (; axis < totalAx; axis++) {
+                if (ct.IsCancellationRequested) return;
+                await _drives[axis].WriteSpeedAsync(0m, ct);
             }
         }
 

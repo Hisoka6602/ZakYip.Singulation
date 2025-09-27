@@ -3,7 +3,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Core.Configs;
 
 namespace ZakYip.Singulation.Core.Contracts {
 
@@ -13,10 +13,10 @@ namespace ZakYip.Singulation.Core.Contracts {
     public interface IAxisLayoutStore {
 
         /// <summary>读取当前网格布局；不存在则返回 null。</summary>
-        Task<AxisGridLayoutDto?> GetAsync(CancellationToken ct = default);
+        Task<AxisGridLayoutOptions?> GetAsync(CancellationToken ct = default);
 
         /// <summary>写入/覆盖网格布局（整体 upsert）。</summary>
-        Task UpsertAsync(AxisGridLayoutDto layout, CancellationToken ct = default);
+        Task UpsertAsync(AxisGridLayoutOptions layout, CancellationToken ct = default);
 
         /// <summary>清除网格布局。</summary>
         Task DeleteAsync(CancellationToken ct = default);

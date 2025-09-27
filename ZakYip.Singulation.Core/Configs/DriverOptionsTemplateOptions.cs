@@ -4,12 +4,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-namespace ZakYip.Singulation.Core.Contracts.Dto {
+namespace ZakYip.Singulation.Core.Configs {
     /// <summary>
     /// DriverOptions 的可序列化镜像（仅保留需长期持久化字段；NodeId 将在初始化中按轴自动填）。
     /// 注意：此 DTO 在 Core 中定义，避免 Core 直接依赖 Drivers.Common。
     /// </summary>
-    public sealed record DriverOptionsTemplateDto {
+    public sealed record DriverOptionsTemplateOptions {
         /// <summary>控制卡号（厂商 SDK 的卡序号）。</summary>
         public int Card { get; init; } = 8;
 

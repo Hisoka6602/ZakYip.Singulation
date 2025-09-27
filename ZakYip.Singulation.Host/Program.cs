@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
 using ZakYip.Singulation.Host.Workers;
+using ZakYip.Singulation.Core.Configs;
 using Microsoft.AspNetCore.Diagnostics;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using ZakYip.Singulation.Core.Contracts;
@@ -151,10 +152,10 @@ var host = Host.CreateDefaultBuilder(args)
 
                     // 2. 如果不存在，创建默认值并保存
                     if (dto is null) {
-                        dto = new ControllerOptionsDto {
+                        dto = new ControllerOptions {
                             Vendor = "leadshine",
                             ControllerIp = "192.168.5.11",
-                            Template = new DriverOptionsTemplateDto() {
+                            Template = new DriverOptionsTemplateOptions() {
                                 Card = 8,
                                 Port = 2,
                                 GearRatio = 0.4m,
