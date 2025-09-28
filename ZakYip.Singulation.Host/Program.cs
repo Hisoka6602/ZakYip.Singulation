@@ -137,7 +137,13 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- 配置存储 ----------
         services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb();
         // ---------- 设备相关注入 ----------
-        services.AddSingleton<IDriveRegistry, DefaultDriveRegistry>();
+        services.AddSingleton<IDriveRegistry>(sp => {
+            var r = new DefaultDriveRegistry();
+            r.Register("leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts));
+            // 未来在这里再注册其它品牌：
+            // r.Register("Inovance", (axisId, port, opts) => new InovanceAxisDrive(opts));
+            return r;
+        });
 
         services.AddSingleton<IBusAdapter>(serviceProvider => {
             var ctrlOptsStore = serviceProvider.GetRequiredService<IControllerOptionsStore>();

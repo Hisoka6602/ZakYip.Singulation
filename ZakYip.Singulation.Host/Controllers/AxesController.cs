@@ -25,6 +25,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly IAxisLayoutStore _layoutStore;
         private readonly IAxisController _axisController;
         private readonly IControllerOptionsStore _ctrlOptsStore;
+        private readonly ILogger<AxesController> _logger;
 
         /// <summary>
         /// 通过依赖注入构造控制器。
@@ -33,12 +34,18 @@ namespace ZakYip.Singulation.Host.Controllers {
             IDriveRegistry registry,
             IAxisLayoutStore layoutStore,
             IAxisController axisController,
-            IControllerOptionsStore ctrlOptsStore) {
+            IControllerOptionsStore ctrlOptsStore,
+            ILogger<AxesController> logger) {
             _registry = registry;
 
             _layoutStore = layoutStore;
             _axisController = axisController;
             _ctrlOptsStore = ctrlOptsStore;
+            _logger = logger;
+
+            _axisController.ControllerFaulted += (sender, s) => {
+                _logger.LogError(s);
+            };
         }
 
         /// <summary>读取控制器模板（vendor + driver options）。</summary>
@@ -411,9 +418,15 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// 安全执行某个异步动作：吞掉异常并返回 false；具体异常信息由驱动层事件和 LastErrorMessage 负责记录。
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static async Task<bool> Safe(Func<Task> act) {
-            try { await act(); return true; }
-            catch { return false; }
+        private async Task<bool> Safe(Func<Task> act) {
+            try {
+                await act();
+                return true;
+            }
+            catch (Exception exception) {
+                _logger.LogError(exception, "SafeException");
+                return false;
+            }
         }
     }
 }

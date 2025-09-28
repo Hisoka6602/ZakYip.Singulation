@@ -17,7 +17,7 @@ internal static class Program {
         // ===== 可按需修改的运行参数 =====
         ushort cardNo = 8;
         ushort portNo = 2;
-        string? controllerIp = null;      // 有网口就填 IP，直连卡可为 null
+        string? controllerIp = "192.168.5.11";      // 有网口就填 IP，直连卡可为 null
         string vendor = "Leadshine";      // 未来接入别的厂商时，改这个即可
 
         // 速度与加减速（线速度为一等公民）
@@ -42,7 +42,7 @@ internal static class Program {
         // 如果你已实现 DriveRegistry，请引用你的命名空间；下面这行假设你把实现放在 Drivers.Common
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
-            r.Register("Leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts));
+            r.Register("leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts));
             // 未来在这里再注册其它品牌：
             // r.Register("Inovance", (axisId, port, opts) => new InovanceAxisDrive(opts));
             return r;

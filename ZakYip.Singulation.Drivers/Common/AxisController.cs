@@ -29,7 +29,13 @@ namespace ZakYip.Singulation.Drivers.Common {
         public IReadOnlyList<IAxisDrive> Drives => _drives;
 
         public async Task InitializeAsync(string vendor, DriverOptions template, int? overrideAxisCount = null, CancellationToken ct = default) {
-            await Bus.InitializeAsync(ct);
+            if (_drives.Count > 0) return; // 幂等保护
+
+            var busInitialized = await Bus.InitializeAsync(ct);
+            if (!busInitialized) {
+                OnControllerFaulted("Bus initialization failed.");
+                return;
+            }
 
             var count = overrideAxisCount ?? await Bus.GetAxisCountAsync(ct);
             if (count <= 0) {
@@ -47,31 +53,41 @@ namespace ZakYip.Singulation.Drivers.Common {
                 var drive = _registry.Create(vendor, axisId, port: null!, opts);
                 _drives.Add(drive);
                 _aggregator.Attach(drive);
+                OnControllerFaulted($"新增轴:{axisId.Value}");
             }
+            OnControllerFaulted("完成");
         }
 
-        public async Task EnableAllAsync(CancellationToken ct = default) {
-            await Task.WhenAll(_drives.Select(d => d.EnableAsync(ct)));
+        private async Task ForEachDriveAsync(Func<IAxisDrive, Task> action, CancellationToken ct) {
+            var tasks = _drives.Select(async d => {
+                try {
+                    await action(d);
+                }
+                catch (Exception ex) {
+                    OnControllerFaulted($"Drive {d.Axis}: {ex.Message}");
+                }
+            });
+            await Task.WhenAll(tasks);
         }
 
-        public async Task SetAccelDecelAllAsync(decimal accelMmPerSec2, decimal decelMmPerSec2, CancellationToken ct = default) {
-            await Task.WhenAll(_drives.Select(d => d.SetAccelDecelByLinearAsync(accelMmPerSec2, decelMmPerSec2, ct).AsTask()));
-        }
+        public Task EnableAllAsync(CancellationToken ct = default) =>
+            ForEachDriveAsync(d => d.EnableAsync(ct), ct);
 
-        public async Task WriteSpeedAllAsync(decimal mmPerSec, CancellationToken ct = default) {
-            await Task.WhenAll(_drives.Select(d => d.WriteSpeedAsync(mmPerSec, ct)));
-        }
+        public Task SetAccelDecelAllAsync(decimal accelMmPerSec2, decimal decelMmPerSec2, CancellationToken ct = default) =>
+            ForEachDriveAsync(d => d.SetAccelDecelByLinearAsync(accelMmPerSec2, decelMmPerSec2, ct).AsTask(), ct);
 
-        public async Task StopAllAsync(CancellationToken ct = default) {
-            await Task.WhenAll(_drives.Select(d => d.StopAsync(ct).AsTask()));
-        }
+        public Task WriteSpeedAllAsync(decimal mmPerSec, CancellationToken ct = default) =>
+            ForEachDriveAsync(d => d.WriteSpeedAsync(mmPerSec, ct), ct);
+
+        public Task StopAllAsync(CancellationToken ct = default) =>
+            ForEachDriveAsync(d => d.StopAsync(ct).AsTask(), ct);
 
         public async Task DisposeAllAsync(CancellationToken ct = default) {
             try {
-                await Task.WhenAll(_drives.Select(async d => {
+                await ForEachDriveAsync(async d => {
                     _aggregator.Detach(d);
                     await d.DisposeAsync();
-                }));
+                }, ct);
             }
             finally {
                 _drives.Clear();
@@ -87,29 +103,18 @@ namespace ZakYip.Singulation.Drivers.Common {
             if (totalAx == 0) return;
             if (main.Count == 0 && eject.Count == 0) return;
 
-            var axis = 0;
+            var speeds = new List<decimal>(totalAx);
+            speeds.AddRange(main.Select(x => (decimal)x));
+            speeds.AddRange(eject.Select(x => (decimal)x));
+            while (speeds.Count < totalAx) speeds.Add(0m);
 
-            // 1) 先写 Main；若超过轴数自动截断
-            for (var i = 0; axis < totalAx && i < main.Count; i++, axis++) {
+            for (int i = 0; i < totalAx; i++) {
                 if (ct.IsCancellationRequested) return;
-                await _drives[axis].WriteSpeedAsync((decimal)main[i], ct);
-            }
-
-            // 2) 再用 Eject 补齐；同样不越界
-            for (var i = 0; axis < totalAx && i < eject.Count; i++, axis++) {
-                if (ct.IsCancellationRequested) return;
-                await _drives[axis].WriteSpeedAsync((decimal)eject[i], ct);
-            }
-
-            // 3) 还不够就补零到 totalAx
-            for (; axis < totalAx; axis++) {
-                if (ct.IsCancellationRequested) return;
-                await _drives[axis].WriteSpeedAsync(0m, ct);
+                await _drives[i].WriteSpeedAsync(speeds[i], ct);
             }
         }
 
         private void OnControllerFaulted(string msg) {
-            // 不抛异常，直接触发事件
             ControllerFaulted?.Invoke(this, msg);
         }
     }
