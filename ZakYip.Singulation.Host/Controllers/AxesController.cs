@@ -324,12 +324,12 @@ namespace ZakYip.Singulation.Host.Controllers {
             // 要求 IAxisDrive 提供 DisableAsync；若旧驱动暂未实现，可在实现里降级为 StopAsync。
             var results = await ForEachAxis(targets, d =>
                 Safe(async () => {
-                    await d.DisposeAsync().AsTask();
+                    await d.WriteSpeedAsync((decimal)req.LinearMmps, ct);
                 }));
 
             var response = new BatchCommandResponseDto { Results = results };
 
-            return Ok(ApiResponse<BatchCommandResponseDto>.Success(response, "批量禁用完成"));
+            return Ok(ApiResponse<BatchCommandResponseDto>.Success(response, "设置速度成功"));
         }
 
         // ================= 内部实现 =================

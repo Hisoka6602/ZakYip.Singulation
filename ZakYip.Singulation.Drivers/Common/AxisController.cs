@@ -59,15 +59,18 @@ namespace ZakYip.Singulation.Drivers.Common {
         }
 
         private async Task ForEachDriveAsync(Func<IAxisDrive, Task> action, CancellationToken ct) {
-            var tasks = _drives.Select(async d => {
+            foreach (var d in _drives) {
+                ct.ThrowIfCancellationRequested();
                 try {
                     await action(d);
                 }
                 catch (Exception ex) {
                     OnControllerFaulted($"Drive {d.Axis}: {ex.Message}");
                 }
-            });
-            await Task.WhenAll(tasks);
+
+                // 间隔至少 10ms，避免指令过于密集
+                await Task.Delay(10, ct);
+            }
         }
 
         public Task EnableAllAsync(CancellationToken ct = default) =>

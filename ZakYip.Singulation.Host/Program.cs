@@ -128,7 +128,8 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- Hosted Services ----------
 
         services.AddHostedService<SingulationWorker>();
-
+        // ---------- 初始化轴 ----------
+        services.AddHostedService<AxisBootstrapper>();
         // 如果你有运行时状态上报/心跳等后台任务，可以按需再加：
         // services.AddHostedService<RuntimeStatusReporter>();
 
@@ -145,51 +146,50 @@ var host = Host.CreateDefaultBuilder(args)
             return r;
         });
 
-        services.AddSingleton<IBusAdapter>(serviceProvider => {
-            var ctrlOptsStore = serviceProvider.GetRequiredService<IControllerOptionsStore>();
-            var tcs = new TaskCompletionSource<IBusAdapter>();
+        // Program.cs / DI 注册处
+        services.AddSingleton<IBusAdapter>(sp => {
+            var store = sp.GetRequiredService<IControllerOptionsStore>();
 
-            // 启动一个后台任务来异步加载配置并创建适配器
-            _ = Task.Run(async () => {
-                try {
-                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // 超时保护
-                    var ct = cts.Token;
+            // 1) 同步获取配置（LiteDB 本身是本地存取，同步拿即可）
+            var dto = store.GetAsync().GetAwaiter().GetResult();
 
-                    // 1. 尝试从数据库读取
-                    var dto = await ctrlOptsStore.GetAsync(ct);
-
-                    // 2. 如果不存在，创建默认值并保存
-                    if (dto is null) {
-                        dto = new ControllerOptions {
-                            Vendor = "leadshine",
-                            ControllerIp = "192.168.5.11",
-                            Template = new DriverOptionsTemplateOptions() {
-                                Card = 8,
-                                Port = 2,
-                                GearRatio = 0.4m,
-                                PulleyPitchDiameterMm = 79,
-                            }
-                        }; // 使用 record 默认值
-                        await ctrlOptsStore.UpsertAsync(dto, ct);
+            // 2) 首次不存在：写入默认并继续使用默认
+            if (dto is null) {
+                dto = new ControllerOptions {
+                    Vendor = "leadshine",
+                    ControllerIp = "192.168.5.11",
+                    Template = new DriverOptionsTemplateOptions {
+                        Card = 8,
+                        Port = 2,
+                        GearRatio = 0.4m,
+                        PulleyPitchDiameterMm = 79m,
+                        // 如果你的模板里还有 MaxLinearMmps/MaxAccelMmPerSec2 等，建议也给上默认
                     }
+                };
+                store.UpsertAsync(dto).GetAwaiter().GetResult();
+            }
 
-                    // 3. 创建适配器
-                    var adapter = new LeadshineLtdmcBusAdapter(
+            // 3) 根据 Vendor 选择 BusAdapter（为未来扩展做分派）
+            var vendor = dto.Vendor?.Trim().ToLowerInvariant();
+            switch (vendor) {
+                case "leadshine":
+                case "ltdmc":
+                    return new LeadshineLtdmcBusAdapter(
                         cardNo: (ushort)dto.Template.Card,
-                        portNo: dto.Template.Port,
+                        portNo: (ushort)dto.Template.Port,  // ← 修正强转
                         controllerIp: dto.ControllerIp
                     );
 
-                    // 4. 完成 TaskCompletionSource
-                    tcs.SetResult(adapter);
-                }
-                catch (Exception ex) {
-                    tcs.SetException(ex);
-                }
-            });
-            // 返回一个“未来会完成”的 IBusAdapter 代理
-            return tcs.Task.GetAwaiter().GetResult();
+                // 未来接别的厂商：在这里新增 case
+                // case "inovance": return new InovanceBusAdapter(...);
+
+                default:
+                    throw new NotSupportedException(
+                        $"Unsupported controller vendor: '{dto.Vendor}'. " +
+                        "Please update ControllerOptions.Vendor in LiteDB.");
+            }
         });
+
         services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
         services.AddSingleton<IAxisController, AxisController>();
         // ---------- 上游数据连接Tcp相关注入 ----------
