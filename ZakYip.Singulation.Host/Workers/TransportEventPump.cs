@@ -79,6 +79,7 @@ namespace ZakYip.Singulation.Host.Workers {
                                 // 轻解 + 下游投递（重活放到下游worker）
                                 // 如果你的 IUpstreamCodec 返回 SpeedSet，就保持原调用
                                 if (_upstreamCodec.TryDecodeSpeed(ev.Payload.Span, out var speedSet)) {
+                                    Console.WriteLine(JsonConvert.SerializeObject(speedSet));
                                     _ = _axisController.ApplySpeedSetAsync(speedSet, stoppingToken);
                                 }
                                 // 可选：实时调试日志（走日志泵，避免异常路径）
