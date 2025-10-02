@@ -149,7 +149,7 @@ namespace ZakYip.Singulation.Drivers.Common {
             speeds.AddRange(eject.Select(x => (decimal)x));
             while (speeds.Count < totalAx) speeds.Add(0m);
 
-            for (int i = 0; i < totalAx; i++) {
+            for (var i = 0; i < totalAx; i++) {
                 if (ct.IsCancellationRequested) return;
                 await _drives[i].WriteSpeedAsync(speeds[i], ct);
             }

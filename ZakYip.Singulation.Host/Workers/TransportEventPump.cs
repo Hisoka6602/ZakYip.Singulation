@@ -20,15 +20,20 @@ namespace ZakYip.Singulation.Host.Workers {
 
     /// <summary>
     /// 极简低延迟事件泵：
-    /// - Data：同步“快路径”扇出到 Hub（零排队、DropOldest 由订阅者各自通道承担）。
-    /// - BytesReceived/StateChanged/Error：仍走“慢路径”写入有界通道做日志与统计。
+    /// - Transport.Data：同步“快路径”扇出到 Hub（零排队，订阅者各自通道做 DropOldest）。
+    /// - Transport.BytesReceived/StateChanged/Error：走“慢路径”写入有界通道做日志与统计。
+    /// - Axis.*（Faulted/Disconnected/DriverNotLoaded）：走独立 Axis 通道，集中落日志（不再伪装成 TransportEvent）。
     /// </summary>
     public sealed class TransportEventPump : BackgroundService {
         private readonly ILogger<TransportEventPump> _log;
         private readonly List<(string Name, IByteTransport Transport)> _transports = new();
 
-        // 慢路径：仅承载低频事件，容量很小即可
+        // 传输侧“慢路径”：仅承载低频事件，容量很小即可
         private readonly Channel<TransportEvent> _ctlChannel;
+
+        // 轴侧事件：独立通道，避免把非字节数据塞进 TransportEvent
+        private readonly Channel<AxisEvent> _axisChannel = Channel.CreateUnbounded<AxisEvent>(
+            new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
 
         // 轻量指标：按源计数写入/丢弃
         private readonly ConcurrentDictionary<string, long> _dropped = new();
@@ -50,7 +55,7 @@ namespace ZakYip.Singulation.Host.Workers {
             _hub = hub;
             _axisEventAggregator = axisEventAggregator;
 
-            // 慢路径：小容量即可；DropOldest 防抖
+            // 传输侧慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(256) {
                 SingleReader = true,
                 SingleWriter = false,
@@ -67,8 +72,9 @@ namespace ZakYip.Singulation.Host.Workers {
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             SubscribeAxisEventsOnce();
+
             // 订阅（只一次）
-            foreach (var (name, t) in _transports) Subscribe(name, t); // 原实现在这里做订阅 :contentReference[oaicite:1]{index=1}
+            foreach (var (name, t) in _transports) Subscribe(name, t);
 
             // 启动所有传输
             foreach (var (name, t) in _transports) {
@@ -81,35 +87,28 @@ namespace ZakYip.Singulation.Host.Workers {
                 }
             }
 
-            // 仅消费“慢路径”通道
-            await foreach (var ev in _ctlChannel.Reader.ReadAllAsync(stoppingToken)) {
+            var ctlReader = _ctlChannel.Reader;
+            var axisReader = _axisChannel.Reader;
+
+            // 合并处理：优先 drain 两侧通道，空时小睡 2ms，避免忙等
+            while (!stoppingToken.IsCancellationRequested) {
                 try {
-                    switch (ev.Type) {
-                        case TransportEventType.BytesReceived:
-                            _log.LogDebug("[transport.rx] {Source} bytes={Len}", ev.Source, ev.Payload.Length);
-                            break;
-
-                        case TransportEventType.StateChanged:
-                            _log.LogInformation("[transport:{Source}] state={State}", ev.Source, ev.Conn);
-                            break;
-
-                        case TransportEventType.Error:
-                            _log.LogError(ev.Exception, "[transport:{Source}] error", ev.Source);
-                            break;
-
-                        // Data 永远不会走到这里（已走快路径）
-                        case TransportEventType.Data:
-                        default:
-                            // 新增：轴侧 Data 的轻量可观测日志（避免把所有 Data 都打出来）
-                            if (ev.Source.StartsWith("axis:", StringComparison.OrdinalIgnoreCase) && !ev.Payload.IsEmpty) {
-                                _log.LogInformation("[axis.data] {Source} {Json}", ev.Source, Encoding.UTF8.GetString(ev.Payload.Span));
-                            }
-                            break;
+                    // 1) 先尽量清空传输侧慢路径
+                    while (ctlReader.TryRead(out var tev)) {
+                        ProcessTransportEvent(tev);
+                    }
+                    // 2) 再清空轴侧事件
+                    while (axisReader.TryRead(out var aev)) {
+                        ProcessAxisEvent(aev);
+                    }
+                    // 3) 都空了，稍作等待
+                    if (!ctlReader.TryPeek(out _) && !axisReader.TryPeek(out _)) {
+                        await Task.Delay(2, stoppingToken).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex) {
-                    // 低频异常隔离
-                    _log.LogError(ex, "[event-pump] ctl pipeline error");
+                    // 任意一侧处理异常都要兜底，避免吞事件
+                    _log.LogError(ex, "[event-pump] pipeline error");
                 }
             }
         }
@@ -121,6 +120,7 @@ namespace ZakYip.Singulation.Host.Workers {
                 catch (Exception ex) { _log.LogDebug(ex, "[transport:{Name}] stop ignored", name); }
             }
             _ctlChannel.Writer.TryComplete();
+            _axisChannel.Writer.TryComplete();
 
             // 打点输出
             foreach (var (name, _) in _transports) {
@@ -137,13 +137,11 @@ namespace ZakYip.Singulation.Host.Workers {
 
         private void Subscribe(string name, IByteTransport t) {
             // ============= 关键优化：Data 走“快路径” =============
-            // 直接在事件回调里同步广播到 Hub，避免先入队再出队的额外 hop 和分配。
+            // 直接在事件回调里同步广播到 Hub，避免队列 hop
             t.Data += mem => {
-                // 按源类型扇出（你已用 speed/position/heartbeat 命名注册）
-                // 心跳与位置若需要也可加 PublishXxx。
                 switch (name) {
                     case "speed":
-                        _hub.PublishSpeed(mem); // 新实现：在订阅处直发，不经 _channel
+                        _hub.PublishSpeed(mem);
                         break;
 
                     case "heartbeat":
@@ -161,7 +159,6 @@ namespace ZakYip.Singulation.Host.Workers {
                         ));
                         break;
                 }
-
                 // 轻量记账（不打日志，避免干扰快路径）
                 _written.AddOrUpdate(name, 1, static (_, v) => v + 1);
             };
@@ -192,40 +189,51 @@ namespace ZakYip.Singulation.Host.Workers {
         private void SubscribeAxisEventsOnce() {
             if (_axisSubscribed) return;
 
-            // 轴错误
+            // 轴故障（真正异常对象）→ AxisEvent.Faulted
             _axisEventAggregator.AxisFaulted += (s, e) => {
-                // 走慢路径，类型沿用 Error，Source 统一前缀 axis
-                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
-                    $"axis:{e.Axis}", TransportEventType.Error, default, 0, default, e.Exception
+                _axisChannel.Writer.TryWrite(new AxisEvent(
+                    Source: $"axis:{e.Axis}",
+                    Type: AxisEventType.Faulted,
+                    AxisId: e.Axis,
+                    Reason: null,
+                    Exception: e.Exception
                 ));
             };
 
-            // 轴断开/掉线
+            // 轴断开/掉线（文本原因）→ AxisEvent.Disconnected
             _axisEventAggregator.AxisDisconnected += (s, e) => {
-                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
-                    $"axis:{e.Axis}", TransportEventType.StateChanged, default, 0,
-                    TransportConnectionState.Disconnected, null
+                _axisChannel.Writer.TryWrite(new AxisEvent(
+                    Source: $"axis:{e.Axis}",
+                    Type: AxisEventType.Disconnected,
+                    AxisId: e.Axis,
+                    Reason: e.Reason,
+                    Exception: null
                 ));
             };
 
-            // 驱动未加载
+            // 驱动未加载（库级问题）→ AxisEvent.DriverNotLoaded
             _axisEventAggregator.DriverNotLoaded += (s, e) => {
-                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
-                    $"{e.Message}", TransportEventType.Error, default, 0, default,
-                    new InvalidOperationException($"Driver not loaded: {e.Message}")
+                _axisChannel.Writer.TryWrite(new AxisEvent(
+                    Source: $"driver:{e.LibraryName}",
+                    Type: AxisEventType.DriverNotLoaded,
+                    AxisId: null,
+                    Reason: e.Message,
+                    Exception: null
                 ));
             };
 
-            // 命令已下发（作为可观测数据写入 Data；下面会在慢路径里专门打印 axis:* 的 Data）
+            // —— 以下两类仍作为“可观测数据”走 TransportEvent.Data（JSON 轻量记录），保持你原有做法 ——
+
+            // 命令已下发（仅观测，不要阻塞，不要 Task.Run）
             _axisEventAggregator.CommandIssued += (s, e) => {
-                var json = JsonConvert.SerializeObject(new { e.Axis, e.Invocation, });
+                var json = JsonConvert.SerializeObject(new { e.Axis, e.Invocation });
                 var bytes = Encoding.UTF8.GetBytes(json);
                 _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
                     $"axis:{e.Axis}", TransportEventType.Data, bytes, 0, default, null
                 ));
             };
 
-            // 速度/状态反馈（同上，写 Data；不阻塞、不重活）
+            // 速度/状态反馈（仅观测）
             _axisEventAggregator.SpeedFeedback += (s, e) => {
                 var json = JsonConvert.SerializeObject(new { e.Axis, e.Rpm, e.SpeedMps, e.TimestampUtc });
                 var bytes = Encoding.UTF8.GetBytes(json);
@@ -235,6 +243,59 @@ namespace ZakYip.Singulation.Host.Workers {
             };
 
             _axisSubscribed = true;
+        }
+
+        // ========== 事件处理：传输侧 ==========
+        private void ProcessTransportEvent(TransportEvent ev) {
+            switch (ev.Type) {
+                case TransportEventType.BytesReceived:
+                    // 提醒：这里用 e.Buffer.Length 放在 Count，或你的 Count 字段
+                    var len = ev.Count > 0 ? ev.Count : ev.Payload.Length;
+                    _log.LogDebug("[transport.rx] {Source} bytes={Len}", ev.Source, len);
+                    break;
+
+                case TransportEventType.StateChanged:
+                    _log.LogInformation("[transport:{Source}] state={State}", ev.Source, ev.Conn);
+                    break;
+
+                case TransportEventType.Error:
+                    _log.LogError(ev.Exception, "[transport:{Source}] error", ev.Source);
+                    break;
+
+                case TransportEventType.Data:
+                default:
+                    // 仅在 axis:* 的“观测数据”时打印一条信息日志（不会刷屏）
+                    if (ev.Source.StartsWith("axis:", StringComparison.OrdinalIgnoreCase) && !ev.Payload.IsEmpty) {
+                        _log.LogInformation("[axis.data] {Source} {Json}", ev.Source, Encoding.UTF8.GetString(ev.Payload.Span));
+                    }
+                    break;
+            }
+        }
+
+        // ========== 事件处理：轴侧 ==========
+        private void ProcessAxisEvent(AxisEvent ev) {
+            switch (ev.Type) {
+                case AxisEventType.Faulted:
+                    _log.LogError(ev.Exception, "[{Source}] axis faulted (axis={Axis})", ev.Source, ev.AxisId);
+                    break;
+
+                case AxisEventType.Disconnected:
+                    _log.LogWarning("[{Source}] axis disconnected (axis={Axis}) reason={Reason}", ev.Source, ev.AxisId, ev.Reason);
+                    break;
+
+                case AxisEventType.DriverNotLoaded:
+                    _log.LogError("[{Source}] driver not loaded: {Reason}", ev.Source, ev.Reason);
+                    break;
+
+                case AxisEventType.ControllerFaulted:
+                    // 如果你未来把控制器 Faulted 也接到这里，可复用此分支
+                    _log.LogError("[{Source}] controller fault: {Reason}", ev.Source, ev.Reason);
+                    break;
+
+                default:
+                    _log.LogWarning("[{Source}] unhandled axis event type={Type}", ev.Source, ev.Type);
+                    break;
+            }
         }
     }
 }

@@ -205,6 +205,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<LogEventBus>();
         services.AddSingleton<ILogEventWriter>(sp => sp.GetRequiredService<LogEventBus>());
         services.AddHostedService<LogEventPump>();
+        // ---------- 日志清理 ----------
+        services.AddHostedService<LogsCleanupService>();
     })
     // ---------- 日志 ----------
     .ConfigureLogging(logging => {
