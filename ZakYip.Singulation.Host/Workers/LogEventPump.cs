@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Host.Runtime;
 using ZakYip.Singulation.Core.Contracts.Events;
+using ZakYip.Singulation.Core.Abstractions.Realtime;
 
 namespace ZakYip.Singulation.Host.Workers {
 
@@ -19,6 +20,7 @@ namespace ZakYip.Singulation.Host.Workers {
     public sealed class LogEventPump : BackgroundService {
         private readonly ILogger<LogEventPump> _log;
         private readonly LogEventBus _bus;
+        private readonly IRealtimeNotifier _rt;
 
         // 合并桶：key = $"{Category}|{Message}"
         private readonly ConcurrentDictionary<string, (LogEvent ev, int count)> _bucket = new();
@@ -50,9 +52,11 @@ namespace ZakYip.Singulation.Host.Workers {
             return dst;
         }
 
-        public LogEventPump(ILogger<LogEventPump> log, LogEventBus bus) {
+        public LogEventPump(ILogger<LogEventPump> log, LogEventBus bus,
+            IRealtimeNotifier rt) {
             _log = log;
             _bus = bus;
+            _rt = rt;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -116,8 +120,13 @@ namespace ZakYip.Singulation.Host.Workers {
                         }
                     }
 
-                    // 如需推到 SignalR，可以用 props（已截断）：
-                    // _notifier.PublishLog(ev.Category, ev.Message, times, scopeDict);
+                    _ = _rt.PublishDeviceAsync(new {
+                        kind = "log",
+                        category = ev.Category,
+                        message = ev.Message,
+                        times,
+                        props = scopeDict
+                    });
                 }
             }
         }

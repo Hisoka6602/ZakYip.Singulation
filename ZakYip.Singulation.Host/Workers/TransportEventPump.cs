@@ -43,18 +43,20 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly IUpstreamFrameHub _hub;
         private readonly IAxisEventAggregator _axisEventAggregator;
         private readonly IServiceProvider _sp;
+        private readonly IRealtimeNotifier _rt;
         private bool _axisSubscribed;
 
         public TransportEventPump(
             ILogger<TransportEventPump> log,
             IServiceProvider sp,
             IUpstreamFrameHub hub,
-            IAxisEventAggregator axisEventAggregator) {
+            IAxisEventAggregator axisEventAggregator,
+            IRealtimeNotifier rt) {
             _log = log;
             _sp = sp;
             _hub = hub;
             _axisEventAggregator = axisEventAggregator;
-
+            _rt = rt;
             // 传输侧慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(1024) {
                 SingleReader = true,
@@ -142,14 +144,27 @@ namespace ZakYip.Singulation.Host.Workers {
                 switch (name) {
                     case "speed":
                         _hub.PublishSpeed(mem);
+                        _ = _rt.PublishVisionAsync(new {
+                            kind = "speed.raw",
+                            len = mem.Length,
+                            hex = BitConverter.ToString(mem.ToArray()).Replace("-", " ")
+                        });
                         break;
 
                     case "heartbeat":
                         _hub.PublishHeartbeat(mem);
+                        _ = _rt.PublishVisionAsync(new {
+                            kind = "position.raw",
+                            len = mem.Length
+                        });
                         break;
 
                     case "position":
                         _hub.PublishPosition(mem);
+                        _ = _rt.PublishVisionAsync(new {
+                            kind = "heartbeat.raw",
+                            len = mem.Length
+                        });
                         break;
 
                     default:
@@ -168,6 +183,11 @@ namespace ZakYip.Singulation.Host.Workers {
                 if (_ctlChannel.Writer.TryWrite(new TransportEvent(
                     name, TransportEventType.BytesReceived, default, e.Buffer.Length, default, null))) {
                     _written.AddOrUpdate(name, 1, static (_, v) => v + 1);
+                    _ = _rt.PublishDeviceAsync(new {
+                        kind = "transport.bytes",
+                        source = name,
+                        len = e.Buffer.Length
+                    }); // 即刻广播
                 }
                 else {
                     _dropped.AddOrUpdate(name, 1, static (_, v) => v + 1);
@@ -178,11 +198,22 @@ namespace ZakYip.Singulation.Host.Workers {
             t.StateChanged += (s, e) => {
                 _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
                     name, TransportEventType.StateChanged, default, 0, e.State, null)).AsTask();
+
+                _ = _rt.PublishDeviceAsync(new {
+                    kind = "transport.state",
+                    source = name,
+                    state = e.State.ToString()
+                });
             };
 
             t.Error += (s, e) => {
                 _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
                     name, TransportEventType.Error, default, 0, default, e.Exception)).AsTask();
+                _ = _rt.PublishErrorAsync(new {
+                    kind = "transport.error",
+                    source = name,
+                    error = e.Exception?.Message
+                });
             };
         }
 

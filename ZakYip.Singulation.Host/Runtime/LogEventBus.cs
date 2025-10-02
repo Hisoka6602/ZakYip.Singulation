@@ -12,7 +12,7 @@ namespace ZakYip.Singulation.Host.Runtime {
     /// <summary>
     /// 日志事件总线：封装一个有界通道，供写侧快速投递，读侧由 LogEventPump 消费。
     /// </summary>
-    public sealed class LogEventBus : ILogEventWriter {
+    public sealed class LogEventBus {
         private readonly Channel<LogEvent> _ch;
 
         public LogEventBus(int capacity = 4096) {

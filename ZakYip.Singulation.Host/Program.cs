@@ -203,7 +203,6 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<HeartbeatWorker>();
         // ---------- 日志泵 ----------
         services.AddSingleton<LogEventBus>();
-        services.AddSingleton<ILogEventWriter>(sp => sp.GetRequiredService<LogEventBus>());
         services.AddHostedService<LogEventPump>();
         // ---------- 日志清理 ----------
         services.AddHostedService<LogsCleanupService>();

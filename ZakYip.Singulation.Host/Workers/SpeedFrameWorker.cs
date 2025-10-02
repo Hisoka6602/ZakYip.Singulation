@@ -20,16 +20,19 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly IUpstreamFrameHub _hub;
         private readonly IUpstreamCodec _codec;
         private readonly IAxisController _controller;
+        private readonly IRealtimeNotifier _rt;
 
         public SpeedFrameWorker(
             ILogger<SpeedFrameWorker> log,
             IUpstreamFrameHub hub,
             IUpstreamCodec codec,
-            IAxisController controller) {
+            IAxisController controller,
+            IRealtimeNotifier rt) {
             _log = log;
             _hub = hub;
             _codec = codec;
             _controller = controller;
+            _rt = rt;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -41,6 +44,14 @@ namespace ZakYip.Singulation.Host.Workers {
                             continue;
 
                         await _controller.ApplySpeedSetAsync(speedSet, stoppingToken).ConfigureAwait(false);
+
+                        // 广播解码后的“轻量”视图
+                        _ = _rt.PublishVisionAsync(new {
+                            kind = "speed.decoded",
+                            sequence = speedSet.Sequence,
+                            mainCount = speedSet.MainMmps?.Count ?? 0,
+                            ejectCount = speedSet.EjectMmps?.Count ?? 0
+                        }, stoppingToken);
                     }
                     catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
                     catch (Exception ex) {

@@ -3,13 +3,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.Extensions.Hosting;
 
 namespace ZakYip.Singulation.Drivers.Health {
 
-    public sealed class AxisHealthMonitor {
+    public sealed class AxisHealthMonitor : BackgroundService {
         private readonly Func<CancellationToken, Task<bool>> _ping;
         private readonly TimeSpan _interval;
-        private CancellationTokenSource? _cts;
+        private volatile bool _enabled;
 
         public event Action? Recovered;
 
@@ -17,29 +18,18 @@ namespace ZakYip.Singulation.Drivers.Health {
             _ping = ping; _interval = interval;
         }
 
-        public void Start() {
-            if (_cts != null) return;
-            _cts = new CancellationTokenSource();
-            var ct = _cts.Token;
-            _ = Task.Run(async () => {
-                while (!ct.IsCancellationRequested) {
-                    try {
-                        if (await _ping(ct).ConfigureAwait(false)) {
-                            Stop();
-                            Recovered?.Invoke();
-                            break;
-                        }
-                    }
-                    catch { /* ignore */ }
-                    await Task.Delay(_interval, ct).ConfigureAwait(false);
-                }
-            }, ct);
-        }
+        public void Start() => _enabled = true;
 
-        public void Stop() {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = null;
+        public void Stop() => _enabled = false;
+
+        protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            var timer = new PeriodicTimer(_interval);
+            while (await timer.WaitForNextTickAsync(stoppingToken)) {
+                if (!_enabled) continue;
+                bool ok = false;
+                try { ok = await _ping(stoppingToken); } catch { }
+                if (ok) Recovered?.Invoke();
+            }
         }
     }
 }
