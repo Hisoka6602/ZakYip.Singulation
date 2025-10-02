@@ -15,6 +15,7 @@ using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
+using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -138,7 +139,7 @@ namespace ZakYip.Singulation.Host.Controllers {
                 return BadRequest(ApiResponse<object>.Invalid("请先设置控制器模板", new { Hint = "PUT /api/axes/controller/options" }));
 
             var vendor = opt.Vendor;
-            var tpl = MapToDriverOptions(opt.Template);
+            var tpl = opt.Template.ToDriverOptionsTemplate();
             var ok = await Safe(async () => {
                 switch (req.Type) {
                     case ControllerResetType.Hard:
@@ -395,24 +396,6 @@ namespace ZakYip.Singulation.Host.Controllers {
 
             return ok;
         }
-
-        private static DriverOptions MapToDriverOptions(DriverOptionsTemplateOptions t) => new() {
-            // 注意：Card/Port/NodeId/IsReverse 在 InitializeAsync 内按轴设置，这里不填
-            GearRatio = t.GearRatio,
-            ScrewPitchMm = t.ScrewPitchMm,
-            PulleyDiameterMm = t.PulleyDiameterMm,
-            PulleyPitchDiameterMm = t.PulleyPitchDiameterMm,
-            MaxRpm = t.MaxRpm,
-            MaxAccelRpmPerSec = t.MaxAccelRpmPerSec,
-            MaxDecelRpmPerSec = t.MaxDecelRpmPerSec,
-            MinWriteInterval = TimeSpan.FromMilliseconds(t.MinWriteInterval),
-            ConsecutiveFailThreshold = t.ConsecutiveFailThreshold,
-            EnableHealthMonitor = t.EnableHealthMonitor,
-            HealthPingInterval = TimeSpan.FromMilliseconds(t.HealthPingInterval),
-            Card = t.Card,
-            Port = t.Port,
-            NodeId = 0
-        };
 
         /// <summary>
         /// 安全执行某个异步动作：吞掉异常并返回 false；具体异常信息由驱动层事件和 LastErrorMessage 负责记录。

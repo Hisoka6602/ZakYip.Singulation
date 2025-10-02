@@ -37,7 +37,7 @@ namespace ZakYip.Singulation.Drivers.Common {
                 return;
             }
 
-            var count = overrideAxisCount ?? await Bus.GetAxisCountAsync(ct);
+            var count = overrideAxisCount is > 0 ? overrideAxisCount : await Bus.GetAxisCountAsync(ct);
             if (count <= 0) {
                 OnControllerFaulted("Axis count must be > 0.");
                 return;
@@ -53,7 +53,6 @@ namespace ZakYip.Singulation.Drivers.Common {
                 var drive = _registry.Create(vendor, axisId, port: null!, opts);
                 _drives.Add(drive);
                 _aggregator.Attach(drive);
-                OnControllerFaulted($"新增轴:{axisId.Value}");
             }
             OnControllerFaulted("完成");
         }
@@ -68,8 +67,8 @@ namespace ZakYip.Singulation.Drivers.Common {
                     OnControllerFaulted($"Drive {d.Axis}: {ex.Message}");
                 }
 
-                // 间隔至少 10ms，避免指令过于密集
-                await Task.Delay(10, ct);
+                // 间隔至少 2ms，避免指令过于密集
+                await Task.Delay(2, ct);
             }
         }
 

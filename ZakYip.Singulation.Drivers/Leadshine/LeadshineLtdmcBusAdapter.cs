@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Drivers.Abstractions;
+using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 namespace ZakYip.Singulation.Drivers.Leadshine {
 
@@ -59,6 +60,25 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public async Task<bool> InitializeAsync(CancellationToken ct = default) {
             return await Safe<bool>(async () => {
                 if (IsInitialized) return true; // 幂等：已初始化则直接成功
+                ushort errcode = 0;
+                int i = 0;
+                do {
+                    LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
+                    if (errcode != 0) {
+                        if (i > 2) {
+                            SetError($"总线异常:{errcode}");
+                            return false;
+                        }
+                        else {
+                            await ResetAsync(ct);
+                        }
+                    }
+                    else {
+                        break;
+                    }
+
+                    i++;
+                } while (true);
 
                 if (_controllerIp != null) {
                     // Step 1: Ping 探测（快速失败）

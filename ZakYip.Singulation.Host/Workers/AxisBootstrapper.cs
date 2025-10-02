@@ -7,6 +7,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Abstractions;
+using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
 namespace ZakYip.Singulation.Host.Workers {
 
@@ -14,14 +15,18 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly ILogger<AxisBootstrapper> _log;
         private readonly IControllerOptionsStore _ctrlOpts;
         private readonly IAxisController _controller;
+        private readonly IHostApplicationLifetime _lifetime;
 
         public AxisBootstrapper(
             ILogger<AxisBootstrapper> log,
             IControllerOptionsStore ctrlOpts,
-            IAxisController controller) {
+            IAxisController controller,
+            IHostApplicationLifetime lifetime) {
             _log = log;
             _ctrlOpts = ctrlOpts;
             _controller = controller;
+            _lifetime = lifetime;
+            _lifetime.ApplicationStopping.Register(OnStopping);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -44,9 +49,11 @@ namespace ZakYip.Singulation.Host.Workers {
                 }
 
                 // 2) 按模板初始化轴（这一步会调用 Bus.Initialize、GetAxisCount、并批量创建驱动）
+                var driverTemplate = opt.Template.ToDriverOptionsTemplate();
+
                 await _controller.InitializeAsync(
                     vendor: opt.Vendor,
-                    template: MapToDriverOptions(opt.Template),
+                    template: driverTemplate,           // ← 用集中映射后的模板
                     overrideAxisCount: opt.OverrideAxisCount,
                     ct: stoppingToken);
 
@@ -64,20 +71,16 @@ namespace ZakYip.Singulation.Host.Workers {
             }
         }
 
-        private static DriverOptions MapToDriverOptions(DriverOptionsTemplateOptions t) => new DriverOptions {
-            //—— 将模板映射到实际驱动选项（字段名以你项目中 Drivers.Common/DriverOptions 为准）——
-            Card = (ushort)t.Card,
-            Port = (ushort)t.Port,
-            GearRatio = t.GearRatio,
-            PulleyPitchDiameterMm = t.PulleyPitchDiameterMm,
-            MinWriteInterval = TimeSpan.FromSeconds(t.MinWriteInterval),
-            ConsecutiveFailThreshold = t.ConsecutiveFailThreshold,
-            EnableHealthMonitor = t.EnableHealthMonitor,
-            HealthPingInterval = TimeSpan.FromMilliseconds(t.HealthPingInterval),
-            // 线性限幅（你 Core 的模板里已经是 mm/s 与 mm/s²）
-            MaxAccelRpmPerSec = t.MaxAccelRpmPerSec,
-            MaxDecelRpmPerSec = t.MaxDecelRpmPerSec,
-            NodeId = 0
-        };
+        private void OnStopping() {
+            try {
+                _log.LogInformation("AxisBootstrapper stopping: releasing all axes...");
+                _controller.DisposeAllAsync(CancellationToken.None)
+                    .GetAwaiter().GetResult();
+                _log.LogInformation("AxisBootstrapper stopping: all axes released.");
+            }
+            catch (Exception ex) {
+                _log.LogError(ex, "AxisBootstrapper stopping: release failed");
+            }
+        }
     }
 }

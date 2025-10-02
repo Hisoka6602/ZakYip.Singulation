@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Configs;
+using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 
@@ -102,5 +105,89 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
         public static AxisGridLayoutOptions ToDto(this AxisGridLayoutDoc d) => new() { Rows = d.Rows, Cols = d.Cols };
 
         public static AxisGridLayoutDoc ToDoc(this AxisGridLayoutOptions dto) => new() { Rows = dto.Rows, Cols = dto.Cols };
+
+        /// <summary>
+        /// 生成“模板级别”的 DriverOptions：已带 Card/Port，NodeId 留 0（让控制器在按轴创建时再映射）。
+        /// </summary>
+        public static DriverOptions ToDriverOptionsTemplate(this DriverOptionsTemplateOptions tpl) {
+            if (tpl is null) throw new ArgumentNullException(nameof(tpl));
+
+            // 1) 创建目标，复制同名同型字段（排除硬件字段）
+            var o = new DriverOptions {
+                Card = tpl.Card,
+                Port = (ushort)tpl.Port,
+                NodeId = 0,
+                GearRatio = tpl.GearRatio,
+                PulleyPitchDiameterMm = tpl.PulleyPitchDiameterMm
+            };
+            CopySameProps(tpl, o, ExcludedHardwareFields);
+
+            // 2) 补齐硬件（NodeId 模板阶段置 0，按轴时再映射）
+            o = o with {
+                Card = tpl.Card,
+                Port = (ushort)tpl.Port,
+                NodeId = 0,
+                GearRatio = tpl.GearRatio,
+                PulleyPitchDiameterMm = tpl.PulleyPitchDiameterMm <= 0 ? 79m : tpl.PulleyPitchDiameterMm,
+            };
+
+            // 3) 时间字段：模板里是“毫秒”的 int/decimal，DriverOptions 是 TimeSpan
+            //    ——若模板没有这些字段，下面赋值不会编译；那就删掉对应三行即可。
+            o = o with {
+                MinWriteInterval = TimeSpan.FromMilliseconds(tpl.MinWriteInterval),
+                HealthPingInterval = TimeSpan.FromMilliseconds(tpl.HealthPingInterval)
+            };
+
+            // 4) 兜底：仅对 rpm/rpm/s 和失败阈值做最小值兜底，防止 0 值导致底层拒绝
+            if (o.MaxRpm <= 0) o = o with { MaxRpm = 1813m };
+            if (o.MaxAccelRpmPerSec <= 0) o = o with { MaxAccelRpmPerSec = 1511m };
+            if (o.MaxDecelRpmPerSec <= 0) o = o with { MaxDecelRpmPerSec = 1511m };
+            if (o.ConsecutiveFailThreshold <= 0) o = o with { ConsecutiveFailThreshold = 5 };
+
+            // 5) 机械参数：至少给出一种换算依据（丝杠螺距或皮带/辊筒直径）
+            var hasLead = o.ScrewPitchMm > 0;
+            var hasPulley = o.PulleyDiameterMm > 0 || o.PulleyPitchDiameterMm > 0;
+            if (!hasLead && !hasPulley)
+
+                throw new InvalidOperationException("模板缺少机械换算参数：请提供 ScrewPitchMm 或 PulleyDiameterMm / PulleyPitchDiameterMm。");
+
+            if (o.GearRatio <= 0)
+                throw new InvalidOperationException("模板缺少 GearRatio 或其值无效（必须 > 0）。");
+
+            return o;
+        }
+
+        /// <summary>
+        /// 供控制器在“按轴创建”时做 NodeId 映射：logic 1..N → 1001..100N。
+        /// </summary>
+        public static ushort DefaultNodeIdMap(int logicalAxisId) => (ushort)(1000 + logicalAxisId);
+
+        // ===== 内部工具 =====
+
+        private static readonly HashSet<string> ExcludedHardwareFields = new(StringComparer.Ordinal)
+        {
+            nameof(DriverOptions.Card),
+            nameof(DriverOptions.Port),
+            nameof(DriverOptions.NodeId),
+            nameof(DriverOptions.IsReverse),
+        };
+
+        private static void CopySameProps(object src, object dest, ISet<string> exclude) {
+            var sps = src.GetType()
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead && p.GetIndexParameters().Length == 0);
+
+            var dps = dest.GetType()
+                .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanWrite && p.GetIndexParameters().Length == 0)
+                .ToDictionary(p => p.Name, p => p, StringComparer.Ordinal);
+
+            foreach (var sp in sps) {
+                if (exclude.Contains(sp.Name)) continue;
+                if (!dps.TryGetValue(sp.Name, out var dp)) continue;
+                if (dp.PropertyType != sp.PropertyType) continue;
+                dp.SetValue(dest, sp.GetValue(src));
+            }
+        }
     }
 }
