@@ -36,15 +36,19 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly ConcurrentDictionary<string, long> _written = new();
 
         private readonly IUpstreamFrameHub _hub;
+        private readonly IAxisEventAggregator _axisEventAggregator;
         private readonly IServiceProvider _sp;
+        private bool _axisSubscribed;
 
         public TransportEventPump(
             ILogger<TransportEventPump> log,
             IServiceProvider sp,
-            IUpstreamFrameHub hub) {
+            IUpstreamFrameHub hub,
+            IAxisEventAggregator axisEventAggregator) {
             _log = log;
             _sp = sp;
             _hub = hub;
+            _axisEventAggregator = axisEventAggregator;
 
             // 慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(256) {
@@ -62,6 +66,7 @@ namespace ZakYip.Singulation.Host.Workers {
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            SubscribeAxisEventsOnce();
             // 订阅（只一次）
             foreach (var (name, t) in _transports) Subscribe(name, t); // 原实现在这里做订阅 :contentReference[oaicite:1]{index=1}
 
@@ -95,6 +100,10 @@ namespace ZakYip.Singulation.Host.Workers {
                         // Data 永远不会走到这里（已走快路径）
                         case TransportEventType.Data:
                         default:
+                            // 新增：轴侧 Data 的轻量可观测日志（避免把所有 Data 都打出来）
+                            if (ev.Source.StartsWith("axis:", StringComparison.OrdinalIgnoreCase) && !ev.Payload.IsEmpty) {
+                                _log.LogInformation("[axis.data] {Source} {Json}", ev.Source, Encoding.UTF8.GetString(ev.Payload.Span));
+                            }
                             break;
                     }
                 }
@@ -142,7 +151,14 @@ namespace ZakYip.Singulation.Host.Workers {
                         break;
 
                     case "position":
-                        // 如需：_hub.PublishPosition(mem);
+                        _hub.PublishPosition(mem);
+                        break;
+
+                    default:
+                        // 未知名的通道仍可走控制事件日志通道
+                        _ = _ctlChannel.Writer.TryWrite(new TransportEvent(
+                            name, TransportEventType.Data, mem, 0, default, null
+                        ));
                         break;
                 }
 
@@ -171,6 +187,54 @@ namespace ZakYip.Singulation.Host.Workers {
                 _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
                     name, TransportEventType.Error, default, 0, default, e.Exception)).AsTask();
             };
+        }
+
+        private void SubscribeAxisEventsOnce() {
+            if (_axisSubscribed) return;
+
+            // 轴错误
+            _axisEventAggregator.AxisFaulted += (s, e) => {
+                // 走慢路径，类型沿用 Error，Source 统一前缀 axis
+                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
+                    $"axis:{e.Axis}", TransportEventType.Error, default, 0, default, e.Exception
+                ));
+            };
+
+            // 轴断开/掉线
+            _axisEventAggregator.AxisDisconnected += (s, e) => {
+                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
+                    $"axis:{e.Axis}", TransportEventType.StateChanged, default, 0,
+                    TransportConnectionState.Disconnected, null
+                ));
+            };
+
+            // 驱动未加载
+            _axisEventAggregator.DriverNotLoaded += (s, e) => {
+                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
+                    $"{e.Message}", TransportEventType.Error, default, 0, default,
+                    new InvalidOperationException($"Driver not loaded: {e.Message}")
+                ));
+            };
+
+            // 命令已下发（作为可观测数据写入 Data；下面会在慢路径里专门打印 axis:* 的 Data）
+            _axisEventAggregator.CommandIssued += (s, e) => {
+                var json = JsonConvert.SerializeObject(new { e.Axis, e.Invocation, });
+                var bytes = Encoding.UTF8.GetBytes(json);
+                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
+                    $"axis:{e.Axis}", TransportEventType.Data, bytes, 0, default, null
+                ));
+            };
+
+            // 速度/状态反馈（同上，写 Data；不阻塞、不重活）
+            _axisEventAggregator.SpeedFeedback += (s, e) => {
+                var json = JsonConvert.SerializeObject(new { e.Axis, e.Rpm, e.SpeedMps, e.TimestampUtc });
+                var bytes = Encoding.UTF8.GetBytes(json);
+                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
+                    $"axis:{e.Axis}", TransportEventType.Data, bytes, 0, default, null
+                ));
+            };
+
+            _axisSubscribed = true;
         }
     }
 }

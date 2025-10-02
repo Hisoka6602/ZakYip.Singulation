@@ -283,8 +283,16 @@ var host = Host.CreateDefaultBuilder(args)
     .Build();
 
 try {
+    // ◊Ë÷πµÁƒ‘ÀØ√ﬂ/œ®∆¡
+    PowerGuard.SetThreadExecutionState(
+        PowerGuard.EXECUTION_STATE.ES_CONTINUOUS |
+        PowerGuard.EXECUTION_STATE.ES_SYSTEM_REQUIRED |
+        PowerGuard.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
     host.Run();
 }
 catch (Exception e) {
     NLog.LogManager.GetCurrentClassLogger().Error(e, "‘À––“Ï≥£");
+}
+finally {
+    PowerGuard.SetThreadExecutionState(PowerGuard.EXECUTION_STATE.ES_CONTINUOUS);
 }

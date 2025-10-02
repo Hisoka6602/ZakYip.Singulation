@@ -29,5 +29,9 @@ namespace ZakYip.Singulation.Core.Contracts {
 
         /// <summary>发布一帧心跳原始字节（泵侧调用）。</summary>
         void PublishHeartbeat(ReadOnlyMemory<byte> payload);
+
+        (ChannelReader<ReadOnlyMemory<byte>> reader, IDisposable unsubscribe) SubscribePosition(int capacity = 256);
+
+        void PublishPosition(ReadOnlyMemory<byte> payload);
     }
 }
