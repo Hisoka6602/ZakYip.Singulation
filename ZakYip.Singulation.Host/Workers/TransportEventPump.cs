@@ -1,18 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using Newtonsoft.Json;
-using System.Threading.Tasks;
 using System.Threading.Channels;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 using ZakYip.Singulation.Core.Enums;
-using System.Security.Cryptography.Xml;
 using ZakYip.Singulation.Core.Contracts;
-using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Events;
-using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Transport.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 
@@ -32,8 +25,11 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly Channel<TransportEvent> _ctlChannel;
 
         // 轴侧事件：独立通道，避免把非字节数据塞进 TransportEvent
-        private readonly Channel<AxisEvent> _axisChannel = Channel.CreateUnbounded<AxisEvent>(
-            new UnboundedChannelOptions { SingleReader = true, SingleWriter = false });
+        private readonly Channel<AxisEvent> _axisChannel = Channel.CreateBounded<AxisEvent>(new BoundedChannelOptions(512) {
+            FullMode = BoundedChannelFullMode.DropOldest,
+            SingleReader = true,
+            SingleWriter = false
+        });
 
         // 轻量指标：按源计数写入/丢弃
         private readonly ConcurrentDictionary<string, long> _dropped = new();
@@ -44,7 +40,10 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly IAxisEventAggregator _axisEventAggregator;
         private readonly IServiceProvider _sp;
         private readonly IRealtimeNotifier _rt;
+
         private bool _axisSubscribed;
+        private long _axisDropped;
+        private long _axisWritten;
 
         public TransportEventPump(
             ILogger<TransportEventPump> log,
@@ -57,6 +56,7 @@ namespace ZakYip.Singulation.Host.Workers {
             _hub = hub;
             _axisEventAggregator = axisEventAggregator;
             _rt = rt;
+
             // 传输侧慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(1024) {
                 SingleReader = true,
@@ -124,7 +124,7 @@ namespace ZakYip.Singulation.Host.Workers {
             _ctlChannel.Writer.TryComplete();
             _axisChannel.Writer.TryComplete();
 
-            // 打点输出
+            // 打点输出（停止时统计更准确）
             foreach (var (name, _) in _transports) {
                 var dropped = _dropped.TryGetValue(name, out var d) ? d : 0;
                 var written = _written.TryGetValue(name, out var w) ? w : 0;
@@ -133,6 +133,12 @@ namespace ZakYip.Singulation.Host.Workers {
                 else
                     _log.LogInformation("[transport:{Name}] written={Written}", name, written);
             }
+
+            // 补：轴侧总统计
+            if (_axisDropped > 0)
+                _log.LogWarning("[axis] dropped={Dropped} written={Written}", _axisDropped, _axisWritten);
+            else
+                _log.LogInformation("[axis] written={Written}", _axisWritten);
 
             await base.StopAsync(ct).ConfigureAwait(false);
         }
@@ -154,7 +160,7 @@ namespace ZakYip.Singulation.Host.Workers {
                     case "heartbeat":
                         _hub.PublishHeartbeat(mem);
                         _ = _rt.PublishVisionAsync(new {
-                            kind = "position.raw",
+                            kind = "heartbeat.raw",
                             len = mem.Length
                         });
                         break;
@@ -162,7 +168,7 @@ namespace ZakYip.Singulation.Host.Workers {
                     case "position":
                         _hub.PublishPosition(mem);
                         _ = _rt.PublishVisionAsync(new {
-                            kind = "heartbeat.raw",
+                            kind = "position.raw",
                             len = mem.Length
                         });
                         break;
@@ -222,35 +228,41 @@ namespace ZakYip.Singulation.Host.Workers {
 
             // 轴故障（真正异常对象）→ AxisEvent.Faulted
             _axisEventAggregator.AxisFaulted += (s, e) => {
-                _axisChannel.Writer.TryWrite(new AxisEvent(
+                var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
                     Source: $"axis:{e.Axis}",
                     Type: AxisEventType.Faulted,
                     AxisId: e.Axis,
                     Reason: null,
                     Exception: e.Exception
                 ));
+                if (!ok) Interlocked.Increment(ref _axisDropped);
+                else Interlocked.Increment(ref _axisWritten);
             };
 
             // 轴断开/掉线（文本原因）→ AxisEvent.Disconnected
             _axisEventAggregator.AxisDisconnected += (s, e) => {
-                _axisChannel.Writer.TryWrite(new AxisEvent(
+                var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
                     Source: $"axis:{e.Axis}",
                     Type: AxisEventType.Disconnected,
                     AxisId: e.Axis,
                     Reason: e.Reason,
                     Exception: null
                 ));
+                if (!ok) Interlocked.Increment(ref _axisDropped);
+                else Interlocked.Increment(ref _axisWritten);
             };
 
             // 驱动未加载（库级问题）→ AxisEvent.DriverNotLoaded
             _axisEventAggregator.DriverNotLoaded += (s, e) => {
-                _axisChannel.Writer.TryWrite(new AxisEvent(
+                var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
                     Source: $"driver:{e.LibraryName}",
                     Type: AxisEventType.DriverNotLoaded,
                     AxisId: null,
                     Reason: e.Message,
                     Exception: null
                 ));
+                if (!ok) Interlocked.Increment(ref _axisDropped);
+                else Interlocked.Increment(ref _axisWritten);
             };
 
             // —— 以下两类仍作为“可观测数据”走 TransportEvent.Data（JSON 轻量记录），保持你原有做法 ——
