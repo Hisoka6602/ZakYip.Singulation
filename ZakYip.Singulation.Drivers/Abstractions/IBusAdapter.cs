@@ -17,11 +17,10 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         bool IsInitialized { get; }
 
         /// <summary>
-        /// 初始化控制器或通信总线（幂等）。
+        /// 初始化底层总线。
+        /// 返回：Key=true 表示成功，Value为说明；Key=false 表示失败，Value为失败原因。
         /// </summary>
-        /// <param name="ct">取消令牌</param>
-        /// <returns>如果初始化成功返回 true；否则返回 false。</returns>
-        Task<bool> InitializeAsync(CancellationToken ct = default);
+        Task<KeyValuePair<bool, string>> InitializeAsync(CancellationToken ct = default);
 
         /// <summary>关闭/释放控制器资源（幂等）。</summary>
         Task CloseAsync(CancellationToken ct = default);

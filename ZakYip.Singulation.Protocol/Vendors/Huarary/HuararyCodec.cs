@@ -69,34 +69,33 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
 
         /// <inheritdoc />
         public bool TryDecodePositions(ReadOnlySpan<byte> frame, out IReadOnlyList<ParcelPose> poses) {
-            // 位置帧（Ctrl=0x82）按文档：数量与每件的 X/Y/Len/W/Angle 均为 4B 小端。:contentReference[oaicite:3]{index=3}
-            poses = Array.Empty<ParcelPose>();
+            poses = [];
             if (frame.Length < 6) return false;
             if (frame[0] != HuararyControl.Start || frame[^1] != HuararyControl.End) return false;
             if (frame[1] != HuararyControl.CtrlPos) return false;
 
-            ushort len = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(2, 2));
+            var len = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(2, 2));
             if (len != frame.Length) return false;
 
-            int checksumIndex = frame.Length - 2;
+            var checksumIndex = frame.Length - 2;
             byte xor = 0;
-            for (int i = 0; i < checksumIndex; i++) xor ^= frame[i];
+            for (var i = 0; i < checksumIndex; i++) xor ^= frame[i];
             if (xor != frame[checksumIndex]) return false;
 
             var payload = frame.Slice(4, frame.Length - 6);
             if (payload.Length < 4) return false;
 
-            int off = 0;
-            int count = BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4)); off += 4;
+            var off = 0;
+            var count = BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4)); off += 4;
 
             var list = new List<ParcelPose>(count);
-            for (int i = 0; i < count; i++) {
+            for (var i = 0; i < count; i++) {
                 if (off + 5 * 4 > payload.Length) break;
-                float x = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
-                float y = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
-                float l = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
-                float w = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
-                float a = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var x = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var y = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var l = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var w = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var a = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
                 list.Add(new ParcelPose(x, y, l, w, a));
             }
 
@@ -137,7 +136,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             BinaryPrimitives.WriteUInt16LittleEndian(span.Slice(5, 2), maxMmps);
             BinaryPrimitives.WriteUInt16LittleEndian(span.Slice(7, 2), minMmps);
             byte xor = 0;
-            for (int i = 0; i < 9; i++) xor ^= span[i];
+            for (var i = 0; i < 9; i++) xor ^= span[i];
             span[9] = xor;
             span[10] = HuararyControl.End;
             writer.Advance(11);
@@ -154,7 +153,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             BinaryPrimitives.WriteUInt16LittleEndian(span.Slice(4, 2), spacingMm);
             span[6] = 0x02; // 分离模式
             span[7] = 0x00; // 备用
-            byte xor = 0; for (int i = 0; i < 8; i++) xor ^= span[i];
+            byte xor = 0; for (var i = 0; i < 8; i++) xor ^= span[i];
             span[8] = xor;
             span[9] = HuararyControl.End;
             writer.Advance(10);
@@ -177,7 +176,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             span[4] = ejectCount;
             BinaryPrimitives.WriteUInt16LittleEndian(span.Slice(5, 2), ejectMmps);
             span[7] = autoStartDelaySec;
-            byte xor = 0; for (int i = 0; i < 8; i++) xor ^= span[i];
+            byte xor = 0; for (var i = 0; i < 8; i++) xor ^= span[i];
             span[8] = xor;
             span[9] = HuararyControl.End;
             writer.Advance(10);
@@ -205,7 +204,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             span[1] = ctrl;
             span[2] = 0x0A; span[3] = 0x00; // 长度=10
             span[4] = 0x00; span[5] = 0x00; span[6] = 0x00; span[7] = arg;
-            byte xor = 0; for (int i = 0; i < 8; i++) xor ^= span[i];
+            byte xor = 0; for (var i = 0; i < 8; i++) xor ^= span[i];
             span[8] = xor;
             span[9] = HuararyControl.End;
             writer.Advance(10);

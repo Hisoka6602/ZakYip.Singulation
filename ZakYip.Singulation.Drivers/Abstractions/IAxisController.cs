@@ -48,7 +48,11 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <param name="template">驱动初始化模板参数。</param>
         /// <param name="overrideAxisCount">可选，强制覆盖的轴数量。</param>
         /// <param name="ct">取消标记。</param>
-        Task InitializeAsync(string vendor, DriverOptions template, int? overrideAxisCount = null, CancellationToken ct = default);
+        Task<KeyValuePair<bool, string>> InitializeAsync(
+            string vendor,
+            DriverOptions template,
+            int? overrideAxisCount = null,
+            CancellationToken ct = default);
 
         /// <summary>
         /// 启用所有已创建的轴驱动。

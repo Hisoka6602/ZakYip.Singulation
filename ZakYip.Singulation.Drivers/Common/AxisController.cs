@@ -28,33 +28,72 @@ namespace ZakYip.Singulation.Drivers.Common {
         public IBusAdapter Bus { get; }
         public IReadOnlyList<IAxisDrive> Drives => _drives;
 
-        public async Task InitializeAsync(string vendor, DriverOptions template, int? overrideAxisCount = null, CancellationToken ct = default) {
-            if (_drives.Count > 0) return; // 幂等保护
+        public async Task<KeyValuePair<bool, string>> InitializeAsync(string vendor,
+            DriverOptions template,
+            int? overrideAxisCount = null, CancellationToken ct = default) {
+            try {
+                // 幂等：已初始化直接返回成功说明
+                if (_drives.Count > 0)
+                    return new KeyValuePair<bool, string>(true, $"Already initialized with {_drives.Count} axes.");
 
-            var busInitialized = await Bus.InitializeAsync(ct);
-            if (!busInitialized) {
-                OnControllerFaulted("Bus initialization failed.");
-                return;
-            }
+                // 1) 初始化总线（带原因文本）
+                var busInit = await Bus.InitializeAsync(ct);
+                if (!busInit.Key) {
+                    var msg = $"Bus initialization failed: {busInit.Value}";
+                    OnControllerFaulted(msg);
+                    return new(false, msg);
+                }
 
-            var count = overrideAxisCount is > 0 ? overrideAxisCount : await Bus.GetAxisCountAsync(ct);
-            if (count <= 0) {
-                OnControllerFaulted("Axis count must be > 0.");
-                return;
-            }
+                // 2) 轴数判定：优先使用 override，其次总线探测
+                ct.ThrowIfCancellationRequested();
+                var count = (overrideAxisCount is > 0)
+                    ? overrideAxisCount.Value
+                    : await Bus.GetAxisCountAsync(ct);
 
-            _drives.Clear();
-            for (ushort i = 1; i <= count; i++) {
-                var axisId = new AxisId(Bus.TranslateNodeId(i));
-                var opts = template with {
-                    NodeId = (ushort)axisId.Value,
-                    IsReverse = Bus.ShouldReverse((ushort)axisId.Value)
-                };
-                var drive = _registry.Create(vendor, axisId, port: null!, opts);
-                _drives.Add(drive);
-                _aggregator.Attach(drive);
+                if (count <= 0) {
+                    const string msg = "Axis count must be > 0.";
+                    OnControllerFaulted(msg);
+                    return new(false, msg);
+                }
+
+                // 3) 创建并注册驱动
+                _drives.Clear();
+                for (ushort i = 1; i <= count; i++) {
+                    ct.ThrowIfCancellationRequested();
+
+                    var axisId = new AxisId(Bus.TranslateNodeId(i));
+                    var opts = template with {
+                        NodeId = (ushort)axisId.Value,
+                        IsReverse = Bus.ShouldReverse((ushort)axisId.Value)
+                    };
+
+                    try {
+                        var drive = _registry.Create(vendor, axisId, port: null!, opts);
+                        _drives.Add(drive);
+                        _aggregator.Attach(drive);
+                    }
+                    catch (Exception ex) {
+                        var msg = $"Create axis {i} (node {axisId.Value}) failed: {ex.Message}";
+                        OnControllerFaulted(msg);
+                        _drives.Clear(); // 若需要可在此处补充逐个 Detach
+                        return new(false, msg);
+                    }
+                }
+
+                // 成功：返回说明文本，不触发 Faulted 事件
+                return new(true, $"Initialized {_drives.Count} axes successfully.");
             }
-            OnControllerFaulted("完成");
+            catch (OperationCanceledException) {
+                const string msg = "Initialization canceled.";
+                OnControllerFaulted(msg);
+                return new(false, msg);
+            }
+            catch (Exception ex) {
+                var msg = $"Unexpected error: {ex.Message}";
+                OnControllerFaulted(msg);
+                _drives.Clear();
+                return new(false, msg);
+            }
         }
 
         private async Task ForEachDriveAsync(Func<IAxisDrive, Task> action, CancellationToken ct) {

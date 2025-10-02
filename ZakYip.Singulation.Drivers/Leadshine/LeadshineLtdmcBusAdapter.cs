@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Polly;
+using System;
 using csLTDMC;
 using System.Linq;
 using System.Text;
@@ -57,72 +58,144 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         public bool IsInitialized { get; private set; }
 
-        public async Task<bool> InitializeAsync(CancellationToken ct = default) {
-            return await Safe<bool>(async () => {
-                if (IsInitialized) return true; // 幂等：已初始化则直接成功
-                ushort errcode = 0;
-                int i = 0;
-                do {
-                    LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
-                    if (errcode != 0) {
-                        if (i > 2) {
-                            SetError($"总线异常:{errcode}");
-                            return false;
-                        }
-                        else {
-                            await ResetAsync(ct);
-                        }
-                    }
-                    else {
-                        break;
-                    }
+        public async Task<KeyValuePair<bool, string>> InitializeAsync(CancellationToken ct = default) {
+            return await Safe<KeyValuePair<bool, string>>(async () => {
+                if (IsInitialized) return new(true, "Already initialized."); // 幂等
 
-                    i++;
-                } while (true);
+                // 重试节奏：0ms → 300ms → 1s → 2s（可调）
+                var delays = new[]
+                {
+            TimeSpan.Zero,
+            TimeSpan.FromMilliseconds(300),
+            TimeSpan.FromSeconds(1),
+            TimeSpan.FromSeconds(2),
+        };
 
-                if (_controllerIp != null) {
-                    // Step 1: Ping 探测（快速失败）
+                int attempt = 0;
+
+                var policy = Policy
+                    .HandleResult<KeyValuePair<bool, string>>(r => r.Key == false)
+                    .Or<Exception>()
+                    .WaitAndRetryAsync(
+                        delays,
+                        onRetryAsync: (outcome, delay, retryAttempt, _) => {
+                            var reason = outcome.Exception?.Message ?? outcome.Result.Value;
+                            SetError($"Initialize retry #{retryAttempt} after {delay.TotalMilliseconds}ms, reason={reason}");
+                            return Task.CompletedTask;
+                        });
+
+                return await policy.ExecuteAsync(async () => {
+                    attempt++;
+
+                    // === 0) 总线健康检查（唯一判据：errcode） ===
                     try {
-                        using var ping = new Ping();
-                        var reply = await ping.SendPingAsync(_controllerIp, TimeSpan.FromMilliseconds(1000), cancellationToken: ct)
-                            .ConfigureAwait(false);
-                        if (reply.Status != IPStatus.Success) {
-                            return false;
+                        ushort errcode = 0;
+                        LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
+                        if (errcode != 0) {
+                            // 本次尝试仅做一次复位：偶数尝试→软复位；奇数尝试→冷复位
+                            var useSoftReset = (attempt % 2 == 0);
+
+                            try {
+                                if (useSoftReset) {
+                                    var rc = await Task.Run(() => LTDMC.dmc_soft_reset(_cardNo), ct);
+                                    if (rc != 0) {
+                                        var msg = $"软复位失败: rc={rc}";
+                                        SetError(msg);
+                                        return new(false, msg);
+                                    }
+                                    await Task.Delay(500, ct); // 恢复时间
+                                }
+                                else {
+                                    await ResetAsync(ct);      // 冷复位（无返回值）
+                                    await Task.Delay(200, ct); // 恢复时间
+                                }
+                            }
+                            catch (OperationCanceledException) {
+                                return new(false, "Canceled");
+                            }
+                            catch (Exception ex) {
+                                var msg = $"复位过程异常: {ex.Message}";
+                                SetError(msg);
+                                return new(false, msg);
+                            }
+
+                            // 复位后再读一次 errcode；若仍异常则失败，交给 Polly
+                            LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
+                            if (errcode != 0) {
+                                var msg = $"总线异常未恢复: err={errcode}";
+                                SetError(msg);
+                                return new(false, msg);
+                            }
                         }
                     }
-                    catch (Exception ex) when (!(ex is OperationCanceledException && ct.IsCancellationRequested)) {
-                        return false;
+                    catch (OperationCanceledException) {
+                        return new(false, "Canceled");
                     }
-                }
+                    catch (Exception ex) {
+                        var msg = $"总线检查异常: {ex.Message}";
+                        SetError(msg);
+                        return new(false, msg);
+                    }
 
-                // Step 2: 调用 LTDMC 初始化（带超时）
-                const int timeoutMs = 5000;
-                var initTask = Task.Run(() => _controllerIp is null
-                    ? LTDMC.dmc_board_init()
-                    : LTDMC.dmc_board_init_eth(_cardNo, _controllerIp), ct);
+                    // === 1) 可选 Ping 预检（仅当配置了 IP） ===
+                    if (_controllerIp != null) {
+                        try {
+                            using var ping = new Ping();
+                            var reply = await ping.SendPingAsync(_controllerIp, TimeSpan.FromMilliseconds(1000), cancellationToken: ct)
+                                                  .ConfigureAwait(false);
+                            if (reply.Status != IPStatus.Success) {
+                                const string msg = "Ping controller failed.";
+                                SetError(msg);
+                                return new(false, msg);
+                            }
+                        }
+                        catch (OperationCanceledException) {
+                            return new(false, "Canceled");
+                        }
+                        catch {
+                            const string msg = "Ping 异常";
+                            SetError(msg);
+                            return new(false, msg);
+                        }
+                    }
 
-                var winner = await Task.WhenAny(initTask, Task.Delay(timeoutMs, ct)).ConfigureAwait(false);
+                    // === 2) LTDMC 初始化（WhenAny 严格超时 + 返回码判定） ===
+                    try {
+                        var initTask = Task.Run(() => {
+                            return _controllerIp is null
+                                ? LTDMC.dmc_board_init()
+                                : LTDMC.dmc_board_init_eth(_cardNo, _controllerIp);
+                        });
 
-                if (winner != initTask) {
-                    return false; // 超时 → 失败
-                }
+                        var timeoutTask = Task.Delay(5000, ct);
+                        var winner = await Task.WhenAny(initTask, timeoutTask).ConfigureAwait(false);
+                        if (winner != initTask) {
+                            const string msg = "LTDMC init 超时";
+                            SetError(msg);
+                            return new(false, msg);
+                        }
 
-                ct.ThrowIfCancellationRequested(); // 如果是取消导致的，抛出异常
+                        var ret = await initTask.ConfigureAwait(false);
+                        if (ret != 0) {
+                            var msg = $"LTDMC init 返回: {ret}";
+                            SetError(msg);
+                            return new(false, msg);
+                        }
+                    }
+                    catch (OperationCanceledException) {
+                        const string msg = "LTDMC init 取消";
+                        SetError(msg);
+                        return new(false, msg);
+                    }
+                    catch (Exception ex) {
+                        var msg = $"LTDMC init 异常: {ex.Message}";
+                        SetError(msg);
+                        return new(false, msg);
+                    }
 
-                int ret;
-                try {
-                    ret = await initTask.ConfigureAwait(false);
-                }
-                catch (Exception ex) {
-                    return false;
-                }
-
-                if (ret != 0) {
-                    return false;
-                }
-
-                IsInitialized = true;
-                return true;
+                    IsInitialized = true;
+                    return new(true, "Bus initialized.");
+                });
             }, "InitializeAsync");
         }
 
@@ -188,7 +261,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             var success = await Safe(async () => {
                 LTDMC.dmc_cool_reset(_cardNo);
                 await CloseAsync(ct).ConfigureAwait(false);
-                await Task.Delay(TimeSpan.FromSeconds(15), ct).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
                 await InitializeAsync(ct).ConfigureAwait(false);
             }, "ResetAsync");
 
@@ -212,7 +285,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             var success = await Safe(async () => {
                 // 若未初始化，直接初始化即可
                 if (!IsInitialized) {
-                    IsInitialized = await InitializeAsync(ct).ConfigureAwait(false);
+                    var (key, value) = await InitializeAsync(ct).ConfigureAwait(false);
+                    IsInitialized = key;
                     return;
                 }
 

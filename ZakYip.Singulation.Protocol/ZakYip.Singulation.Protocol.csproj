@@ -10,4 +10,9 @@
 		<ProjectReference Include="..\ZakYip.Singulation.Core\ZakYip.Singulation.Core.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Codecs\" />
+	  <Folder Include="Security\" />
+	</ItemGroup>
+
 </Project>

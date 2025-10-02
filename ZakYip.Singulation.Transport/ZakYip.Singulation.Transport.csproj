@@ -16,4 +16,8 @@
 		<ProjectReference Include="..\ZakYip.Singulation.Protocol\ZakYip.Singulation.Protocol.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Upstream\" />
+	</ItemGroup>
+
 </Project>
