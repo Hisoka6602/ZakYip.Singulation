@@ -14,7 +14,7 @@ namespace ZakYip.Singulation.Core.Contracts {
     public interface IControllerOptionsStore {
 
         /// <summary>读取当前控制器模板；不存在返回 null。</summary>
-        Task<ControllerOptions?> GetAsync(CancellationToken ct = default);
+        Task<ControllerOptions> GetAsync(CancellationToken ct = default);
 
         /// <summary>写入/更新控制器模板（幂等）。</summary>
         Task UpsertAsync(ControllerOptions dto, CancellationToken ct = default);

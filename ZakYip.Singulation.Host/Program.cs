@@ -153,23 +153,7 @@ var host = Host.CreateDefaultBuilder(args)
             // 1) 同步获取配置（LiteDB 本身是本地存取，同步拿即可）
             var dto = store.GetAsync().GetAwaiter().GetResult();
 
-            // 2) 首次不存在：写入默认并继续使用默认
-            if (dto is null) {
-                dto = new ControllerOptions {
-                    Vendor = "leadshine",
-                    ControllerIp = "192.168.5.11",
-                    Template = new DriverOptionsTemplateOptions {
-                        Card = 8,
-                        Port = 2,
-                        GearRatio = 0.4m,
-                        PulleyPitchDiameterMm = 79m,
-                        // 如果你的模板里还有 MaxLinearMmps/MaxAccelMmPerSec2 等，建议也给上默认
-                    }
-                };
-                store.UpsertAsync(dto).GetAwaiter().GetResult();
-            }
-
-            // 3) 根据 Vendor 选择 BusAdapter（为未来扩展做分派）
+            //根据 Vendor 选择 BusAdapter（为未来扩展做分派）
             var vendor = dto.Vendor?.Trim().ToLowerInvariant();
             switch (vendor) {
                 case "leadshine":

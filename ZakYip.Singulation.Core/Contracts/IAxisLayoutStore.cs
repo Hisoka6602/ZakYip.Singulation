@@ -13,7 +13,7 @@ namespace ZakYip.Singulation.Core.Contracts {
     public interface IAxisLayoutStore {
 
         /// <summary>读取当前网格布局；不存在则返回 null。</summary>
-        Task<AxisGridLayoutOptions?> GetAsync(CancellationToken ct = default);
+        Task<AxisGridLayoutOptions> GetAsync(CancellationToken ct = default);
 
         /// <summary>写入/覆盖网格布局（整体 upsert）。</summary>
         Task UpsertAsync(AxisGridLayoutOptions layout, CancellationToken ct = default);

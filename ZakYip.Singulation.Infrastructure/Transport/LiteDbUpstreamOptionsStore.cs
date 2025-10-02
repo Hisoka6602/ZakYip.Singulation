@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
@@ -22,15 +23,10 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
         public LiteDbUpstreamOptionsStore(ILiteDatabase db) {
             _col = db.GetCollection<UpstreamOptionsDoc>(CollName);
             _col.EnsureIndex(x => x.Id, unique: true);
-
-            // 种子：没有就写默认
-            if (_col.FindById(Key) is null) {
-                _col.Upsert(new UpstreamOptionsDoc { Id = Key });
-            }
         }
 
-        public Task<UpstreamOptions?> GetAsync(CancellationToken ct = default) =>
-            Task.Run(() => _col.FindById(Key)?.ToDto(), ct);
+        public Task<UpstreamOptions> GetAsync(CancellationToken ct = default)
+            => Task.FromResult(_col.FindById(Key)?.ToDto() ?? ConfigDefaults.Upstream());
 
         public Task SaveAsync(UpstreamOptions dto, CancellationToken ct = default) =>
             Task.Run(() => {

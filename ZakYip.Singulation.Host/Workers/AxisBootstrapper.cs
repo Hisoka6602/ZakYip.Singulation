@@ -33,21 +33,6 @@ namespace ZakYip.Singulation.Host.Workers {
             try {
                 // 1) 从 LiteDB 读取控制器模板；若无则写入默认并继续使用默认
                 var opt = await _ctrlOpts.GetAsync(stoppingToken);
-                if (opt is null) {
-                    opt = new ControllerOptions {
-                        Vendor = "leadshine",
-                        ControllerIp = "192.168.5.11",
-                        Template = new DriverOptionsTemplateOptions {
-                            Card = 8,
-                            Port = 2,
-                            GearRatio = 0.4m,
-                            PulleyPitchDiameterMm = 79
-                        }
-                    };
-                    await _ctrlOpts.UpsertAsync(opt, stoppingToken);
-                    _log.LogWarning("LiteDB 中不存在控制器模板，已写入默认模板并使用之。");
-                }
-
                 // 2) 按模板初始化轴（这一步会调用 Bus.Initialize、GetAxisCount、并批量创建驱动）
                 var driverTemplate = opt.Template.ToDriverOptionsTemplate();
 

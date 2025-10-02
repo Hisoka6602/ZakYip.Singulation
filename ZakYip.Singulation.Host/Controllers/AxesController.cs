@@ -53,9 +53,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpGet("controller/options")]
         public async Task<ActionResult<ControllerOptions>> GetControllerOptions(CancellationToken ct) {
             var dto = await _ctrlOptsStore.GetAsync(ct);
-            return dto is null
-                ? NotFound(ApiResponse<ControllerOptions>.NotFound("未找到控制器配置"))
-                : Ok(ApiResponse<ControllerOptions>.Success(dto, "获取成功"));
+            return Ok(ApiResponse<ControllerOptions>.Success(dto, "获取成功"));
         }
 
         /// <summary>写入/更新控制器模板。</summary>
@@ -77,9 +75,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpGet("topology")]
         public async Task<ActionResult<AxisGridLayoutOptions>> GetTopology(CancellationToken ct) {
             var dto = await _layoutStore.GetAsync(ct);
-            return dto is null
-                ? NotFound(ApiResponse<AxisGridLayoutOptions>.NotFound("未找到轴布局"))
-                : Ok(ApiResponse<AxisGridLayoutOptions>.Success(dto, "获取布局成功"));
+            return Ok(ApiResponse<AxisGridLayoutOptions>.Success(dto, "获取布局成功"));
         }
 
         /// <summary>
@@ -135,9 +131,6 @@ namespace ZakYip.Singulation.Host.Controllers {
         public async Task<ActionResult<object>> ResetController([FromBody] ControllerResetRequestDto req, CancellationToken ct) {
             // 1) 取模板
             var opt = await _ctrlOptsStore.GetAsync(ct);
-            if (opt is null)
-                return BadRequest(ApiResponse<object>.Invalid("请先设置控制器模板", new { Hint = "PUT /api/axes/controller/options" }));
-
             var vendor = opt.Vendor;
             var tpl = opt.Template.ToDriverOptionsTemplate();
             var ok = await Safe(async () => {

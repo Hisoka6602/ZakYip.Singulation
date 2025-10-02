@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
@@ -22,14 +23,13 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             _db = db ?? throw new ArgumentNullException(nameof(db));
             var col = _db.GetCollection<UpstreamCodecOptionsDoc>(CollName);
             col.EnsureIndex(x => x.Id, unique: true);
-            if (col.FindById(Key) is null) col.Upsert(new UpstreamCodecOptionsDoc { Id = Key });
         }
 
         public Task<UpstreamCodecOptions> GetAsync(CancellationToken ct = default) {
             lock (_gate) {
                 var col = _db.GetCollection<UpstreamCodecOptionsDoc>(CollName);
                 var doc = col.FindById(Key);
-                return Task.FromResult((doc ?? new UpstreamCodecOptionsDoc { Id = Key }).ToOptions());
+                return Task.FromResult(doc?.ToOptions() ?? ConfigDefaults.Codec());
             }
         }
 

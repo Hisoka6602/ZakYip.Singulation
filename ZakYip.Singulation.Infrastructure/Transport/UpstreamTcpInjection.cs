@@ -22,12 +22,12 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             // 注意：确保你在此之前已经调用了 AddUpstreamFromLiteDb(...) 注册 IUpstreamOptionsStore
             using var temp = services.BuildServiceProvider();
             var store = temp.GetRequiredService<IUpstreamOptionsStore>();
-            var dto = store.GetAsync().GetAwaiter().GetResult() ?? new UpstreamOptions();
+            var dto = store.GetAsync().GetAwaiter().GetResult();
 
             // ---- speed ----
             if (dto.SpeedPort > 0) {
                 services.AddKeyedSingleton<IByteTransport>("speed", (IServiceProvider sp, object key) => {
-                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult() ?? dto;
+                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
                     return cur.Role == TransportRole.Server
                         ? new TouchServerByteTransport(new TcpServerOptions {
                             Address = IPAddress.Any,
@@ -43,7 +43,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             // ---- position ----
             if (dto.PositionPort > 0) {
                 services.AddKeyedSingleton<IByteTransport>("position", (IServiceProvider sp, object key) => {
-                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult() ?? dto;
+                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
                     return cur.Role == TransportRole.Server
                         ? new TouchServerByteTransport(new TcpServerOptions {
                             Address = IPAddress.Any,
@@ -59,7 +59,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             // ---- heartbeat ----
             if (dto.HeartbeatPort > 0) {
                 services.AddKeyedSingleton<IByteTransport>("heartbeat", (IServiceProvider sp, object key) => {
-                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult() ?? dto;
+                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
                     return cur.Role == TransportRole.Server
                         ? new TouchServerByteTransport(new TcpServerOptions {
                             Address = IPAddress.Any,

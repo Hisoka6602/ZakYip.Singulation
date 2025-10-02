@@ -36,7 +36,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             if (!sec.Exists()) return;
 
             var store = sp.GetRequiredService<IUpstreamOptionsStore>();
-            var dto = await store.GetAsync(ct) ?? new UpstreamOptions();
+            var dto = await store.GetAsync(ct);
 
             // 读取配置并合并（不存在则保留当前值）
             dto.Host = sec["Host"] ?? dto.Host;

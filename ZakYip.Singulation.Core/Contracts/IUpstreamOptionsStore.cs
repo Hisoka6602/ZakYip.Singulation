@@ -14,7 +14,7 @@ namespace ZakYip.Singulation.Core.Contracts {
     public interface IUpstreamOptionsStore {
 
         /// <summary>读取配置（若不存在则返回 null）。</summary>
-        Task<UpstreamOptions?> GetAsync(CancellationToken ct = default);
+        Task<UpstreamOptions> GetAsync(CancellationToken ct = default);
 
         /// <summary>写入配置（存在则更新，不存在则插入）。</summary>
         Task SaveAsync(UpstreamOptions dto, CancellationToken ct = default);
