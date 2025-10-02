@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
 
-namespace ZakYip.Singulation.Core.Contracts.ValueObjects {
+namespace ZakYip.Singulation.Core.Contracts.Events {
     public readonly record struct TransportEvent(
         string Source,                     // 哪个传输发来的（名称/端口）
         TransportEventType Type,

@@ -193,10 +193,14 @@ var host = Host.CreateDefaultBuilder(args)
                 ejectCount: options.EjectCount
             );
         });
-
+        // ---------- 速度多发 ----------
+        services.AddSingleton<IUpstreamFrameHub, UpstreamFrameHub>();
         // ---------- 事件泵 ----------
         services.AddHostedService<TransportEventPump>();
-
+        // ---------- 速度执行器 ----------
+        services.AddHostedService<SpeedFrameWorker>();
+        // ---------- 心跳执行器 ----------
+        services.AddHostedService<HeartbeatWorker>();
         // ---------- 日志泵 ----------
         services.AddSingleton<LogEventBus>();
         services.AddSingleton<ILogEventWriter>(sp => sp.GetRequiredService<LogEventBus>());

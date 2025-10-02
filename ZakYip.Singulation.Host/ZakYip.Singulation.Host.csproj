@@ -8,6 +8,13 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<Compile Remove="Runtime\新文件夹\**" />
+		<Content Remove="Runtime\新文件夹\**" />
+		<EmbeddedResource Remove="Runtime\新文件夹\**" />
+		<None Remove="Runtime\新文件夹\**" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.Core" Version="2.3.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="8.0.20" />
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Common" Version="9.0.9" />
@@ -39,5 +46,9 @@
 		<None Update="unstall.bat">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Transports\" />
 	</ItemGroup>
 </Project>

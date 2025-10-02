@@ -8,48 +8,52 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using ZakYip.Singulation.Core.Enums;
 using System.Security.Cryptography.Xml;
+using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Transport.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
-using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
 namespace ZakYip.Singulation.Host.Workers {
 
+    /// <summary>
+    /// 极简低延迟事件泵：
+    /// - Data：同步“快路径”扇出到 Hub（零排队、DropOldest 由订阅者各自通道承担）。
+    /// - BytesReceived/StateChanged/Error：仍走“慢路径”写入有界通道做日志与统计。
+    /// </summary>
     public sealed class TransportEventPump : BackgroundService {
         private readonly ILogger<TransportEventPump> _log;
         private readonly List<(string Name, IByteTransport Transport)> _transports = new();
-        private readonly Channel<TransportEvent> _channel;
-        private readonly IServiceProvider _sp;
-        private readonly IUpstreamCodec _upstreamCodec;
-        private readonly ILogEventWriter _logWriter;
-        private readonly IAxisController _axisController;
 
-        // 轻量指标：按通道计数的写入/丢弃次数
+        // 慢路径：仅承载低频事件，容量很小即可
+        private readonly Channel<TransportEvent> _ctlChannel;
+
+        // 轻量指标：按源计数写入/丢弃
         private readonly ConcurrentDictionary<string, long> _dropped = new();
 
         private readonly ConcurrentDictionary<string, long> _written = new();
 
-        public TransportEventPump(ILogger<TransportEventPump> log,
+        private readonly IUpstreamFrameHub _hub;
+        private readonly IServiceProvider _sp;
+
+        public TransportEventPump(
+            ILogger<TransportEventPump> log,
             IServiceProvider sp,
-            IUpstreamCodec upstreamCodec,
-            ILogEventWriter logWriter,
-            IAxisController axisController) {
+            IUpstreamFrameHub hub) {
             _log = log;
             _sp = sp;
-            _upstreamCodec = upstreamCodec;
-            _logWriter = logWriter;
-            _axisController = axisController;
+            _hub = hub;
 
-            _channel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(4096) {
+            // 慢路径：小容量即可；DropOldest 防抖
+            _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(256) {
                 SingleReader = true,
                 SingleWriter = false,
-                FullMode = BoundedChannelFullMode.DropOldest // 数据面保最新视图
+                FullMode = BoundedChannelFullMode.DropOldest
             });
 
-            // 如果你稍后做成从配置/DB读取，只要把 keys 换掉即可
+            // 通过 Keyed DI 聚合（speed/position/heartbeat）
             var keys = new[] { "speed", "position", "heartbeat" };
             foreach (var key in keys) {
                 var t = _sp.GetKeyedService<IByteTransport>(key);
@@ -58,13 +62,13 @@ namespace ZakYip.Singulation.Host.Workers {
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-            // 订阅事件（只订阅一次）
-            foreach (var (name, t) in _transports) Subscribe(name, t);
+            // 订阅（只一次）
+            foreach (var (name, t) in _transports) Subscribe(name, t); // 原实现在这里做订阅 :contentReference[oaicite:1]{index=1}
 
-            // 尝试启动所有传输
+            // 启动所有传输
             foreach (var (name, t) in _transports) {
                 try {
-                    await t.StartAsync(stoppingToken);
+                    await t.StartAsync(stoppingToken).ConfigureAwait(false);
                     _log.LogInformation("[transport:{Name}] started, status={Status}", name, t.Status);
                 }
                 catch (Exception ex) {
@@ -72,77 +76,44 @@ namespace ZakYip.Singulation.Host.Workers {
                 }
             }
 
-            await foreach (var ev in _channel.Reader.ReadAllAsync(stoppingToken)) {
+            // 仅消费“慢路径”通道
+            await foreach (var ev in _ctlChannel.Reader.ReadAllAsync(stoppingToken)) {
                 try {
                     switch (ev.Type) {
-                        case TransportEventType.Data: {
-                                // 轻解 + 下游投递（重活放到下游worker）
-                                // 如果你的 IUpstreamCodec 返回 SpeedSet，就保持原调用
-                                if (_upstreamCodec.TryDecodeSpeed(ev.Payload.Span, out var speedSet)) {
-                                    Console.WriteLine(JsonConvert.SerializeObject(speedSet));
-                                    _ = _axisController.ApplySpeedSetAsync(speedSet, stoppingToken);
-                                }
-                                // 可选：实时调试日志（走日志泵，避免异常路径）
-                                _logWriter.TryWrite(new LogEvent {
-                                    Kind = LogKind.Debug,
-                                    Category = "transport.data",
-                                    Message = "speed-frame",
-                                    Props = new Dictionary<string, object> {
-                                        ["channel"] = ev.Source,
-                                        ["len"] = ev.Payload.Length
-                                    }
-                                });
-                                break;
-                            }
+                        case TransportEventType.BytesReceived:
+                            _log.LogDebug("[transport.rx] {Source} bytes={Len}", ev.Source, ev.Payload.Length);
+                            break;
 
-                        case TransportEventType.BytesReceived: {
-                                _logWriter.TryWrite(new LogEvent {
-                                    Kind = LogKind.Debug,
-                                    Category = "transport.rx",
-                                    Message = "bytes",
-                                    Props = new Dictionary<string, object> {
-                                        ["channel"] = ev.Source,
-                                        ["len"] = ev.Payload.Length
-                                    }
-                                });
-                                break;
-                            }
+                        case TransportEventType.StateChanged:
+                            _log.LogInformation("[transport:{Source}] state={State}", ev.Source, ev.Conn);
+                            break;
 
-                        case TransportEventType.StateChanged: {
-                                _logWriter.TryWrite(new LogEvent {
-                                    Kind = LogKind.Info,
-                                    Category = "transport",
-                                    Message = $"state={ev.Conn}",
-                                    Props = new Dictionary<string, object> {
-                                        ["channel"] = ev.Source
-                                    }
-                                });
-                                break;
-                            }
+                        case TransportEventType.Error:
+                            _log.LogError(ev.Exception, "[transport:{Source}] error", ev.Source);
+                            break;
 
-                        case TransportEventType.Error: {
-                                // 异常走立即写盘，不进日志泵
-                                _log.LogError(ev.Exception, "[transport:{Source}] {Msg}", ev.Source, ev.Exception?.Message);
-                                break;
-                            }
+                        // Data 永远不会走到这里（已走快路径）
+                        case TransportEventType.Data:
+                        default:
+                            break;
                     }
                 }
                 catch (Exception ex) {
-                    // 解码或下游异常被隔离，不影响接收环
-                    _log.LogError(ex, "[event-pump] pipeline error");
+                    // 低频异常隔离
+                    _log.LogError(ex, "[event-pump] ctl pipeline error");
                 }
             }
         }
 
         public override async Task StopAsync(CancellationToken ct) {
-            // 先停源，再完成通道
+            // 先停源，再收尾
             foreach (var (name, t) in _transports) {
-                try { await t.StopAsync(ct); }
-                catch (Exception ex) { _log.LogDebug(ex, "[transport:{Name}] stop error (ignored)", name); }
+                try { await t.StopAsync(ct).ConfigureAwait(false); }
+                catch (Exception ex) { _log.LogDebug(ex, "[transport:{Name}] stop ignored", name); }
             }
-            _channel.Writer.TryComplete();
+            _ctlChannel.Writer.TryComplete();
 
-            // 打点：各通道丢弃与写入统计
+            // 打点输出
             foreach (var (name, _) in _transports) {
                 var dropped = _dropped.TryGetValue(name, out var d) ? d : 0;
                 var written = _written.TryGetValue(name, out var w) ? w : 0;
@@ -152,40 +123,53 @@ namespace ZakYip.Singulation.Host.Workers {
                     _log.LogInformation("[transport:{Name}] written={Written}", name, written);
             }
 
-            await base.StopAsync(ct);
+            await base.StopAsync(ct).ConfigureAwait(false);
         }
 
         private void Subscribe(string name, IByteTransport t) {
-            // 高频数据：TryWrite（丢旧保新）+ 记账
+            // ============= 关键优化：Data 走“快路径” =============
+            // 直接在事件回调里同步广播到 Hub，避免先入队再出队的额外 hop 和分配。
             t.Data += mem => {
-                if (_channel.Writer.TryWrite(new TransportEvent(name, TransportEventType.Data, mem, 0, default, null))) {
-                    _written.AddOrUpdate(name, 1, (_, v) => v + 1);
+                // 按源类型扇出（你已用 speed/position/heartbeat 命名注册）
+                // 心跳与位置若需要也可加 PublishXxx。
+                switch (name) {
+                    case "speed":
+                        _hub.PublishSpeed(mem); // 新实现：在订阅处直发，不经 _channel
+                        break;
+
+                    case "heartbeat":
+                        _hub.PublishHeartbeat(mem);
+                        break;
+
+                    case "position":
+                        // 如需：_hub.PublishPosition(mem);
+                        break;
                 }
-                else {
-                    _dropped.AddOrUpdate(name, 1, (_, v) => v + 1);
-                }
+
+                // 轻量记账（不打日志，避免干扰快路径）
+                _written.AddOrUpdate(name, 1, static (_, v) => v + 1);
             };
 
+            // ============= 慢路径：统计/状态/错误 =============
             t.BytesReceived += (s, e) => {
-                if (_channel.Writer.TryWrite(new TransportEvent(name, TransportEventType.BytesReceived, default, e.Buffer.Length, default, null))) {
-                    _written.AddOrUpdate(name, 1, (_, v) => v + 1);
+                if (_ctlChannel.Writer.TryWrite(new TransportEvent(
+                    name, TransportEventType.BytesReceived, default, e.Buffer.Length, default, null))) {
+                    _written.AddOrUpdate(name, 1, static (_, v) => v + 1);
                 }
                 else {
-                    _dropped.AddOrUpdate(name, 1, (_, v) => v + 1);
+                    _dropped.AddOrUpdate(name, 1, static (_, v) => v + 1);
                 }
             };
 
-            // 低频关键：绝不丢，用 WriteAsync 背压一下写端
+            // 低频关键事件：允许轻度背压
             t.StateChanged += (s, e) => {
-                _ = _channel.Writer.WriteAsync(
-                    new TransportEvent(name, TransportEventType.StateChanged, default, 0, e.State, null)
-                ).AsTask();
+                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
+                    name, TransportEventType.StateChanged, default, 0, e.State, null)).AsTask();
             };
 
             t.Error += (s, e) => {
-                _ = _channel.Writer.WriteAsync(
-                    new TransportEvent(name, TransportEventType.Error, default, 0, default, e.Exception)
-                ).AsTask();
+                _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(
+                    name, TransportEventType.Error, default, 0, default, e.Exception)).AsTask();
             };
         }
     }
