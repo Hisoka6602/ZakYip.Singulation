@@ -79,5 +79,12 @@ namespace ZakYip.Singulation.Protocol.Abstractions {
         /// 编码“获取参数”的命令（视觉返回参数帧）。
         /// </summary>
         int EncodeGetParams(IBufferWriter<byte> writer);
+
+        /// <summary>
+        /// 设置解码器的轴布局（主/疏散轴数量）。用于运行时热更新，不需要重建实例。
+        /// </summary>
+        /// <param name="mainCount">主分离轴数量（可为 0）。</param>
+        /// <param name="ejectCount">疏散轴数量（可为 0）。</param>
+        void SetAxisLayout(int mainCount, int ejectCount);
     }
 }

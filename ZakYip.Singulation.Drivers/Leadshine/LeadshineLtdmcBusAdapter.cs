@@ -161,11 +161,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
                     // === 2) LTDMC 初始化（WhenAny 严格超时 + 返回码判定） ===
                     try {
-                        var initTask = Task.Run(() => {
-                            return _controllerIp is null
-                                ? LTDMC.dmc_board_init()
-                                : LTDMC.dmc_board_init_eth(_cardNo, _controllerIp);
-                        });
+                        var initTask = Task.Run(() => _controllerIp is null
+                            ? LTDMC.dmc_board_init()
+                            : LTDMC.dmc_board_init_eth(_cardNo, _controllerIp), ct);
 
                         var timeoutTask = Task.Delay(5000, ct);
                         var winner = await Task.WhenAny(initTask, timeoutTask).ConfigureAwait(false);

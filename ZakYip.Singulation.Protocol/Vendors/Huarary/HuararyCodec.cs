@@ -16,8 +16,8 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
     /// 同时提供各命令的编码（固定长度帧含 XOR 校验）。
     /// </summary>
     public sealed class HuararyCodec : IUpstreamCodec {
-        private readonly int _mainCount;
-        private readonly int _ejectCount;
+        private int _mainCount;
+        private int _ejectCount;
 
         /// <summary>
         /// 使用指定的分离段/疏散段数量创建编解码器。
@@ -193,6 +193,14 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         public int EncodeGetParams(IBufferWriter<byte> writer) {
             // 固定长度10字节：2A 88 0A 00 00 00 00 00 XOR 3B（响应为 0x5C）。:contentReference[oaicite:12]{index=12}
             return EncodeFixed10(writer, HuararyControl.CtrlGetParams, 0x00);
+        }
+
+        public void SetAxisLayout(int mainCount, int ejectCount) {
+            if (mainCount < 0 || ejectCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(mainCount), "Counts must be >= 0.");
+
+            Volatile.Write(ref _mainCount, mainCount);
+            Volatile.Write(ref _ejectCount, ejectCount);
         }
 
         /// <summary>

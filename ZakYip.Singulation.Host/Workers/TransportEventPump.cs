@@ -8,6 +8,7 @@ using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
+using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
 namespace ZakYip.Singulation.Host.Workers {
 
@@ -40,6 +41,7 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly IAxisEventAggregator _axisEventAggregator;
         private readonly IServiceProvider _sp;
         private readonly IRealtimeNotifier _rt;
+        private readonly IAxisController _axisController;
 
         private bool _axisSubscribed;
         private long _axisDropped;
@@ -50,12 +52,14 @@ namespace ZakYip.Singulation.Host.Workers {
             IServiceProvider sp,
             IUpstreamFrameHub hub,
             IAxisEventAggregator axisEventAggregator,
-            IRealtimeNotifier rt) {
+            IRealtimeNotifier rt,
+            IAxisController axisController) {
             _log = log;
             _sp = sp;
             _hub = hub;
             _axisEventAggregator = axisEventAggregator;
             _rt = rt;
+            _axisController = axisController;
 
             // 传输侧慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(1024) {
@@ -187,7 +191,7 @@ namespace ZakYip.Singulation.Host.Workers {
             // ============= 慢路径：统计/状态/错误 =============
             t.BytesReceived += (s, e) => {
                 if (_ctlChannel.Writer.TryWrite(new TransportEvent(
-                    name, TransportEventType.BytesReceived, default, e.Buffer.Length, default, null))) {
+                    name, TransportEventType.BytesReceived, e.Buffer, e.Buffer.Length, default, null))) {
                     _written.AddOrUpdate(name, 1, static (_, v) => v + 1);
                     _ = _rt.PublishDeviceAsync(new {
                         kind = "transport.bytes",
@@ -225,7 +229,17 @@ namespace ZakYip.Singulation.Host.Workers {
 
         private void SubscribeAxisEventsOnce() {
             if (_axisSubscribed) return;
-
+            _axisController.ControllerFaulted += (sender, s) => {
+                var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
+                    Source: $"axisController",
+                    Type: AxisEventType.ControllerFaulted,
+                    Reason: s,
+                    Exception: null,
+                    AxisId: new AxisId(0)
+                ));
+                if (!ok) Interlocked.Increment(ref _axisDropped);
+                else Interlocked.Increment(ref _axisWritten);
+            };
             // 轴故障（真正异常对象）→ AxisEvent.Faulted
             _axisEventAggregator.AxisFaulted += (s, e) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
@@ -293,8 +307,9 @@ namespace ZakYip.Singulation.Host.Workers {
             switch (ev.Type) {
                 case TransportEventType.BytesReceived:
                     // 提醒：这里用 e.Buffer.Length 放在 Count，或你的 Count 字段
-                    var len = ev.Count > 0 ? ev.Count : ev.Payload.Length;
-                    _log.LogDebug("[transport.rx] {Source} bytes={Len}", ev.Source, len);
+                    /*var len = ev.Count > 0 ? ev.Count : ev.Payload.Length;
+                    var replace = BitConverter.ToString(ev.Payload.ToArray()).Replace("-", " ");
+                    _log.LogDebug("[transport.rx] {Source} bytes={Len}  {type} bytesString={replace}", ev.Source, len, ev.Source, replace);*/
                     break;
 
                 case TransportEventType.StateChanged:
@@ -319,7 +334,7 @@ namespace ZakYip.Singulation.Host.Workers {
         private void ProcessAxisEvent(AxisEvent ev) {
             switch (ev.Type) {
                 case AxisEventType.Faulted:
-                    _log.LogError(ev.Exception, "[{Source}] axis faulted (axis={Axis})", ev.Source, ev.AxisId);
+                    _log.LogError(ev.Exception, "[{Source}] axis faulted (axis={Axis}),Reason({Reason}),Exception({Exception})", ev.Source, ev.AxisId, ev.Reason, ev.Exception);
                     break;
 
                 case AxisEventType.Disconnected:
@@ -331,7 +346,6 @@ namespace ZakYip.Singulation.Host.Workers {
                     break;
 
                 case AxisEventType.ControllerFaulted:
-                    // 如果你未来把控制器 Faulted 也接到这里，可复用此分支
                     _log.LogError("[{Source}] controller fault: {Reason}", ev.Source, ev.Reason);
                     break;
 

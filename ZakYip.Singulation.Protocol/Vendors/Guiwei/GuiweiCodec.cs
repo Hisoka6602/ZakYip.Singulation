@@ -15,8 +15,8 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
     /// 归位编解码器：速度帧无控制码/长度/XOR，仅由起止符包裹，载荷为 N*int32 小端的速度（mm/s）。
     /// </summary>
     public sealed class GuiweiCodec : IUpstreamCodec {
-        private readonly int _mainCount;
-        private readonly int _ejectCount;
+        private int _mainCount;
+        private int _ejectCount;
 
         /// <summary>
         /// 使用指定的分离段/扩散段数量创建编解码器。
@@ -87,5 +87,13 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
         public int EncodeQueryStatus(IBufferWriter<byte> writer) => 0;
 
         public int EncodeGetParams(IBufferWriter<byte> writer) => 0;
+
+        public void SetAxisLayout(int mainCount, int ejectCount) {
+            if (mainCount < 0 || ejectCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(mainCount), "Counts must be >= 0.");
+
+            Volatile.Write(ref _mainCount, mainCount);
+            Volatile.Write(ref _ejectCount, ejectCount);
+        }
     }
 }

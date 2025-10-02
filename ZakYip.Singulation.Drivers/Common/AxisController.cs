@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
@@ -141,8 +143,16 @@ namespace ZakYip.Singulation.Drivers.Common {
             var eject = set.EjectMmps ?? [];
             var totalAx = _drives.Count;
 
-            if (totalAx == 0) return;
-            if (main.Count == 0 && eject.Count == 0) return;
+            if (totalAx == 0) {
+                OnControllerFaulted($" _drives.Count={_drives.Count},无法赋值速度");
+                return;
+            }
+
+            if (main.Count == 0 && eject.Count == 0) {
+                OnControllerFaulted($"{JsonConvert.SerializeObject(set)}");
+                OnControllerFaulted($"main.Count={main.Count}&&eject.Count={eject.Count},无法赋值速度");
+                return;
+            }
 
             var speeds = new List<decimal>(totalAx);
             speeds.AddRange(main.Select(x => (decimal)x));
