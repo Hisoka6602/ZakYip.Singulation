@@ -1,10 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-
-namespace ZakYip.Singulation.Core.Abstractions {
+﻿namespace ZakYip.Singulation.Host.Dto {
 
     /// <summary>
     /// 统一 API 响应格式

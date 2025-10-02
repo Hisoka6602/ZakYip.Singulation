@@ -56,7 +56,7 @@ namespace ZakYip.Singulation.Host.Workers {
             _axisEventAggregator = axisEventAggregator;
 
             // 传输侧慢路径：小容量即可；DropOldest 防抖
-            _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(256) {
+            _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(1024) {
                 SingleReader = true,
                 SingleWriter = false,
                 FullMode = BoundedChannelFullMode.DropOldest
