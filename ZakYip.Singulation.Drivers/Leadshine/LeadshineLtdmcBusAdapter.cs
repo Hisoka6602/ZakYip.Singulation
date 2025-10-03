@@ -62,7 +62,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             return await Safe<KeyValuePair<bool, string>>(async () => {
                 if (IsInitialized) return new(true, "Already initialized."); // 幂等
 
-                var ok = await EnsureBootGapAsync(TimeSpan.FromSeconds(10), ct);
+                var ok = await EnsureBootGapAsync(TimeSpan.FromSeconds(15), ct);
                 if (!ok.Key) {
                     SetError(ok.Value);
                 }
