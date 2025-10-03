@@ -21,7 +21,7 @@ namespace ZakYip.Singulation.Host.Controllers {
     public sealed class DecoderController : ControllerBase {
         private readonly ILogger<DecoderController> _log;
         private readonly IUpstreamCodec _codec;
-        private readonly IUpstreamCodecOptionsStore? _store; // 可选：如果你已有 UpstreamOptions 的 LiteDB Store，请通过 DI 注入
+        private readonly IUpstreamCodecOptionsStore? _store;
 
         public DecoderController(
             ILogger<DecoderController> log,
@@ -109,8 +109,6 @@ namespace ZakYip.Singulation.Host.Controllers {
                         Speed = speed
                     });
                 }
-
-                // 若你还有 TryDecodeHeartbeat / TryDecodeXXX，可在此追加分支
 
                 return ApiResponse<DecodeResult>.Success(new DecodeResult {
                     Ok = false,

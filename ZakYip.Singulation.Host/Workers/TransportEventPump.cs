@@ -279,7 +279,7 @@ namespace ZakYip.Singulation.Host.Workers {
                 else Interlocked.Increment(ref _axisWritten);
             };
 
-            // —— 以下两类仍作为“可观测数据”走 TransportEvent.Data（JSON 轻量记录），保持你原有做法 ——
+            // —— 以下两类仍作为“可观测数据”走 TransportEvent.Data（JSON 轻量记录），保持原有做法 ——
 
             // 命令已下发（仅观测，不要阻塞，不要 Task.Run）
             _axisEventAggregator.CommandIssued += (s, e) => {
@@ -306,7 +306,6 @@ namespace ZakYip.Singulation.Host.Workers {
         private void ProcessTransportEvent(TransportEvent ev) {
             switch (ev.Type) {
                 case TransportEventType.BytesReceived:
-                    // 提醒：这里用 e.Buffer.Length 放在 Count，或你的 Count 字段
                     /*var len = ev.Count > 0 ? ev.Count : ev.Payload.Length;
                     var replace = BitConverter.ToString(ev.Payload.ToArray()).Replace("-", " ");
                     _log.LogDebug("[transport.rx] {Source} bytes={Len}  {type} bytesString={replace}", ev.Source, len, ev.Source, replace);*/
@@ -324,7 +323,7 @@ namespace ZakYip.Singulation.Host.Workers {
                 default:
                     // 仅在 axis:* 的“观测数据”时打印一条信息日志（不会刷屏）
                     if (ev.Source.StartsWith("axis:", StringComparison.OrdinalIgnoreCase) && !ev.Payload.IsEmpty) {
-                        _log.LogInformation("[axis.data] {Source} {Json}", ev.Source, Encoding.UTF8.GetString(ev.Payload.Span));
+                        // _log.LogInformation("[axis.data] {Source} {Json}", ev.Source, Encoding.UTF8.GetString(ev.Payload.Span));
                     }
                     break;
             }

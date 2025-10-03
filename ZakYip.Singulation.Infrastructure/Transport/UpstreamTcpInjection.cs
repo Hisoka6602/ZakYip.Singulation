@@ -19,7 +19,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
         /// 仅负责注册，不启动。
         /// </summary>
         public static IServiceCollection AddUpstreamTcpFromLiteDb(this IServiceCollection services) {
-            // 注意：确保你在此之前已经调用了 AddUpstreamFromLiteDb(...) 注册 IUpstreamOptionsStore
+            // 注意：确保在此之前已经调用了 AddUpstreamFromLiteDb(...) 注册 IUpstreamOptionsStore
             using var temp = services.BuildServiceProvider();
             var store = temp.GetRequiredService<IUpstreamOptionsStore>();
             var dto = store.GetAsync().GetAwaiter().GetResult();

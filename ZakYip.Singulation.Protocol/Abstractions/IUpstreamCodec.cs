@@ -86,5 +86,23 @@ namespace ZakYip.Singulation.Protocol.Abstractions {
         /// <param name="mainCount">主分离轴数量（可为 0）。</param>
         /// <param name="ejectCount">疏散轴数量（可为 0）。</param>
         void SetAxisLayout(int mainCount, int ejectCount);
+
+        /// <summary>
+        /// 设置二维网格布局与“横纵转换”选项
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="xCount"></param>
+        /// <param name="enabled"></param>
+        /// <returns></returns>
+        IReadOnlyList<int> SetGridLayout(IReadOnlyList<int> source, int xCount, bool enabled = true);
+
+        /// <summary>
+        /// 设置二维网格布局与“横纵转换”选项
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="xCount"></param>
+        /// <param name="enabled"></param>
+        /// <returns></returns>
+        SpeedSet SetGridLayout(SpeedSet source, int xCount, bool enabled = true);
     }
 }

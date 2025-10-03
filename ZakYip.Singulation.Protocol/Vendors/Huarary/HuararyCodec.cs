@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using System.Buffers;
+using Newtonsoft.Json;
 using System.Buffers.Binary;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -18,6 +19,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
     public sealed class HuararyCodec : IUpstreamCodec {
         private int _mainCount;
         private int _ejectCount;
+        private int _xCount;
 
         /// <summary>
         /// 使用指定的分离段/疏散段数量创建编解码器。
@@ -201,6 +203,53 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
 
             Volatile.Write(ref _mainCount, mainCount);
             Volatile.Write(ref _ejectCount, ejectCount);
+        }
+
+        public IReadOnlyList<int> SetGridLayout(IReadOnlyList<int> source, int xCount, bool enabled = true) {
+            _xCount = xCount;
+            if (!enabled || xCount <= 0) return source.ToArray();
+            var n = source.Count;
+            if (n == 0) return [];
+
+            // 行数按“向上取整”计算，保证不满一行的尾部也能被遍历到
+            var rows = (n + xCount - 1) / xCount;
+
+            var result = new int[n];
+            var write = 0;
+
+            // 关键：按列优先输出。对每一列 x，依次读取每一行 y 的元素 y*xCount + x
+            // 当索引超界时跳过，这样不满一行的数据也会在正确的位置被写入。
+            for (var x = 0; x < xCount; x++) {
+                for (var y = 0; y < rows; y++) {
+                    var srcIndex = y * xCount + x;
+                    if (srcIndex < n) {
+                        result[write++] = source[srcIndex];
+                    }
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 设置二维网格布局与“横纵转换”选项（仅对 Main 段做列优先重排；Eject 保持不变）。
+        /// </summary>
+        public SpeedSet SetGridLayout(SpeedSet source, int xCount, bool enabled = true) {
+            _xCount = xCount;
+            // 未启用或参数非法：直接返回原 SpeedSet
+            if (!enabled || xCount <= 0)
+                return source;
+
+            var main = source.MainMmps;
+            if (main.Count == 0)
+                return source;
+            var transposedMain = SetGridLayout(main, xCount, enabled: true);
+
+            return new SpeedSet(
+                source.TimestampUtc,
+                source.Sequence,
+                transposedMain,
+                source.EjectMmps
+            );
         }
 
         /// <summary>

@@ -95,5 +95,13 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
             Volatile.Write(ref _mainCount, mainCount);
             Volatile.Write(ref _ejectCount, ejectCount);
         }
+
+        public IReadOnlyList<int> SetGridLayout(IReadOnlyList<int> source, int xCount, bool enabled = true) {
+            return source;
+        }
+
+        public SpeedSet SetGridLayout(SpeedSet source, int xCount, bool enabled = true) {
+            return source;
+        }
     }
 }

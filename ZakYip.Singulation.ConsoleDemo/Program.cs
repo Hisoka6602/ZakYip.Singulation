@@ -25,7 +25,7 @@ internal static class Program {
         decimal accelMmps2 = 1000m;       // 加速度 mm/s²
         decimal decelMmps2 = 1000m;       // 减速度 mm/s²
 
-        // 机械参数（按你的默认）
+        // 机械参数
         decimal drumDiameterMm = 79m;
         decimal gearRatio = 0.4m;
 
@@ -39,7 +39,7 @@ internal static class Program {
         services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
 
         // Registry：把厂商名映射到对应的 IAxisDrive 工厂
-        // 如果你已实现 DriveRegistry，请引用你的命名空间；下面这行假设你把实现放在 Drivers.Common
+
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
             r.Register("leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts));

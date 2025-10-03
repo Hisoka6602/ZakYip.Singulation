@@ -22,21 +22,26 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly IUpstreamCodec _codec;
         private readonly IAxisController _controller;
         private readonly IRealtimeNotifier _rt;
+        private readonly IAxisLayoutStore _axisLayoutStore;
 
         public SpeedFrameWorker(
             ILogger<SpeedFrameWorker> log,
             IUpstreamFrameHub hub,
             IUpstreamCodec codec,
             IAxisController controller,
-            IRealtimeNotifier rt) {
+            IRealtimeNotifier rt,
+            IAxisLayoutStore axisLayoutStore) {
             _log = log;
             _hub = hub;
             _codec = codec;
             _controller = controller;
             _rt = rt;
+            _axisLayoutStore = axisLayoutStore;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            //获取布局
+            var layoutOptions = await _axisLayoutStore.GetAsync(stoppingToken);
             var (reader, unsub) = _hub.SubscribeSpeed(capacity: 512);
             using (unsub) {
                 await foreach (var mem in reader.ReadAllAsync(stoppingToken)) {
@@ -44,7 +49,7 @@ namespace ZakYip.Singulation.Host.Workers {
                         if (!_codec.TryDecodeSpeed(mem.Span, out var speedSet))
                             continue;
 
-                        await _controller.ApplySpeedSetAsync(speedSet, stoppingToken).ConfigureAwait(false);
+                        await _controller.ApplySpeedSetAsync(_codec.SetGridLayout(speedSet, layoutOptions.Rows), stoppingToken).ConfigureAwait(false);
 
                         // 广播解码后的“轻量”视图
                         _ = _rt.PublishVisionAsync(new {

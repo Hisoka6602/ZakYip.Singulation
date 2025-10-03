@@ -682,7 +682,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             // pps：考虑齿比（电机轴:负载轴）
             decimal pps = 0;
             if (pulsesPerRev > 0) {
-                // 如果你的 AxisRpm.ToPulsePerSec 有 gearRatio 参数，直接用它；
+                // 如果 AxisRpm.ToPulsePerSec 有 gearRatio 参数，直接用它；
                 // 否则按公式算：pps = (rpm/60) * PPR / gearRatio
                 pps = (rpm.Value / 60m) * pulsesPerRev / _opts.GearRatio;
             }

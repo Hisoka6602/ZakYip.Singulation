@@ -97,7 +97,6 @@ namespace ZakYip.Singulation.Host.Workers {
                     // 增补用于路由和常用字段
                     var scopeDict = new Dictionary<string, object>(props) {
                         ["category"] = ev.Category,
-                        // 你也可以把 Message 的摘要放进去便于检索
                     };
 
                     // 2) 把属性放进 Scope，供 NLog 的 ${event-properties:*} 使用

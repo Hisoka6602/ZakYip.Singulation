@@ -62,6 +62,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             return await Safe<KeyValuePair<bool, string>>(async () => {
                 if (IsInitialized) return new(true, "Already initialized."); // 幂等
 
+                var ok = await EnsureBootGapAsync(TimeSpan.FromSeconds(10), ct);
+                if (!ok.Key) {
+                    SetError(ok.Value);
+                }
                 // 重试节奏：0ms → 300ms → 1s → 2s（可调）
                 var delays = new[]
                 {
@@ -346,6 +350,53 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public bool ShouldReverse(ushort logicalNodeId) {
             // 奇数 NodeId 反转
             return logicalNodeId % 2 == 1;
+        }
+
+        /// <summary>
+        /// 计算“系统开机至当前进程启动”的时间差（boot→appStart gap，使用本地时间）。
+        /// 若 gap 小于给定阈值，则等待 gap；否则不等待。
+        /// 返回 (true, msg) 表示可以继续初始化；(false, msg) 表示在等待期间被取消。
+        /// </summary>
+        private static async Task<KeyValuePair<bool, string>> EnsureBootGapAsync(
+            TimeSpan threshold,
+            CancellationToken ct = default) {
+            var log = NLog.LogManager.GetCurrentClassLogger();
+
+            // 1) 系统已开机时长（毫秒计时器，不受本地时间影响）
+            var systemUptime = TimeSpan.FromMilliseconds(Environment.TickCount64);
+
+            // 2) 当前进程已运行时长（使用本地时间）
+            TimeSpan processUptime;
+            try {
+                var ps = System.Diagnostics.Process.GetCurrentProcess();
+                // 注意：StartTime 与 DateTime.Now 同为本地时间
+                processUptime = DateTime.Now - ps.StartTime;
+            }
+            catch (Exception ex) {
+                log.Warn(ex, "[BootGap] 读取进程启动时间失败，跳过等待。");
+                return new(true, "Skipped: cannot read process start time.");
+            }
+
+            // 3) gap = 系统开机至进程启动的间隔
+            var gap = systemUptime - processUptime;
+            if (gap < TimeSpan.Zero) gap = TimeSpan.Zero;
+
+            // 4) 若 gap < 阈值，则等待 gap（可取消）
+            if (gap > TimeSpan.Zero && gap < threshold) {
+                log.Info($"[BootGap] gap={gap.TotalMilliseconds:N0}ms < {threshold.TotalMilliseconds:N0}ms, delay {gap.TotalMilliseconds:N0}ms.");
+                try {
+                    await Task.Delay(gap, ct).ConfigureAwait(false);
+                }
+                catch (TaskCanceledException) {
+                    log.Warn("[BootGap] 等待被取消。");
+                    return new(false, "Canceled during boot-gap delay.");
+                }
+            }
+            else {
+                log.Info($"[BootGap] gap={gap.TotalMilliseconds:N0}ms ≥ {threshold.TotalMilliseconds:N0}ms，无需等待。");
+            }
+
+            return new(true, "Boot-gap ensured.");
         }
 
         #region 安全执行工具方法

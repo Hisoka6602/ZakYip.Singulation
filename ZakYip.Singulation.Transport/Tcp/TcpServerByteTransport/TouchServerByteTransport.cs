@@ -115,7 +115,6 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
                 RaiseError($"server start failed: {ex.Message}", ex, transient: false, endpoint: endpoint, port: _opt.Port);
 
                 try { service.SafeDispose(); } catch { /* ignore */ }
-                // 不外抛异常，按你的体系通过 Error 事件上报
             }
         }
 

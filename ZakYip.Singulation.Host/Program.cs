@@ -130,7 +130,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddHostedService<SingulationWorker>();
         // ---------- 初始化轴 ----------
         services.AddHostedService<AxisBootstrapper>();
-        // 如果你有运行时状态上报/心跳等后台任务，可以按需再加：
+
         // services.AddHostedService<RuntimeStatusReporter>();
 
         // ---------- SignalR ----------
@@ -185,7 +185,6 @@ var host = Host.CreateDefaultBuilder(args)
             // 获取配置（若不存在则返回默认）
             var options = store.GetAsync().GetAwaiter().GetResult();
 
-            // 如果你想确保第一次启动时一定存入数据库
             store.UpsertAsync(options).GetAwaiter().GetResult();
 
             return new HuararyCodec(

@@ -28,7 +28,6 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
 
         /// <summary>
         /// （可选）从配置做一次性“种子写入/覆盖”，不依赖上游源，不启动任何后台任务。
-        /// 仅在你主动调用时生效。
         /// </summary>
         public static async Task SeedUpstreamOptionsFromConfigAsync(this IServiceProvider sp, IConfiguration cfg, CancellationToken ct = default) {
             // 约定使用 "Upstream" 节点；不存在则不做任何事

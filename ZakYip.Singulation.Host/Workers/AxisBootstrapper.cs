@@ -42,7 +42,7 @@ namespace ZakYip.Singulation.Host.Workers {
                     overrideAxisCount: opt.OverrideAxisCount,
                     ct: stoppingToken);
 
-                // 3) 如果需要，统一上电、设加减速、设目标速度（来自模板的线性参数，按你现有控制逻辑决定是否在这里做）
+                // 3) 如果需要，统一上电、设加减速、设目标速度
                 await _controller.EnableAllAsync(stoppingToken);
                 await _controller.SetAccelDecelAllAsync(
                     accelMmPerSec2: opt.Template.MaxAccelRpmPerSec,

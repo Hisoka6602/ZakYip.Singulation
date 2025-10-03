@@ -67,7 +67,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
                 EnableHealthMonitor = d.Template.EnableHealthMonitor,
                 HealthPingInterval = d.Template.HealthPingInterval,
 
-                // 若 DriverOptionsTemplateDto 中保留了 Card/Port 字段（你当前包里是有的），一并映射：
+                // 若 DriverOptionsTemplateDto 中保留了 Card/Port 字段（当前包里是有的），一并映射：
                 Card = d.Template.Card,
                 Port = d.Template.Port,
             }
@@ -96,7 +96,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
                 EnableHealthMonitor = dto.Template.EnableHealthMonitor,
                 HealthPingInterval = dto.Template.HealthPingInterval,
 
-                // 同步硬件定位字段（若你决定在 DTO 中保留）
+                // 同步硬件定位字段（若决定在 DTO 中保留）
                 Card = dto.Template.Card,
                 Port = dto.Template.Port,
             }

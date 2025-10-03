@@ -28,7 +28,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
         private volatile bool _stopping;             // Stop 标志，避免“关停时重连”
         private TransportConnectionState _connState; // IByteTransport 的连接状态
 
-        /// <summary>你的运行层状态（保持兼容）。</summary>
+        /// <summary>运行层状态（保持兼容）。</summary>
         public TransportStatus Status { get; private set; } = TransportStatus.Stopped;
 
         public string? RemoteIp { get; }
@@ -111,7 +111,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                 await StartAsync(ct).ConfigureAwait(false);
             }
             catch (Exception ex) {
-                // 按你的风格：不抛异常，事件上报
+                //不抛异常，事件上报
                 RaiseError($"client restart failed: {ex.Message}", ex, transient: true,
                     endpoint: $"{_opt.Host}:{_opt.Port}", port: _opt.Port);
             }
