@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Infrastr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Tests", "ZakYip.Singulation.Tests\ZakYip.Singulation.Tests.csproj", "{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.MauiApp", "ZakYip.Singulation.MauiApp\ZakYip.Singulation.MauiApp.csproj", "{7E49623F-13B6-4370-94BC-7CCF753963A9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +73,10 @@ Global
 		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E49623F-13B6-4370-94BC-7CCF753963A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E49623F-13B6-4370-94BC-7CCF753963A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E49623F-13B6-4370-94BC-7CCF753963A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E49623F-13B6-4370-94BC-7CCF753963A9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    x:Class="ZakYip.Singulation.MauiApp.Resources.Styles.Colors">
+    <Color x:Key="Primary">#512BD4</Color>
+    <Color x:Key="Secondary">#0A84FF</Color>
+    <Color x:Key="Surface">#FFFFFF</Color>
+    <Color x:Key="OnSurface">#1F1F1F</Color>
+</ResourceDictionary>

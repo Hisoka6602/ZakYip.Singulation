@@ -11,7 +11,6 @@ using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
-using ZakYip.Singulation.Host.Runtime;
 
 namespace ZakYip.Singulation.Host.Safety {
 
@@ -25,7 +24,6 @@ namespace ZakYip.Singulation.Host.Safety {
         private readonly IAxisController _axisController;
         private readonly IAxisEventAggregator _axisEvents;
         private readonly IRealtimeNotifier _realtime;
-        private readonly IApplicationRestarter _restarter;
         private readonly Channel<SafetyOperation> _operations;
 
         public SafetyPipeline(
@@ -34,15 +32,13 @@ namespace ZakYip.Singulation.Host.Safety {
             IEnumerable<ISafetyIoModule> ioModules,
             IAxisController axisController,
             IAxisEventAggregator axisEvents,
-            IRealtimeNotifier realtime,
-            IApplicationRestarter restarter) {
+            IRealtimeNotifier realtime) {
             _log = log;
             _isolator = isolator;
             _ioModules = ioModules.ToArray();
             _axisController = axisController;
             _axisEvents = axisEvents;
             _realtime = realtime;
-            _restarter = restarter;
             _operations = Channel.CreateUnbounded<SafetyOperation>(new UnboundedChannelOptions {
                 SingleReader = true,
                 SingleWriter = false,
@@ -161,9 +157,6 @@ namespace ZakYip.Singulation.Host.Safety {
                     await _realtime.PublishDeviceAsync(new {
                         kind = "safety.start", reason = operation.CommandReason
                     }, ct).ConfigureAwait(false);
-                    if (operation.TriggeredByIo) {
-                        await _restarter.RestartAsync($"IO 启动信号({operation.CommandKind})", ct).ConfigureAwait(false);
-                    }
                     break;
                 case SafetyCommand.Stop:
                     StopRequested?.Invoke(this, args);
@@ -181,9 +174,6 @@ namespace ZakYip.Singulation.Host.Safety {
                     else if (_isolator.IsDegraded) {
                         var ok = _isolator.TryRecoverFromDegraded(operation.CommandReason ?? "reset");
                         _log.LogInformation("降级恢复结果={Result}", ok);
-                    }
-                    if (operation.TriggeredByIo) {
-                        await _restarter.RestartAsync($"IO 复位信号({operation.CommandKind})", ct).ConfigureAwait(false);
                     }
                     break;
             }
