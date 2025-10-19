@@ -1,36 +1,54 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using Prism.Commands;
+using Prism.Mvvm;
 
 namespace ZakYip.Singulation.MauiApp.ViewModels;
 
 /// <summary>
 /// 设置页面视图模型
 /// </summary>
-public partial class SettingsViewModel : ObservableObject
+public class SettingsViewModel : BindableBase
 {
-    [ObservableProperty]
     private string _apiBaseUrl = "http://localhost:5000";
+    public string ApiBaseUrl
+    {
+        get => _apiBaseUrl;
+        set => SetProperty(ref _apiBaseUrl, value);
+    }
 
-    [ObservableProperty]
     private string _timeoutSeconds = "30";
+    public string TimeoutSeconds
+    {
+        get => _timeoutSeconds;
+        set => SetProperty(ref _timeoutSeconds, value);
+    }
 
-    [ObservableProperty]
     private string _statusMessage = string.Empty;
+    public string StatusMessage
+    {
+        get => _statusMessage;
+        set => SetProperty(ref _statusMessage, value);
+    }
+
+    public DelegateCommand SaveSettingsCommand { get; }
 
     public SettingsViewModel()
     {
         // 从本地存储加载设置
         LoadSettings();
+
+        SaveSettingsCommand = new DelegateCommand(async () => await SaveSettingsAsync());
     }
 
     /// <summary>
     /// 保存设置
     /// </summary>
-    [RelayCommand]
     private async Task SaveSettingsAsync()
     {
         try
         {
+            // Haptic feedback
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
             // 验证 URL 格式
             if (!Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out var uri))
             {

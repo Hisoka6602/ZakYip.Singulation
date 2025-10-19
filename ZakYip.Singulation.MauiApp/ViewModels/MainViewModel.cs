@@ -1,5 +1,5 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+using Prism.Commands;
+using Prism.Mvvm;
 using System.Collections.ObjectModel;
 using ZakYip.Singulation.MauiApp.Services;
 
@@ -8,46 +8,96 @@ namespace ZakYip.Singulation.MauiApp.ViewModels;
 /// <summary>
 /// 主页面视图模型，实现MVVM架构
 /// </summary>
-public partial class MainViewModel : ObservableObject
+public class MainViewModel : BindableBase
 {
     private readonly ApiClient _apiClient;
     private readonly SignalRClientFactory _signalRFactory;
 
-    [ObservableProperty]
     private string _statusMessage = "Ready";
+    public string StatusMessage
+    {
+        get => _statusMessage;
+        set => SetProperty(ref _statusMessage, value);
+    }
 
-    [ObservableProperty]
     private bool _isLoading = false;
+    public bool IsLoading
+    {
+        get => _isLoading;
+        set => SetProperty(ref _isLoading, value);
+    }
 
-    [ObservableProperty]
     private ObservableCollection<ControllerInfo> _controllers = new();
+    public ObservableCollection<ControllerInfo> Controllers
+    {
+        get => _controllers;
+        set => SetProperty(ref _controllers, value);
+    }
 
-    [ObservableProperty]
     private string _safetyCommandType = "Start";
+    public string SafetyCommandType
+    {
+        get => _safetyCommandType;
+        set => SetProperty(ref _safetyCommandType, value);
+    }
 
-    [ObservableProperty]
     private string _safetyReason = string.Empty;
+    public string SafetyReason
+    {
+        get => _safetyReason;
+        set => SetProperty(ref _safetyReason, value);
+    }
 
-    [ObservableProperty]
     private ControllerInfo? _selectedController;
+    public ControllerInfo? SelectedController
+    {
+        get => _selectedController;
+        set => SetProperty(ref _selectedController, value);
+    }
 
-    [ObservableProperty]
     private double _targetSpeed = 100.0;
+    public double TargetSpeed
+    {
+        get => _targetSpeed;
+        set => SetProperty(ref _targetSpeed, value);
+    }
+
+    public DelegateCommand RefreshControllersCommand { get; }
+    public DelegateCommand SendSafetyCommandCommand { get; }
+    public DelegateCommand ConnectSignalRCommand { get; }
+    public DelegateCommand EnableAllAxesCommand { get; }
+    public DelegateCommand DisableAllAxesCommand { get; }
+    public DelegateCommand SetAllAxesSpeedCommand { get; }
 
     public MainViewModel(ApiClient apiClient, SignalRClientFactory signalRFactory)
     {
         _apiClient = apiClient;
         _signalRFactory = signalRFactory;
+
+        RefreshControllersCommand = new DelegateCommand(async () => await RefreshControllersAsync(), () => !IsLoading)
+            .ObservesProperty(() => IsLoading);
+        SendSafetyCommandCommand = new DelegateCommand(async () => await SendSafetyCommandAsync(), () => !IsLoading)
+            .ObservesProperty(() => IsLoading);
+        ConnectSignalRCommand = new DelegateCommand(async () => await ConnectSignalRAsync(), () => !IsLoading)
+            .ObservesProperty(() => IsLoading);
+        EnableAllAxesCommand = new DelegateCommand(async () => await EnableAllAxesAsync(), () => !IsLoading)
+            .ObservesProperty(() => IsLoading);
+        DisableAllAxesCommand = new DelegateCommand(async () => await DisableAllAxesAsync(), () => !IsLoading)
+            .ObservesProperty(() => IsLoading);
+        SetAllAxesSpeedCommand = new DelegateCommand(async () => await SetAllAxesSpeedAsync(), () => !IsLoading)
+            .ObservesProperty(() => IsLoading);
     }
 
     /// <summary>
     /// 刷新控制器列表
     /// </summary>
-    [RelayCommand]
     private async Task RefreshControllersAsync()
     {
         try
         {
+            // Haptic feedback
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
             IsLoading = true;
             StatusMessage = "Refreshing controllers...";
 
@@ -79,11 +129,13 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// 发送安全命令
     /// </summary>
-    [RelayCommand]
     private async Task SendSafetyCommandAsync()
     {
         try
         {
+            // Haptic feedback
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
             IsLoading = true;
             StatusMessage = "Sending safety command...";
 
@@ -126,11 +178,13 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// 连接到SignalR Hub
     /// </summary>
-    [RelayCommand]
     private async Task ConnectSignalRAsync()
     {
         try
         {
+            // Haptic feedback
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
             IsLoading = true;
             StatusMessage = "Connecting to SignalR...";
 
@@ -152,11 +206,13 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// 使能所有轴
     /// </summary>
-    [RelayCommand]
     private async Task EnableAllAxesAsync()
     {
         try
         {
+            // Haptic feedback
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
             IsLoading = true;
             StatusMessage = "Enabling all axes...";
 
@@ -178,11 +234,13 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// 禁用所有轴
     /// </summary>
-    [RelayCommand]
     private async Task DisableAllAxesAsync()
     {
         try
         {
+            // Haptic feedback
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
             IsLoading = true;
             StatusMessage = "Disabling all axes...";
 
@@ -204,11 +262,13 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// 设置所有轴速度
     /// </summary>
-    [RelayCommand]
     private async Task SetAllAxesSpeedAsync()
     {
         try
         {
+            // Haptic feedback
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
             IsLoading = true;
             StatusMessage = $"Setting speed to {TargetSpeed} mm/s...";
 

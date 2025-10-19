@@ -1,5 +1,5 @@
-using System.Net.Http.Json;
-using System.Text.Json;
+using Newtonsoft.Json;
+using System.Text;
 
 namespace ZakYip.Singulation.MauiApp.Services;
 
@@ -9,14 +9,15 @@ namespace ZakYip.Singulation.MauiApp.Services;
 public class ApiClient
 {
     private readonly HttpClient _httpClient;
-    private readonly JsonSerializerOptions _jsonOptions;
+    private readonly JsonSerializerSettings _jsonSettings;
 
     public ApiClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        _jsonOptions = new JsonSerializerOptions
+        _jsonSettings = new JsonSerializerSettings
         {
-            PropertyNameCaseInsensitive = true
+            NullValueHandling = NullValueHandling.Ignore,
+            Formatting = Formatting.None
         };
     }
 
@@ -27,8 +28,9 @@ public class ApiClient
     {
         try
         {
-            var response = await _httpClient.GetFromJsonAsync<ApiResponse<List<ControllerInfo>>>(
-                "/api/axes/axes", _jsonOptions);
+            var responseMessage = await _httpClient.GetAsync("/api/axes/axes");
+            var content = await responseMessage.Content.ReadAsStringAsync();
+            var response = JsonConvert.DeserializeObject<ApiResponse<List<ControllerInfo>>>(content, _jsonSettings);
             return response ?? new ApiResponse<List<ControllerInfo>> 
             { 
                 Result = false, 
@@ -52,8 +54,9 @@ public class ApiClient
     {
         try
         {
-            var response = await _httpClient.GetFromJsonAsync<ApiResponse<ControllerStatus>>(
-                "/api/axes/controller", _jsonOptions);
+            var responseMessage = await _httpClient.GetAsync("/api/axes/controller");
+            var content = await responseMessage.Content.ReadAsStringAsync();
+            var response = JsonConvert.DeserializeObject<ApiResponse<ControllerStatus>>(content, _jsonSettings);
             return response ?? new ApiResponse<ControllerStatus> 
             { 
                 Result = false, 
@@ -77,10 +80,13 @@ public class ApiClient
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/safety/commands", request, _jsonOptions);
+            var json = JsonConvert.SerializeObject(request, _jsonSettings);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync("/api/safety/commands", content);
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var result = JsonConvert.DeserializeObject<ApiResponse<object>>(responseContent, _jsonSettings);
                 return result ?? new ApiResponse<object> 
                 { 
                     Result = true, 
@@ -116,7 +122,8 @@ public class ApiClient
             var response = await _httpClient.PostAsync($"/api/axes/axes/enable{query}", null);
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var result = JsonConvert.DeserializeObject<ApiResponse<object>>(responseContent, _jsonSettings);
                 return result ?? new ApiResponse<object> { Result = true, Msg = "Axes enabled" };
             }
             return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
@@ -140,7 +147,8 @@ public class ApiClient
             var response = await _httpClient.PostAsync($"/api/axes/axes/disable{query}", null);
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var result = JsonConvert.DeserializeObject<ApiResponse<object>>(responseContent, _jsonSettings);
                 return result ?? new ApiResponse<object> { Result = true, Msg = "Axes disabled" };
             }
             return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
@@ -161,11 +169,14 @@ public class ApiClient
             var query = axisIds != null && axisIds.Length > 0 
                 ? $"?{string.Join("&", axisIds.Select(id => $"axisIds={id}"))}"
                 : "";
-            var request = new { LinearMmps = speedMmps };
-            var response = await _httpClient.PostAsJsonAsync($"/api/axes/axes/speed{query}", request, _jsonOptions);
+            var requestData = new { LinearMmps = speedMmps };
+            var json = JsonConvert.SerializeObject(requestData, _jsonSettings);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"/api/axes/axes/speed{query}", content);
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var result = JsonConvert.DeserializeObject<ApiResponse<object>>(responseContent, _jsonSettings);
                 return result ?? new ApiResponse<object> { Result = true, Msg = "Speed set" };
             }
             return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
