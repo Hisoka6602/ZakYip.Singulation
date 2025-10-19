@@ -24,8 +24,14 @@ namespace ZakYip.Singulation.MauiApp {
                 var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5000");
                 var timeoutSeconds = Preferences.Get("TimeoutSeconds", "30");
                 
+                // 安全解析超时值，失败时使用默认值
+                if (!int.TryParse(timeoutSeconds, out var timeout) || timeout <= 0)
+                {
+                    timeout = 30;
+                }
+                
                 client.BaseAddress = new Uri(apiBaseUrl);
-                client.Timeout = TimeSpan.FromSeconds(int.Parse(timeoutSeconds));
+                client.Timeout = TimeSpan.FromSeconds(timeout);
             });
 
             // 注册 SignalR 客户端工厂
