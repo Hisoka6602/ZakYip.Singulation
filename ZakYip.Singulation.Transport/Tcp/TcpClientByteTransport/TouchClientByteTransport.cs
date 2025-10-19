@@ -74,6 +74,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
 
         public async Task StopAsync(CancellationToken ct = default) {
             Task? loop;
+            var clientToDispose = default(TcpClient?);
             lock (_gate) {
                 if (Status == TransportStatus.Stopped)
                     return;
@@ -85,8 +86,12 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                 try { _cts?.Cancel(); } catch { /* ignore */ }
                 loop = _connectLoopTask;
 
-                // 关闭现有连接
-                SafeCloseClient();
+                clientToDispose = _client;
+                _client = null;
+            }
+
+            if (clientToDispose is not null) {
+                await CloseAndDisposeAsync(clientToDispose).ConfigureAwait(false);
             }
 
             // 等待连接循环退出（给一个短超时，避免阻塞 Stop）
@@ -192,10 +197,15 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                                 await client.ConnectAsync(1000, ct).ConfigureAwait(false);
 
                                 // 交接生命周期到字段，并关闭旧连接
+                                var previousClient = default(TcpClient?);
                                 lock (_gate) {
-                                    SafeCloseClient();
+                                    previousClient = _client;
                                     _client = client;
                                     client = null; // 避免 finally 二次释放
+                                }
+
+                                if (previousClient is not null) {
+                                    await CloseAndDisposeAsync(previousClient).ConfigureAwait(false);
                                 }
 
                                 // 等待：被动断开 或 取消
@@ -212,8 +222,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                             finally {
                                 // 仅当未成功交接到 _client 时才兜底释放
                                 if (client is not null) {
-                                    try { client.Close(); } catch { /* ignore */ }
-                                    try { client.Dispose(); } catch { /* ignore */ }
+                                    await CloseAndDisposeAsync(client).ConfigureAwait(false);
                                 }
                             }
                         }, token).ConfigureAwait(false);
@@ -240,10 +249,9 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
         // 内部：通用工具
         // =========================
 
-        private void SafeCloseClient() {
-            try { _client?.Close(); } catch { /* ignore */ }
-            try { _client?.Dispose(); } catch { /* ignore */ }
-            _client = null;
+        private static async Task CloseAndDisposeAsync(TcpClient client) {
+            try { await client.CloseAsync().ConfigureAwait(false); } catch { /* ignore */ }
+            try { client.Dispose(); } catch { /* ignore */ }
         }
 
         private void SetStatus(TransportStatus s) {
