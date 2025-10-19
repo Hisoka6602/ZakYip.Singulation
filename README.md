@@ -3,7 +3,7 @@
 ## 本次更新（2025-10-19）
 
 ### MAUI 客户端修复与完善
-- **修复编译问题**：解决 `MauiVersion` 未定义错误，将 MAUI 版本固化为 8.0.90
+- **修复编译问题**：解决 `MauiVersion` 未定义错误，将 MAUI 版本固化为 8.0.90（.NET 8 对应的稳定版本）
 - **简化目标框架**：仅支持 Android 和 Windows 平台，iOS/MacCatalyst 需在 macOS 上构建
 - **修复命名空间冲突**：解决项目命名空间与 `Microsoft.Maui.Hosting.MauiApp` 类型冲突问题
 - **完善 MVVM 架构**：
@@ -77,7 +77,7 @@
 - **.NET 8.0** - 运行时框架
 - **ASP.NET Core** - Web 框架
 - **SignalR** - 实时通信
-- **.NET MAUI** - 跨平台移动/桌面应用
+- **.NET MAUI 8.0.90** - 跨平台移动/桌面应用（Android, Windows, iOS, MacCatalyst）
 - **LiteDB** - 嵌入式数据库
 - **Swagger/OpenAPI** - API 文档
 - **CommunityToolkit.Mvvm** - MVVM 工具包
@@ -167,10 +167,20 @@ dotnet run
 #### Android
 ```bash
 cd ZakYip.Singulation.MauiApp
+
+# 构建 Debug 版本
 dotnet build -f net8.0-android
+
+# 发布 Release 版本（默认生成 APK 和 AAB）
 dotnet publish -f net8.0-android -c Release
+
+# 仅生成 APK
+dotnet publish -f net8.0-android -c Release -p:AndroidPackageFormat=apk
+
+# 仅生成 AAB（推荐用于 Google Play）
+dotnet publish -f net8.0-android -c Release -p:AndroidPackageFormat=aab
 ```
-输出文件：`bin/Release/net8.0-android/publish/*.apk` 和 `*.aab`
+输出文件：`bin/Release/net8.0-android/publish/*.apk` 和/或 `*.aab`
 
 #### Windows（需在 Windows 上）
 ```bash
@@ -181,7 +191,12 @@ dotnet build -f net8.0-windows10.0.19041.0
 #### iOS/MacCatalyst（需在 macOS 上）
 ```bash
 cd ZakYip.Singulation.MauiApp
-# 取消 csproj 中 iOS/MacCatalyst 的注释
+
+# 1. 编辑 ZakYip.Singulation.MauiApp.csproj
+# 2. 在 <PropertyGroup> 部分，将第 5 行修改为：
+#    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">net8.0-android;net8.0-ios;net8.0-maccatalyst</TargetFrameworks>
+
+# 3. 构建 iOS 和 MacCatalyst
 dotnet build -f net8.0-ios
 dotnet build -f net8.0-maccatalyst
 ```
