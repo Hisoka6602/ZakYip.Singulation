@@ -2,6 +2,7 @@ using Prism.Commands;
 using Prism.Mvvm;
 using Prism.Navigation;
 using ZakYip.Singulation.MauiApp.Services;
+using ZakYip.Singulation.MauiApp.Helpers;
 
 namespace ZakYip.Singulation.MauiApp.ViewModels;
 
@@ -150,8 +151,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
         }
         catch (Exception ex)
         {
-            StatusMessage = $"异常: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -185,8 +187,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
         }
         catch (Exception ex)
         {
-            StatusMessage = $"异常: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -220,8 +223,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
         }
         catch (Exception ex)
         {
-            StatusMessage = $"异常: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -269,8 +273,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
         }
         catch (Exception ex)
         {
-            StatusMessage = $"异常: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
