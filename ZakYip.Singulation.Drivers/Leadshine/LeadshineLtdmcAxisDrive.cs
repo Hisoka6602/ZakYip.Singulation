@@ -327,7 +327,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
             if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
             if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, 0)) return;
-            if (!_sPprReady) {
+            if (!Volatile.Read(ref _sPprReady)) {
                 try {
                     var ppr = await ReadAxisPulsesPerRevAsync(ct);
                     if (ppr > 0) {
@@ -666,7 +666,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ValueTask<int> GetPprCachedAsync(CancellationToken ct) {
             // ★ 修改：仅返回静态值，不再主动发起读取
-            var v = Volatile.Read(ref _sPprReady) ? Volatile.Read(ref _sPpr) : 0;
+            var ready = Volatile.Read(ref _sPprReady);
+            var v = ready ? Volatile.Read(ref _sPpr) : 0;
             return ValueTask.FromResult(v);
         }
 
