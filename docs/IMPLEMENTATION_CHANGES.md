@@ -132,6 +132,12 @@ public async Task<ApiResponse<List<SafetyEventDto>>> GetEvents(
 public MainViewModel(...)
 {
     // ...
+    // 注意：使用 fire-and-forget 模式启动后台连接
+    // 错误会被内部捕获并记录，不会影响应用启动
+    // 在生产环境中，这种方式是可接受的，因为：
+    // 1. SignalR 连接是可选的，失败不应阻止应用启动
+    // 2. 有自动重连机制保障
+    // 3. 用户可以手动重新连接
     _ = Task.Run(async () => await AutoConnectSignalRAsync());
 }
 
@@ -144,6 +150,7 @@ private async Task AutoConnectSignalRAsync()
     }
     catch (Exception ex)
     {
+        // 错误被记录但不会崩溃应用
         System.Diagnostics.Debug.WriteLine($"Auto-connect failed: {ex.Message}");
     }
 }
@@ -258,7 +265,10 @@ private void OnSafetyEventOccurred(object? sender, SafetyEventArgs e)
 _hubConnection = new HubConnectionBuilder()
     .WithUrl($"{_baseUrl}{hubPath}")
     .WithAutomaticReconnect(new[] { 
-        TimeSpan.Zero,              // 0s - 立即重连
+        // 注意：TimeSpan.Zero 是 Microsoft SignalR 推荐的第一次重连延迟
+        // 这是因为 SignalR 内部已经有连接管理机制，不会造成"连接风暴"
+        // 参考：https://docs.microsoft.com/aspnet/core/signalr/configuration#configure-client-options
+        TimeSpan.Zero,              // 0s - 立即重连（SignalR推荐）
         TimeSpan.FromSeconds(2),    // 2s
         TimeSpan.FromSeconds(10),   // 10s
         TimeSpan.FromSeconds(30),   // 30s
@@ -334,6 +344,8 @@ public ObservableCollection<string> RealtimeEvents
 ```csharp
 private void AddRealtimeEvent(string message)
 {
+    // 注意：在实际生产环境中，如果需要处理时区，应使用 DateTimeOffset
+    // 这里使用 DateTime.Now 是为了简单的本地时间显示
     var timestamped = $"[{DateTime.Now:HH:mm:ss}] {message}";
     RealtimeEvents.Insert(0, timestamped);
     
