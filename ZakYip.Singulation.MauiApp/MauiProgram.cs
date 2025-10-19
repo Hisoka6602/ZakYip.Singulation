@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using Prism.Ioc;
 using ZakYip.Singulation.MauiApp.Services;
 using ZakYip.Singulation.MauiApp.ViewModels;
+using ZakYip.Singulation.MauiApp.Views;
 
 namespace ZakYip.Singulation.MauiApp {
     public static class MauiProgram {
@@ -8,6 +10,9 @@ namespace ZakYip.Singulation.MauiApp {
             var builder = Microsoft.Maui.Hosting.MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UsePrism(prism => prism
+                    .RegisterTypes(RegisterTypes)
+                    .CreateWindow((container, nav) => nav.NavigateAsync("NavigationPage/MainPage")))
                 .ConfigureFonts(fonts => {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
@@ -17,8 +22,14 @@ namespace ZakYip.Singulation.MauiApp {
     		builder.Logging.AddDebug();
 #endif
 
+            return builder.Build();
+        }
+
+        private static void RegisterTypes(IContainerRegistry containerRegistry)
+        {
             // 注册 HttpClient 和 ApiClient
-            builder.Services.AddHttpClient<ApiClient>(client =>
+            containerRegistry.Register<ApiClient>();
+            containerRegistry.Register<HttpClient>(provider =>
             {
                 // 从本地存储读取API地址
                 var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5000");
@@ -30,26 +41,24 @@ namespace ZakYip.Singulation.MauiApp {
                     timeout = 30;
                 }
                 
-                client.BaseAddress = new Uri(apiBaseUrl);
-                client.Timeout = TimeSpan.FromSeconds(timeout);
+                var client = new HttpClient
+                {
+                    BaseAddress = new Uri(apiBaseUrl),
+                    Timeout = TimeSpan.FromSeconds(timeout)
+                };
+                return client;
             });
 
             // 注册 SignalR 客户端工厂
-            builder.Services.AddSingleton(sp => 
+            containerRegistry.RegisterSingleton<SignalRClientFactory>(provider => 
             {
                 var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5000");
                 return new SignalRClientFactory(apiBaseUrl);
             });
 
-            // 注册 ViewModels
-            builder.Services.AddTransient<MainViewModel>();
-            builder.Services.AddTransient<SettingsViewModel>();
-
-            // 注册 Pages
-            builder.Services.AddTransient<MainPage>();
-            builder.Services.AddTransient<Views.SettingsPage>();
-
-            return builder.Build();
+            // 注册 Pages 和 ViewModels (Prism 会自动关联)
+            containerRegistry.RegisterForNavigation<MainPage, MainViewModel>();
+            containerRegistry.RegisterForNavigation<SettingsPage, SettingsViewModel>();
         }
     }
 }
