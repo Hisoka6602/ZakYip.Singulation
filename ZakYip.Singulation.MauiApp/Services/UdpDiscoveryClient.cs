@@ -42,22 +42,59 @@ public class UdpDiscoveryClient : IDisposable
         _isListening = true;
         _cts = new CancellationTokenSource();
 
-        try
-        {
-            _udpClient = new UdpClient(_listenPort);
-            _udpClient.EnableBroadcast = true;
+        // 使用重试机制启动 UDP 监听，最长等待 10 秒
+        await StartListeningWithRetryAsync(_cts.Token);
+    }
 
-            // 启动接收任务
-            _ = Task.Run(() => ReceiveLoopAsync(_cts.Token), _cts.Token);
-
-            // 启动超时检查任务
-            _ = Task.Run(() => TimeoutCheckLoopAsync(_cts.Token), _cts.Token);
-        }
-        catch (Exception ex)
+    /// <summary>
+    /// 带重试机制的 UDP 监听启动，失败时无限重试，单次最长等待 10 秒
+    /// </summary>
+    private async Task StartListeningWithRetryAsync(CancellationToken cancellationToken)
+    {
+        int retryCount = 0;
+        const int maxRetryDelayMs = 10000; // 最长等待时间 10 秒
+        
+        while (!cancellationToken.IsCancellationRequested && _isListening)
         {
-            System.Diagnostics.Debug.WriteLine($"启动 UDP 监听失败: {ex.Message}");
-            _isListening = false;
-            throw;
+            try
+            {
+                _udpClient = new UdpClient(_listenPort);
+                _udpClient.EnableBroadcast = true;
+
+                // 启动接收任务
+                if (_cts != null)
+                {
+                    _ = Task.Run(() => ReceiveLoopAsync(_cts.Token), _cts.Token);
+
+                    // 启动超时检查任务
+                    _ = Task.Run(() => TimeoutCheckLoopAsync(_cts.Token), _cts.Token);
+                }
+                
+                System.Diagnostics.Debug.WriteLine($"UDP 监听启动成功，端口: {_listenPort}");
+                break; // 成功启动，退出重试循环
+            }
+            catch (Exception ex)
+            {
+                retryCount++;
+                // 计算重试延迟：指数退避，但最大不超过 10 秒
+                var delayMs = Math.Min((int)Math.Pow(2, Math.Min(retryCount, 13)) * 100, maxRetryDelayMs);
+                
+                System.Diagnostics.Debug.WriteLine($"启动 UDP 监听失败 (尝试 #{retryCount}): {ex.Message}，{delayMs}ms 后重试...");
+                
+                // 清理失败的客户端
+                _udpClient?.Dispose();
+                _udpClient = null;
+                
+                try
+                {
+                    await Task.Delay(delayMs, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    _isListening = false;
+                    break;
+                }
+            }
         }
     }
 
@@ -77,6 +114,10 @@ public class UdpDiscoveryClient : IDisposable
 
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
     {
+        int consecutiveErrors = 0;
+        const int maxConsecutiveErrors = 3;
+        const int maxRetryDelayMs = 10000; // 最长等待时间 10 秒
+        
         while (!cancellationToken.IsCancellationRequested && _udpClient != null)
         {
             try
@@ -89,6 +130,9 @@ public class UdpDiscoveryClient : IDisposable
                 {
                     await ProcessDiscoveredServiceAsync(serviceInfo, result.RemoteEndPoint.Address.ToString());
                 }
+                
+                // 成功接收数据，重置错误计数
+                consecutiveErrors = 0;
             }
             catch (OperationCanceledException)
             {
@@ -96,8 +140,33 @@ public class UdpDiscoveryClient : IDisposable
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"接收 UDP 数据失败: {ex.Message}");
-                await Task.Delay(1000, cancellationToken);
+                consecutiveErrors++;
+                System.Diagnostics.Debug.WriteLine($"接收 UDP 数据失败 (连续错误 {consecutiveErrors}): {ex.Message}");
+                
+                // 如果连续错误次数过多，尝试重新初始化 UDP 客户端
+                if (consecutiveErrors >= maxConsecutiveErrors)
+                {
+                    System.Diagnostics.Debug.WriteLine("连续错误过多，尝试重新初始化 UDP 客户端...");
+                    _udpClient?.Dispose();
+                    
+                    // 重新初始化，使用重试逻辑
+                    await StartListeningWithRetryAsync(cancellationToken);
+                    consecutiveErrors = 0;
+                }
+                else
+                {
+                    // 计算重试延迟：指数退避，最大不超过 10 秒
+                    var delayMs = Math.Min((int)Math.Pow(2, consecutiveErrors) * 100, maxRetryDelayMs);
+                    
+                    try
+                    {
+                        await Task.Delay(delayMs, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
             }
         }
     }

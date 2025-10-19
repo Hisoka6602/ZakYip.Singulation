@@ -66,17 +66,12 @@
                     <Button
                         Command="{Binding RefreshControllersCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                        Text="🔄 刷新控制器"
                         BackgroundColor="#4CAF50"
                         TextColor="White"
                         HorizontalOptions="Fill"
-                        Padding="15,10">
-                        <Button.Content>
-                            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
-                                <Label Text="&#xf021;" FontFamily="FontAwesomeSolid" FontSize="18" TextColor="White" VerticalOptions="Center" />
-                                <Label Text="刷新控制器" FontSize="16" TextColor="White" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
-                        </Button.Content>
-                    </Button>
+                        FontSize="16"
+                        Padding="15,10" />
 
                     <CollectionView 
                         ItemsSource="{Binding Controllers}"
@@ -165,17 +160,12 @@
                     <Button
                         Command="{Binding SendSafetyCommandCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                        Text="📤 发送安全命令"
                         BackgroundColor="#FF9800"
                         TextColor="White"
                         HorizontalOptions="Fill"
-                        Padding="15,10">
-                        <Button.Content>
-                            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
-                                <Label Text="&#xf04b;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="White" VerticalOptions="Center" />
-                                <Label Text="发送安全命令" FontSize="16" TextColor="White" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
-                        </Button.Content>
-                    </Button>
+                        FontSize="16"
+                        Padding="15,10" />
                 </VerticalStackLayout>
             </Frame>
 
@@ -201,31 +191,21 @@
                             Grid.Column="0"
                             Command="{Binding EnableAllAxesCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                            Text="✅ 全部使能"
                             BackgroundColor="#4CAF50"
                             TextColor="White"
-                            Padding="15,10">
-                            <Button.Content>
-                                <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
-                                    <Label Text="&#xf00c;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="White" VerticalOptions="Center" />
-                                    <Label Text="全部使能" FontSize="14" TextColor="White" VerticalOptions="Center" />
-                                </HorizontalStackLayout>
-                            </Button.Content>
-                        </Button>
+                            FontSize="14"
+                            Padding="15,10" />
 
                         <Button
                             Grid.Column="1"
                             Command="{Binding DisableAllAxesCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                            Text="❌ 全部禁用"
                             BackgroundColor="#F44336"
                             TextColor="White"
-                            Padding="15,10">
-                            <Button.Content>
-                                <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
-                                    <Label Text="&#xf00d;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="White" VerticalOptions="Center" />
-                                    <Label Text="全部禁用" FontSize="14" TextColor="White" VerticalOptions="Center" />
-                                </HorizontalStackLayout>
-                            </Button.Content>
-                        </Button>
+                            FontSize="14"
+                            Padding="15,10" />
                     </Grid>
 
                     <HorizontalStackLayout Spacing="5" Margin="0,10,0,0">
@@ -242,16 +222,11 @@
                         <Button
                             Command="{Binding SetAllAxesSpeedCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                            Text="⚡ 设置速度"
                             BackgroundColor="#2196F3"
                             TextColor="White"
-                            Padding="15,10">
-                            <Button.Content>
-                                <HorizontalStackLayout Spacing="5">
-                                    <Label Text="&#xf04b;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="White" VerticalOptions="Center" />
-                                    <Label Text="设置速度" FontSize="14" TextColor="White" VerticalOptions="Center" />
-                                </HorizontalStackLayout>
-                            </Button.Content>
-                        </Button>
+                            FontSize="14"
+                            Padding="15,10" />
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Frame>
@@ -281,17 +256,12 @@
                     <Button
                         Command="{Binding ConnectSignalRCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                        Text="🔗 连接 SignalR"
                         BackgroundColor="#9C27B0"
                         TextColor="White"
                         HorizontalOptions="Fill"
-                        Padding="15,10">
-                        <Button.Content>
-                            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
-                                <Label Text="&#xf0c1;" FontFamily="FontAwesomeSolid" FontSize="18" TextColor="White" VerticalOptions="Center" />
-                                <Label Text="连接 SignalR" FontSize="16" TextColor="White" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
-                        </Button.Content>
-                    </Button>
+                        FontSize="16"
+                        Padding="15,10" />
                 </VerticalStackLayout>
             </Frame>
 
