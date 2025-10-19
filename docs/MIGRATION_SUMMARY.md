@@ -9,7 +9,7 @@
 
 #### NuGet 包变更
 - **移除**：`CommunityToolkit.Mvvm` (8.3.2)
-- **添加**： 
+- **添加**：
   - `Prism.Maui` (9.0.537)
   - `Prism.DryIoc.Maui` (9.0.537)
 
