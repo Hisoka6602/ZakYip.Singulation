@@ -1,13 +1,9 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-
 namespace ZakYip.Singulation.Host.Dto {
     /// <summary>上游 TCP 连接项快照（单个 transport）。</summary>
     public sealed record class UpstreamConnectionDto {
+        /// <summary>连接序号（用于前端排序）。</summary>
         public int Index { get; init; }
+
         /// <summary>对端 IP（服务端初始为监听地址，连接后可更新为客户端地址）。</summary>
         public string? Ip { get; init; }
 

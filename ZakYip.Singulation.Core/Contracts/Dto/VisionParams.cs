@@ -1,14 +1,8 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-
 namespace ZakYip.Singulation.Core.Contracts.Dto {
     /// <summary>
     /// 视觉软件公开的参数视图（通过“获取参数”接口或厂商自定义上行获得）。
     /// </summary>
-    public sealed record VisionParams {
+    public sealed record class VisionParams {
         /// <summary>速度端口号（TCP）。</summary>
         public int SpeedPort { get; set; }
 
