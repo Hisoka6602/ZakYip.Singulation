@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 using System.Buffers.Binary;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -31,9 +32,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private volatile DriverStatus _status = DriverStatus.Disconnected;
 
         // —— 全局 PPR（只在 Enable 时读取一次）—— ★ 新增
-        private static volatile int _sPpr;        // 0 表示未知
+        private static int _sPpr;        // 0 表示未知
 
-        private static volatile bool _sPprReady;  // 读取成功的一次性门闩
+        private static bool _sPprReady;  // 读取成功的一次性门闩
 
         // —— 速度反馈节流控制 ——
         // 最小反馈间隔：避免淹没上层（可做成 DriverOptions 配置）

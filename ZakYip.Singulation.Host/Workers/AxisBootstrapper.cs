@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Contracts.ValueObjects;
 using ZakYip.Singulation.Core.Utils;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Abstractions;

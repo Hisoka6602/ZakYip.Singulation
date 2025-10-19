@@ -2,9 +2,11 @@
 
 ## 本次更新
 
-- 将 `SafetyIsolator` 的内部状态与触发类型改为 `int` 支撑的易失读写，满足 `Volatile.Read` 泛型约束并保持线程安全的隔离器行为。
-- 为雷赛驱动的 PPR 缓存访问显式使用 `Volatile.Read`，确保静态门闩字段按照易失语义读取，消除编译器对引用访问的警告。
-- 调整 README，重新导出完整文件树并更新变更记录，便于快速定位组件职责与当前迭代成果。
+- 修正 `TransportEventPump` 中构造 `AxisEvent` 的命名参数大小写，确保与记录构造函数匹配并恢复编译通过。
+- 为 `AxisBootstrapper` 引入 `AxisRpm` 命名空间引用，解决值对象类型未解析的问题。
+- 调整雷赛驱动的 PPR 缓存字段：改用 `System.Threading.Volatile` 读写配合普通静态字段，消除对 `volatile` 引用的编译警告。
+- 优化 `SafetyPipeline`：等待所有安全 IO 模块启动完成，并在循环中避免对空引用调用 `Value`，提升并发健壮性。
+- 更新本 README，保留完整文件树与职责说明，记录当前修改与后续规划。
 
 ## 文件树与功能说明
 
@@ -523,3 +525,4 @@ pwsh ops/dryrun.ps1
 - 扩展 `AxisKinematics` 支持更多机构换算与参数校验工具。
 - 将 `SingulationMetrics` 输出接入观测平台，完善报警策略与历史留存。
 - 为 SignalR 实时通知链路补充单元测试与压力验证，覆盖通道满载与失败回退场景。
+- 为 `SafetyPipeline` 启动阶段增加失败重试与日志细化，验证 Task.WhenAll 聚合后的行为。
