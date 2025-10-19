@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Prism.Ioc;
 using ZakYip.Singulation.MauiApp.Services;
 using ZakYip.Singulation.MauiApp.ViewModels;
 using ZakYip.Singulation.MauiApp.Views;
@@ -11,7 +12,7 @@ namespace ZakYip.Singulation.MauiApp {
                 .UseMauiApp<App>()
                 .UsePrism(prism => prism
                     .RegisterTypes(RegisterTypes)
-                    .OnAppStart("NavigationPage/MainPage"))
+                    .CreateWindow((container, nav) => nav.NavigateAsync("NavigationPage/MainPage")))
                 .ConfigureFonts(fonts => {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
