@@ -52,9 +52,11 @@
   - 更新 `MainPage.xaml` - 完整的 UI 界面，包含控制器列表、安全命令发送、SignalR 连接
   - 更新 `MauiProgram.cs` - 注册所有服务和依赖注入
 - **添加必要依赖**：
-  - `CommunityToolkit.Mvvm` 8.3.2 - MVVM 工具包
+  - `Prism.Maui` 9.0.537 - MVVM 框架
+  - `Prism.DryIoc.Maui` 9.0.537 - Prism DI 容器
   - `Microsoft.AspNetCore.SignalR.Client` 8.0.11 - SignalR 客户端
   - `Microsoft.Extensions.Http` 8.0.1 - HttpClient 扩展
+  - `Newtonsoft.Json` 13.0.3 - JSON 序列化
 - **构建测试成功**：
   - Debug 构建成功
   - Release 发布成功，生成 APK 和 AAB 部署包
@@ -103,14 +105,15 @@
    - MVVM 架构实现（Prism + DryIoc）
    - HTTP API 客户端（7 个功能模块服务）
    - UDP 服务自动发现（带重试机制）
-   - SignalR 实时连接工厂
+   - SignalR 实时连接工厂（自动重连、延迟监测）
    - 完整 UI 界面（控制器列表、安全命令、SignalR 连接）
+   - 用户体验增强（错误提示优化、服务缓存、网络诊断、下拉刷新）
    - Android 后台管理（禁止后台运行）
    - 构建和发布成功（APK/AAB）
 
 ### 📊 代码统计
 - 总项目数：9 个
-- 总源文件数：199+ 个（.cs, .xaml, .csproj）
+- 总源文件数：209 个（.cs, .xaml, .csproj）
 - 代码行数：约 15,000+ 行
 
 ### ⚙️ 技术栈
@@ -118,21 +121,21 @@
 - **ASP.NET Core** - Web 框架
 - **SignalR** - 实时通信
 - **.NET MAUI 8.0.90** - 跨平台移动/桌面应用（Android, Windows, iOS, MacCatalyst）
+- **Prism** - MVVM 框架和依赖注入
 - **LiteDB** - 嵌入式数据库
 - **Swagger/OpenAPI** - API 文档
-- **CommunityToolkit.Mvvm** - MVVM 工具包
 - **雷赛 LTDMC** - 运动控制硬件
 
 ## 📈 项目完成度评估与上线准备
 
-### 整体完成度：约 75%
+### 整体完成度：约 78%
 
 本项目的核心功能已基本完成，包括：
 - ✅ **后端服务（90%）**：核心控制逻辑、安全管理、REST API、SignalR 推送、设备驱动全部完成
-- ✅ **客户端应用（75%）**：MAUI 应用基础功能完成，包括服务发现、API 对接、基础 UI
+- ✅ **客户端应用（80%）**：MAUI 应用核心功能完成，包括服务发现、API 对接、完整 UI、用户体验优化
 - ⚠️ **测试与质量（40%）**：有基础单元测试，但缺少集成测试和性能测试
 - ⚠️ **部署运维（30%）**：缺少容器化、CI/CD、监控告警等生产环境配置
-- ⚠️ **文档完善（60%）**：有 API 文档和基础说明，但缺少详细的运维和故障排查手册
+- ✅ **文档完善（90%）**：API 文档、架构设计、部署运维、故障排查等文档完整
 
 ### 🚀 距离生产上线还需准备的内容
 
