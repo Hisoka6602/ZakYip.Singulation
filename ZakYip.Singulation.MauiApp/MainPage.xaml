@@ -13,11 +13,18 @@
             Spacing="15">
 
             <!-- 标题 -->
-            <Label
-                Text="🎯 Singulation 控制台"
-                Style="{StaticResource Headline}"
-                HorizontalTextAlignment="Center"
-                SemanticProperties.HeadingLevel="Level1" />
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                <Label
+                    Text="●"
+                    FontSize="32"
+                    TextColor="#2196F3"
+                    VerticalOptions="Center" />
+                <Label
+                    Text="Singulation 控制台"
+                    Style="{StaticResource Headline}"
+                    VerticalOptions="Center"
+                    SemanticProperties.HeadingLevel="Level1" />
+            </HorizontalStackLayout>
 
             <!-- 状态信息 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F0F8FF">
@@ -38,45 +45,71 @@
             <!-- 控制器管理区域 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F5F5F5">
                 <VerticalStackLayout Spacing="10">
-                    <Label
-                        Text="📊 控制器管理"
-                        FontAttributes="Bold"
-                        FontSize="20" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="▣"
+                            FontSize="24"
+                            TextColor="#666"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="控制器管理"
+                            FontAttributes="Bold"
+                            FontSize="20"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
                     <Button
-                        Text="🔄 刷新控制器"
                         Command="{Binding RefreshControllersCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                         BackgroundColor="#4CAF50"
                         TextColor="White"
                         HorizontalOptions="Fill"
-                        Padding="15,10" />
+                        Padding="15,10">
+                        <Button.Content>
+                            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
+                                <Label Text="↻" FontSize="20" TextColor="White" VerticalOptions="Center" />
+                                <Label Text="刷新控制器" FontSize="16" TextColor="White" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Button.Content>
+                    </Button>
 
                     <CollectionView 
                         ItemsSource="{Binding Controllers}"
                         SelectionMode="None"
                         HeightRequest="250">
                         <CollectionView.EmptyView>
-                            <Label
-                                Text="📭 暂无控制器数据\n\n点击上方按钮刷新"
-                                HorizontalTextAlignment="Center"
-                                TextColor="Gray"
-                                Margin="20" />
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="10" Margin="20">
+                                <Label
+                                    Text="□"
+                                    FontSize="48"
+                                    TextColor="LightGray"
+                                    HorizontalOptions="Center" />
+                                <Label
+                                    Text="暂无控制器数据"
+                                    HorizontalTextAlignment="Center"
+                                    TextColor="Gray"
+                                    FontSize="16" />
+                                <Label
+                                    Text="点击上方按钮刷新"
+                                    HorizontalTextAlignment="Center"
+                                    TextColor="Gray"
+                                    FontSize="14" />
+                            </VerticalStackLayout>
                         </CollectionView.EmptyView>
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="services:AxisInfo">
                                 <Frame Margin="0,5" Padding="15" BorderColor="#2196F3" BackgroundColor="White">
                                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="5" ColumnSpacing="10">
-                                        <Label Grid.Row="0" Grid.Column="0" Text="🔧" FontSize="16" />
+                                        <Label Grid.Row="0" Grid.Column="0" Text="⚙" FontSize="16" TextColor="#666" />
                                         <Label Grid.Row="0" Grid.Column="1" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" />
                                         
-                                        <Label Grid.Row="1" Grid.Column="0" Text="🆔" FontSize="14" />
+                                        <Label Grid.Row="1" Grid.Column="0" Text="#" FontSize="14" TextColor="#666" />
                                         <Label Grid.Row="1" Grid.Column="1" Text="{Binding AxisId, StringFormat='轴 ID: {0}'}" FontSize="14" />
                                         
-                                        <Label Grid.Row="2" Grid.Column="0" Text="📈" FontSize="14" />
+                                        <Label Grid.Row="2" Grid.Column="0" Text="◆" FontSize="14" TextColor="#666" />
                                         <Label Grid.Row="2" Grid.Column="1" Text="{Binding StatusText, StringFormat='状态: {0}'}" FontSize="14" />
                                         
-                                        <Label Grid.Row="3" Grid.Column="0" Text="⚡" FontSize="14" />
+                                        <Label Grid.Row="3" Grid.Column="0" Text="◈" FontSize="14" TextColor="#666" />
                                         <Label Grid.Row="3" Grid.Column="1" Text="{Binding Enabled, StringFormat='已使能: {0}'}" FontSize="14" />
                                     </Grid>
                                 </Frame>
@@ -89,10 +122,18 @@
             <!-- 安全命令区域 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#FFF8E1">
                 <VerticalStackLayout Spacing="10">
-                    <Label
-                        Text="🛡️ 安全命令"
-                        FontAttributes="Bold"
-                        FontSize="20" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="◈"
+                            FontSize="24"
+                            TextColor="#F57C00"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="安全命令"
+                            FontAttributes="Bold"
+                            FontSize="20"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
                     <Label Text="命令类型" FontSize="14" />
                     <Picker
@@ -115,45 +156,74 @@
                         BackgroundColor="White" />
 
                     <Button
-                        Text="📤 发送安全命令"
                         Command="{Binding SendSafetyCommandCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                         BackgroundColor="#FF9800"
                         TextColor="White"
                         HorizontalOptions="Fill"
-                        Padding="15,10" />
+                        Padding="15,10">
+                        <Button.Content>
+                            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
+                                <Label Text="►" FontSize="20" TextColor="White" VerticalOptions="Center" />
+                                <Label Text="发送安全命令" FontSize="16" TextColor="White" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Button.Content>
+                    </Button>
                 </VerticalStackLayout>
             </Frame>
 
             <!-- 轴控制区域 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#E8F5E9">
                 <VerticalStackLayout Spacing="10">
-                    <Label
-                        Text="⚙️ 轴控制"
-                        FontAttributes="Bold"
-                        FontSize="20" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="⚙"
+                            FontSize="24"
+                            TextColor="#4CAF50"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="轴控制"
+                            FontAttributes="Bold"
+                            FontSize="20"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
                         <Button
                             Grid.Column="0"
-                            Text="✅ 全部使能"
                             Command="{Binding EnableAllAxesCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                             BackgroundColor="#4CAF50"
                             TextColor="White"
-                            Padding="15,10" />
+                            Padding="15,10">
+                            <Button.Content>
+                                <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
+                                    <Label Text="✓" FontSize="18" TextColor="White" VerticalOptions="Center" />
+                                    <Label Text="全部使能" FontSize="14" TextColor="White" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </Button.Content>
+                        </Button>
 
                         <Button
                             Grid.Column="1"
-                            Text="❌ 全部禁用"
                             Command="{Binding DisableAllAxesCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                             BackgroundColor="#F44336"
                             TextColor="White"
-                            Padding="15,10" />
+                            Padding="15,10">
+                            <Button.Content>
+                                <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
+                                    <Label Text="✕" FontSize="18" TextColor="White" VerticalOptions="Center" />
+                                    <Label Text="全部禁用" FontSize="14" TextColor="White" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </Button.Content>
+                        </Button>
                     </Grid>
 
-                    <Label Text="🚀 目标速度 (mm/s)" FontSize="14" Margin="0,10,0,0" />
+                    <HorizontalStackLayout Spacing="5" Margin="0,10,0,0">
+                        <Label Text="▲" FontSize="14" TextColor="#666" VerticalOptions="Center" />
+                        <Label Text="目标速度 (mm/s)" FontSize="14" VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     <HorizontalStackLayout Spacing="10">
                         <Entry
                             Text="{Binding TargetSpeed}"
@@ -162,12 +232,18 @@
                             BackgroundColor="White"
                             HorizontalOptions="FillAndExpand" />
                         <Button
-                            Text="⚡ 设置速度"
                             Command="{Binding SetAllAxesSpeedCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                             BackgroundColor="#2196F3"
                             TextColor="White"
-                            Padding="15,10" />
+                            Padding="15,10">
+                            <Button.Content>
+                                <HorizontalStackLayout Spacing="5">
+                                    <Label Text="►" FontSize="16" TextColor="White" VerticalOptions="Center" />
+                                    <Label Text="设置速度" FontSize="14" TextColor="White" VerticalOptions="Center" />
+                                </HorizontalStackLayout>
+                            </Button.Content>
+                        </Button>
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Frame>
@@ -175,10 +251,18 @@
             <!-- SignalR连接区域 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F3E5F5">
                 <VerticalStackLayout Spacing="10">
-                    <Label
-                        Text="📡 实时连接"
-                        FontAttributes="Bold"
-                        FontSize="20" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="◉"
+                            FontSize="24"
+                            TextColor="#9C27B0"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="实时连接"
+                            FontAttributes="Bold"
+                            FontSize="20"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
                     <Label
                         Text="通过 SignalR 连接到主服务，接收实时事件推送"
@@ -186,13 +270,19 @@
                         TextColor="Gray" />
 
                     <Button
-                        Text="🔗 连接 SignalR"
                         Command="{Binding ConnectSignalRCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                         BackgroundColor="#9C27B0"
                         TextColor="White"
                         HorizontalOptions="Fill"
-                        Padding="15,10" />
+                        Padding="15,10">
+                        <Button.Content>
+                            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
+                                <Label Text="◉" FontSize="20" TextColor="White" VerticalOptions="Center" />
+                                <Label Text="连接 SignalR" FontSize="16" TextColor="White" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Button.Content>
+                    </Button>
                 </VerticalStackLayout>
             </Frame>
 

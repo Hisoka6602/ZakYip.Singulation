@@ -75,6 +75,28 @@ public class SettingsViewModel : BindableBase, IDisposable
         // 订阅服务发现事件
         _discoveryClient.ServiceDiscovered += OnServiceDiscovered;
         _discoveryClient.ServiceLost += OnServiceLost;
+
+        // 自动启动服务发现
+        _ = AutoStartDiscoveryAsync();
+    }
+
+    /// <summary>
+    /// 自动启动服务发现
+    /// </summary>
+    private async Task AutoStartDiscoveryAsync()
+    {
+        try
+        {
+            await Task.Delay(500); // 延迟启动，确保UI已加载
+            await _discoveryClient.StartListeningAsync();
+            IsDiscovering = true;
+            StatusMessage = "自动搜索服务中...";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"❌ 自动启动发现失败: {ex.Message}";
+            IsDiscovering = false;
+        }
     }
 
     /// <summary>
