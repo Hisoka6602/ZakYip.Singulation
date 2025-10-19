@@ -27,8 +27,8 @@ public class MainViewModel : BindableBase
         set => SetProperty(ref _isLoading, value);
     }
 
-    private ObservableCollection<ControllerInfo> _controllers = new();
-    public ObservableCollection<ControllerInfo> Controllers
+    private ObservableCollection<AxisInfo> _controllers = new();
+    public ObservableCollection<AxisInfo> Controllers
     {
         get => _controllers;
         set => SetProperty(ref _controllers, value);
@@ -48,8 +48,8 @@ public class MainViewModel : BindableBase
         set => SetProperty(ref _safetyReason, value);
     }
 
-    private ControllerInfo? _selectedController;
-    public ControllerInfo? SelectedController
+    private AxisInfo? _selectedController;
+    public AxisInfo? SelectedController
     {
         get => _selectedController;
         set => SetProperty(ref _selectedController, value);

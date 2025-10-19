@@ -201,31 +201,6 @@ public class AxisApiService
 }
 
 /// <summary>
-/// 轴信息 DTO
-/// </summary>
-public class AxisInfo
-{
-    public string AxisId { get; set; } = string.Empty;
-    public int Status { get; set; }
-    public double? TargetLinearMmps { get; set; }
-    public double? FeedbackLinearMmps { get; set; }
-    public bool? Enabled { get; set; }
-    public int? LastErrorCode { get; set; }
-    public string? LastErrorMessage { get; set; }
-
-    public string DisplayName => $"Axis {AxisId}";
-    public string StatusText => Status switch
-    {
-        0 => "离线",
-        1 => "初始化中",
-        2 => "就绪",
-        3 => "运行中",
-        4 => "故障",
-        _ => "未知"
-    };
-}
-
-/// <summary>
 /// 轴拓扑布局 DTO
 /// </summary>
 public class AxisTopology
