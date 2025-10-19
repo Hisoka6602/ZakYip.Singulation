@@ -231,11 +231,11 @@ namespace ZakYip.Singulation.Host.Workers {
             if (_axisSubscribed) return;
             _axisController.ControllerFaulted += (sender, s) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
-                    source: $"axisController",
-                    Type: AxisEventType.ControllerFaulted,
-                    Reason: s,
-                    Exception: null,
-                    AxisId: new AxisId(0)
+                    source: "axisController",
+                    type: AxisEventType.ControllerFaulted,
+                    axisId: new AxisId(0),
+                    reason: s,
+                    exception: null
                 ));
                 if (!ok) Interlocked.Increment(ref _axisDropped);
                 else Interlocked.Increment(ref _axisWritten);
@@ -244,10 +244,10 @@ namespace ZakYip.Singulation.Host.Workers {
             _axisEventAggregator.AxisFaulted += (s, e) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
                     source: $"axis:{e.Axis}",
-                    Type: AxisEventType.Faulted,
-                    AxisId: e.Axis,
-                    Reason: null,
-                    Exception: e.Exception
+                    type: AxisEventType.Faulted,
+                    axisId: e.Axis,
+                    reason: null,
+                    exception: e.Exception
                 ));
                 if (!ok) Interlocked.Increment(ref _axisDropped);
                 else Interlocked.Increment(ref _axisWritten);
@@ -257,10 +257,10 @@ namespace ZakYip.Singulation.Host.Workers {
             _axisEventAggregator.AxisDisconnected += (s, e) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
                     source: $"axis:{e.Axis}",
-                    Type: AxisEventType.Disconnected,
-                    AxisId: e.Axis,
-                    Reason: e.Reason,
-                    Exception: null
+                    type: AxisEventType.Disconnected,
+                    axisId: e.Axis,
+                    reason: e.Reason,
+                    exception: null
                 ));
                 if (!ok) Interlocked.Increment(ref _axisDropped);
                 else Interlocked.Increment(ref _axisWritten);
@@ -270,10 +270,10 @@ namespace ZakYip.Singulation.Host.Workers {
             _axisEventAggregator.DriverNotLoaded += (s, e) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
                     source: $"driver:{e.LibraryName}",
-                    Type: AxisEventType.DriverNotLoaded,
-                    AxisId: null,
-                    Reason: e.Message,
-                    Exception: null
+                    type: AxisEventType.DriverNotLoaded,
+                    axisId: null,
+                    reason: e.Message,
+                    exception: null
                 ));
                 if (!ok) Interlocked.Increment(ref _axisDropped);
                 else Interlocked.Increment(ref _axisWritten);

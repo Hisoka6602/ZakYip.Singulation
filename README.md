@@ -2,11 +2,9 @@
 
 ## 本次更新
 
-- 修正 `TransportEventPump` 中构造 `AxisEvent` 的命名参数大小写，确保与记录构造函数匹配并恢复编译通过。
-- 为 `AxisBootstrapper` 引入 `AxisRpm` 命名空间引用，解决值对象类型未解析的问题。
-- 调整雷赛驱动的 PPR 缓存字段：改用 `System.Threading.Volatile` 读写配合普通静态字段，消除对 `volatile` 引用的编译警告。
-- 优化 `SafetyPipeline`：等待所有安全 IO 模块启动完成，并在循环中避免对空引用调用 `Value`，提升并发健壮性。
-- 更新本 README，保留完整文件树与职责说明，记录当前修改与后续规划。
+- 修正 `TransportEventPump` 推送轴事件时的命名参数，统一使用记录构造函数的小写参数名称，解决编译器报错 “无名为 Type 的参数”。
+- 将 `TouchClientByteTransport` 中的连接关闭流程迁移到 `CloseAsync`，并在停止与重连路径上补充 `await`，避免异步方法同步执行与潜在的阻塞。
+- 更新本 README，保留完整文件树与职责说明，并同步记录本轮改动与后续优化方向。
 
 ## 文件树与功能说明
 
@@ -525,4 +523,4 @@ pwsh ops/dryrun.ps1
 - 扩展 `AxisKinematics` 支持更多机构换算与参数校验工具。
 - 将 `SingulationMetrics` 输出接入观测平台，完善报警策略与历史留存。
 - 为 SignalR 实时通知链路补充单元测试与压力验证，覆盖通道满载与失败回退场景。
-- 为 `SafetyPipeline` 启动阶段增加失败重试与日志细化，验证 Task.WhenAll 聚合后的行为。
+- 对 `TouchClientByteTransport` 的关闭流程补充集成测试，验证 CloseAsync 替换后在不同网络异常下的表现。
