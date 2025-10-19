@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Utils;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -44,10 +45,20 @@ namespace ZakYip.Singulation.Host.Workers {
 
                 // 3) 如果需要，统一上电、设加减速、设目标速度
                 await _controller.EnableAllAsync(stoppingToken);
-                await _controller.SetAccelDecelAllAsync(
-                    accelMmPerSec2: opt.Template.MaxAccelRpmPerSec,
-                    decelMmPerSec2: opt.Template.MaxDecelRpmPerSec,
-                    ct: stoppingToken);
+
+                var tpl = opt.Template;
+                var accelMmps2 = AxisRpm.RpmPerSecToMmPerSec2(tpl.MaxAccelRpmPerSec, tpl.PulleyPitchDiameterMm, tpl.GearRatio, tpl.ScrewPitchMm);
+                var decelMmps2 = AxisRpm.RpmPerSecToMmPerSec2(tpl.MaxDecelRpmPerSec, tpl.PulleyPitchDiameterMm, tpl.GearRatio, tpl.ScrewPitchMm);
+
+                if (accelMmps2 > 0m && decelMmps2 > 0m) {
+                    await _controller.SetAccelDecelAllAsync(
+                        accelMmPerSec2: accelMmps2,
+                        decelMmPerSec2: decelMmps2,
+                        ct: stoppingToken);
+                }
+                else {
+                    _log.LogWarning("Axis bootstrap: skip accel/decel bootstrap due to invalid mechanical parameters or template limits.");
+                }
 
                 _log.LogInformation("Axis bootstrap done. Vendor={Vendor}", opt.Vendor);
             }
