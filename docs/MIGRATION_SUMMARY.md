@@ -1,67 +1,67 @@
-# Migration Summary - Prism MVVM & Newtonsoft.Json
+# 迁移总结 - Prism MVVM 与 Newtonsoft.Json
 
-## Overview
-This document summarizes the changes made to migrate the ZakYip.Singulation MAUI application to use Prism for .NET MAUI as the MVVM framework and Newtonsoft.Json as the JSON serialization library, along with performance enhancements.
+## 概述
+本文档总结了将 ZakYip.Singulation MAUI 应用迁移到使用 Prism for .NET MAUI 作为 MVVM 框架以及 Newtonsoft.Json 作为 JSON 序列化库的变更，同时包含性能增强。
 
-## Changes Implemented
+## 已实施的变更
 
-### 1. MVVM Framework: CommunityToolkit.Mvvm → Prism for .NET MAUI
+### 1. MVVM 框架：CommunityToolkit.Mvvm → Prism for .NET MAUI
 
-#### NuGet Package Changes
-- **Removed**: `CommunityToolkit.Mvvm` (8.3.2)
-- **Added**: 
+#### NuGet 包变更
+- **移除**：`CommunityToolkit.Mvvm` (8.3.2)
+- **添加**： 
   - `Prism.Maui` (9.0.537)
   - `Prism.DryIoc.Maui` (9.0.537)
 
-#### Code Changes
+#### 代码变更
 
 **MauiProgram.cs**
-- Added Prism integration using `.UsePrism()` extension method
-- Configured DryIoc container for dependency injection
-- Registered services, pages, and ViewModels using `IContainerRegistry`
-- Set up initial navigation using `CreateWindow` pattern
+- 使用 `.UsePrism()` 扩展方法添加 Prism 集成
+- 配置 DryIoc 容器用于依赖注入
+- 使用 `IContainerRegistry` 注册服务、页面和 ViewModels
+- 使用 `CreateWindow` 模式设置初始导航
 
 **ViewModels**
-- Migrated base class from `ObservableObject` to `BindableBase`
-- Replaced `[ObservableProperty]` attributes with explicit property implementations using `SetProperty()`
-- Converted `[RelayCommand]` to `DelegateCommand` with manual initialization
-- Implemented `ObservesProperty()` for automatic command CanExecute updates
+- 将基类从 `ObservableObject` 迁移到 `BindableBase`
+- 将 `[ObservableProperty]` 特性替换为使用 `SetProperty()` 的显式属性实现
+- 将 `[RelayCommand]` 转换为手动初始化的 `DelegateCommand`
+- 实现 `ObservesProperty()` 以自动更新命令的 CanExecute
 
 **MainViewModel.cs**
-- 6 commands converted to `DelegateCommand`
-- 7 observable properties converted to `BindableBase` pattern
-- Added haptic feedback to all command methods
+- 6 个命令转换为 `DelegateCommand`
+- 7 个可观察属性转换为 `BindableBase` 模式
+- 为所有命令方法添加触觉反馈
 
 **SettingsViewModel.cs**
-- 1 command converted to `DelegateCommand`
-- 3 observable properties converted to `BindableBase` pattern
-- Added haptic feedback to SaveSettings command
+- 1 个命令转换为 `DelegateCommand`
+- 3 个可观察属性转换为 `BindableBase` 模式
+- 为 SaveSettings 命令添加触觉反馈
 
-### 2. JSON Library: System.Text.Json → Newtonsoft.Json
+### 2. JSON 库：System.Text.Json → Newtonsoft.Json
 
-#### NuGet Package Changes
-- **Added**: `Newtonsoft.Json` (13.0.3)
+#### NuGet 包变更
+- **添加**：`Newtonsoft.Json` (13.0.3)
 
-#### Code Changes
+#### 代码变更
 
 **ApiClient.cs**
-- Replaced `System.Text.Json.JsonSerializer` with `Newtonsoft.Json.JsonConvert`
-- Changed from `JsonSerializerOptions` to `JsonSerializerSettings`
-- Converted all `GetFromJsonAsync` calls to manual deserialization using `ReadAsStringAsync()` + `JsonConvert.DeserializeObject()`
-- Converted all `PostAsJsonAsync` calls to manual serialization using `JsonConvert.SerializeObject()` + `StringContent`
-- Configured `NullValueHandling.Ignore` for optimal JSON output
+- 将 `System.Text.Json.JsonSerializer` 替换为 `Newtonsoft.Json.JsonConvert`
+- 从 `JsonSerializerOptions` 改为 `JsonSerializerSettings`
+- 将所有 `GetFromJsonAsync` 调用转换为使用 `ReadAsStringAsync()` + `JsonConvert.DeserializeObject()` 的手动反序列化
+- 将所有 `PostAsJsonAsync` 调用转换为使用 `JsonConvert.SerializeObject()` + `StringContent` 的手动序列化
+- 配置 `NullValueHandling.Ignore` 以优化 JSON 输出
 
-### 3. Performance Enhancements
+### 3. 性能增强
 
-#### Page Transition Animations
+#### 页面过渡动画
 **AppShell.xaml.cs**
-- Added `Navigating` event handler with fade-out animation (100ms, CubicOut easing)
-- Added `Navigated` event handler with fade-in animation (150ms, CubicIn easing)
-- Implemented null-safe page reference capture before async animations
-- Provides smooth, professional page transitions
+- 添加 `Navigating` 事件处理程序，带淡出动画（100ms，CubicOut 缓动）
+- 添加 `Navigated` 事件处理程序，带淡入动画（150ms，CubicIn 缓动）
+- 在异步动画之前实现空安全的页面引用捕获
+- 提供流畅、专业的页面过渡
 
-#### Haptic Feedback
-Added `HapticFeedback.Default.Perform(HapticFeedbackType.Click)` to all command methods:
+#### 触觉反馈
+为所有命令方法添加 `HapticFeedback.Default.Perform(HapticFeedbackType.Click)`：
 - `RefreshControllersAsync()` - MainViewModel
 - `SendSafetyCommandAsync()` - MainViewModel
 - `ConnectSignalRAsync()` - MainViewModel
@@ -70,42 +70,42 @@ Added `HapticFeedback.Default.Perform(HapticFeedbackType.Click)` to all command 
 - `SetAllAxesSpeedAsync()` - MainViewModel
 - `SaveSettingsAsync()` - SettingsViewModel
 
-## Benefits
+## 优势
 
 ### Prism for .NET MAUI
-- **Industry Standard**: Prism is a well-established MVVM framework with extensive documentation
-- **Powerful Navigation**: Advanced navigation service with parameter passing and lifecycle events
-- **Flexible DI**: DryIoc container provides excellent performance and features
-- **Testability**: Better support for unit testing with dependency injection
-- **Modularity**: Support for modular application architecture
+- **行业标准**：Prism 是一个成熟的 MVVM 框架，拥有丰富的文档
+- **强大的导航**：高级导航服务，支持参数传递和生命周期事件
+- **灵活的依赖注入**：DryIoc 容器提供卓越的性能和功能
+- **可测试性**：通过依赖注入更好地支持单元测试
+- **模块化**：支持模块化应用架构
 
 ### Newtonsoft.Json
-- **Mature & Stable**: Most widely used JSON library in .NET ecosystem
-- **Feature Rich**: Extensive customization options and advanced features
-- **Performance**: Highly optimized for large payloads
-- **Compatibility**: Better compatibility with legacy systems and third-party APIs
-- **Fine-grained Control**: Detailed control over serialization behavior
+- **成熟稳定**：.NET 生态系统中使用最广泛的 JSON 库
+- **功能丰富**：广泛的自定义选项和高级功能
+- **性能**：针对大型负载高度优化
+- **兼容性**：与传统系统和第三方 API 更好的兼容性
+- **精细控制**：对序列化行为的详细控制
 
-### Performance Enhancements
-- **Smooth Animations**: Professional fade transitions between pages enhance user experience
-- **Tactile Feedback**: Haptic feedback provides immediate user confirmation for all actions
-- **Optimized UX**: Combination of visual and tactile feedback creates a responsive, modern app feel
+### 性能增强
+- **流畅动画**：页面间的专业淡入淡出过渡增强用户体验
+- **触觉反馈**：触觉反馈为所有操作提供即时的用户确认
+- **优化的用户体验**：视觉和触觉反馈的结合创造了响应迅速的现代应用体验
 
-## Build Verification
-- ✅ Android (net8.0-android): Build successful
-- ⏳ Windows (net8.0-windows): Requires Windows OS for testing
-- ⏳ iOS/MacCatalyst: Requires macOS for building
+## 构建验证
+- ✅ Android (net8.0-android)：构建成功
+- ⏳ Windows (net8.0-windows)：需要 Windows 操作系统进行测试
+- ⏳ iOS/MacCatalyst：需要 macOS 进行构建
 
-## Testing Recommendations
-1. Test all ViewModels to ensure property bindings work correctly
-2. Verify all commands execute as expected
-3. Test page navigation and transitions
-4. Verify haptic feedback works on physical devices
-5. Test API calls to ensure JSON serialization/deserialization works correctly
-6. Verify dependency injection resolves all services correctly
+## 测试建议
+1. 测试所有 ViewModels 以确保属性绑定正常工作
+2. 验证所有命令按预期执行
+3. 测试页面导航和过渡
+4. 在物理设备上验证触觉反馈是否工作
+5. 测试 API 调用以确保 JSON 序列化/反序列化正常工作
+6. 验证依赖注入是否正确解析所有服务
 
-## Migration Notes
-- No breaking changes to public APIs or data models
-- All existing functionality preserved
-- Compatible with existing backend REST API
-- No database schema changes required
+## 迁移说明
+- 公共 API 或数据模型没有破坏性变更
+- 保留所有现有功能
+- 与现有的后端 REST API 兼容
+- 无需更改数据库架构
