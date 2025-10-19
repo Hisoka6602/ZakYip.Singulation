@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Abstractions.Safety;
@@ -34,7 +36,8 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
 
         public bool IsIsolated => State == SafetyIsolationState.Isolated;
 
-        public SafetyTriggerKind LastTriggerKind => Volatile.Read(ref _lastTriggerKind);
+        public SafetyTriggerKind LastTriggerKind
+            => (SafetyTriggerKind)Volatile.Read(ref Unsafe.As<SafetyTriggerKind, int>(ref _lastTriggerKind));
 
         public string? LastTriggerReason => Volatile.Read(ref _lastTriggerReason);
 
@@ -106,11 +109,13 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             switch (ev.Current) {
                 case SafetyIsolationState.Isolated:
                     _log.LogWarning("Safety isolated due to {Kind}: {Reason}", ev.ReasonKind, ev.ReasonText);
-                    SingulationMetrics.Instance.DegradeCounter.Add(1, new("state", "isolated"));
+                    SingulationMetrics.Instance.DegradeCounter.Add(1,
+                        new KeyValuePair<string, object?>("state", "isolated"));
                     break;
                 case SafetyIsolationState.Degraded:
                     _log.LogWarning("Safety degraded due to {Kind}: {Reason}", ev.ReasonKind, ev.ReasonText);
-                    SingulationMetrics.Instance.DegradeCounter.Add(1, new("state", "degraded"));
+                    SingulationMetrics.Instance.DegradeCounter.Add(1,
+                        new KeyValuePair<string, object?>("state", "degraded"));
                     break;
                 default:
                     _log.LogInformation("Safety state recovered: {Reason}", ev.ReasonText);
@@ -119,7 +124,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
 
             _ = _realtime.PublishDeviceAsync(new {
                 kind = "safety.state",
-                payload.kind,
+                triggerKind = payload.kind,
                 payload.state,
                 payload.prev,
                 payload.reason

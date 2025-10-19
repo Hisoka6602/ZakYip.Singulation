@@ -13,13 +13,13 @@ using ZakYip.Singulation.Host.SignalR.Hubs;
 namespace ZakYip.Singulation.Host.Runtime {
 
     public sealed class RealtimeDispatchService : BackgroundService {
-        private readonly Channel<SignalRRealtimeNotifier.QueueItem> _chan;
+        private readonly Channel<SignalRQueueItem> _chan;
         private readonly IHubContext<EventsHub> _hub;
         private readonly ILogger<RealtimeDispatchService> _logger;
         private readonly ConcurrentDictionary<string, long> _seq = new();
 
         public RealtimeDispatchService(
-            Channel<SignalRRealtimeNotifier.QueueItem> chan,
+            Channel<SignalRQueueItem> chan,
             IHubContext<EventsHub> hub,
             ILogger<RealtimeDispatchService> logger) { _chan = chan; _hub = hub; _logger = logger; }
 

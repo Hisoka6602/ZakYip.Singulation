@@ -132,7 +132,8 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
             }
 
             controller.Record(decision.Output, decision.DegradedApplied);
-            SingulationMetrics.Instance.FrameProcessedCounter.Add(1, new("scenario", "regression"));
+            SingulationMetrics.Instance.FrameProcessedCounter.Add(1,
+                new KeyValuePair<string, object?>("scenario", "regression"));
         }
 
         private sealed class ConsoleRealtimeNotifier : IRealtimeNotifier {

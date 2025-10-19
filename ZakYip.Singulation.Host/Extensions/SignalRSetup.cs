@@ -27,7 +27,7 @@ namespace ZakYip.Singulation.Host.Extensions {
                 .AddNewtonsoftJsonProtocol(); // 与全局 JSON 一致
 
             // 有界通道，防止堆积；策略：丢旧保新
-            var chan = Channel.CreateBounded<SignalRRealtimeNotifier.QueueItem>(new BoundedChannelOptions(10_000) {
+            var chan = Channel.CreateBounded<SignalRQueueItem>(new BoundedChannelOptions(10_000) {
                 FullMode = BoundedChannelFullMode.DropOldest,
                 SingleReader = true,
                 SingleWriter = false
