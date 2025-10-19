@@ -191,6 +191,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<ISafetyPipeline>(sp => sp.GetRequiredService<SafetyPipeline>());
         services.AddHostedService(sp => sp.GetRequiredService<SafetyPipeline>());
         services.AddHostedService<CommissioningWorker>();
+        services.AddSingleton<IApplicationRestarter, ProcessApplicationRestarter>();
         // ---------- 上游数据连接Tcp相关注入 ----------
         services.AddUpstreamTcpFromLiteDb();
         // ---------- 解码器相关注入 ----------

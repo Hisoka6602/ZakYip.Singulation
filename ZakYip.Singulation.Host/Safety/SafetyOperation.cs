@@ -21,6 +21,9 @@ namespace ZakYip.Singulation.Host.Safety {
         /// <summary>命令附带原因。</summary>
         public string? CommandReason { get; init; }
 
+        /// <summary>是否来自外部 IO 模块。</summary>
+        public bool TriggeredByIo { get; init; }
+
         /// <summary>轴健康触发类型。</summary>
         public SafetyTriggerKind AxisKind { get; init; }
 
@@ -39,11 +42,12 @@ namespace ZakYip.Singulation.Host.Safety {
             => new(SafetyOperationKind.StateChanged) { StateArgs = ev };
 
         /// <summary>创建命令操作。</summary>
-        public static SafetyOperation Trigger(SafetyCommand command, SafetyTriggerKind kind, string? reason)
+        public static SafetyOperation Trigger(SafetyCommand command, SafetyTriggerKind kind, string? reason, bool triggeredByIo = false)
             => new(SafetyOperationKind.Command) {
                 Command = command,
                 CommandKind = kind,
-                CommandReason = reason
+                CommandReason = reason,
+                TriggeredByIo = triggeredByIo
             };
 
         /// <summary>创建轴健康操作。</summary>
