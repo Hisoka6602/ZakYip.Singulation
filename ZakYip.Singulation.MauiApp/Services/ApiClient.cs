@@ -102,6 +102,79 @@ public class ApiClient
             };
         }
     }
+
+    /// <summary>
+    /// 使能指定轴
+    /// </summary>
+    public async Task<ApiResponse<object>> EnableAxesAsync(int[]? axisIds = null)
+    {
+        try
+        {
+            var query = axisIds != null && axisIds.Length > 0 
+                ? $"?{string.Join("&", axisIds.Select(id => $"axisIds={id}"))}"
+                : "";
+            var response = await _httpClient.PostAsync($"/api/axes/axes/enable{query}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                return result ?? new ApiResponse<object> { Result = true, Msg = "Axes enabled" };
+            }
+            return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Result = false, Msg = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// 禁用指定轴
+    /// </summary>
+    public async Task<ApiResponse<object>> DisableAxesAsync(int[]? axisIds = null)
+    {
+        try
+        {
+            var query = axisIds != null && axisIds.Length > 0 
+                ? $"?{string.Join("&", axisIds.Select(id => $"axisIds={id}"))}"
+                : "";
+            var response = await _httpClient.PostAsync($"/api/axes/axes/disable{query}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                return result ?? new ApiResponse<object> { Result = true, Msg = "Axes disabled" };
+            }
+            return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Result = false, Msg = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// 设置轴速度
+    /// </summary>
+    public async Task<ApiResponse<object>> SetAxesSpeedAsync(double speedMmps, int[]? axisIds = null)
+    {
+        try
+        {
+            var query = axisIds != null && axisIds.Length > 0 
+                ? $"?{string.Join("&", axisIds.Select(id => $"axisIds={id}"))}"
+                : "";
+            var request = new { LinearMmps = speedMmps };
+            var response = await _httpClient.PostAsJsonAsync($"/api/axes/axes/speed{query}", request, _jsonOptions);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                return result ?? new ApiResponse<object> { Result = true, Msg = "Speed set" };
+            }
+            return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Result = false, Msg = ex.Message };
+        }
+    }
 }
 
 /// <summary>

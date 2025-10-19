@@ -28,6 +28,12 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _safetyReason = string.Empty;
 
+    [ObservableProperty]
+    private ControllerInfo? _selectedController;
+
+    [ObservableProperty]
+    private double _targetSpeed = 100.0;
+
     public MainViewModel(ApiClient apiClient, SignalRClientFactory signalRFactory)
     {
         _apiClient = apiClient;
@@ -136,6 +142,84 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             StatusMessage = $"SignalR error: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// 使能所有轴
+    /// </summary>
+    [RelayCommand]
+    private async Task EnableAllAxesAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Enabling all axes...";
+
+            var response = await _apiClient.EnableAxesAsync();
+            StatusMessage = response.Success 
+                ? "All axes enabled successfully" 
+                : $"Error: {response.Message}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Exception: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// 禁用所有轴
+    /// </summary>
+    [RelayCommand]
+    private async Task DisableAllAxesAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = "Disabling all axes...";
+
+            var response = await _apiClient.DisableAxesAsync();
+            StatusMessage = response.Success 
+                ? "All axes disabled successfully" 
+                : $"Error: {response.Message}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Exception: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// 设置所有轴速度
+    /// </summary>
+    [RelayCommand]
+    private async Task SetAllAxesSpeedAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            StatusMessage = $"Setting speed to {TargetSpeed} mm/s...";
+
+            var response = await _apiClient.SetAxesSpeedAsync(TargetSpeed);
+            StatusMessage = response.Success 
+                ? $"Speed set to {TargetSpeed} mm/s successfully" 
+                : $"Error: {response.Message}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Exception: {ex.Message}";
         }
         finally
         {
