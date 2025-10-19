@@ -12,6 +12,7 @@ public class MainViewModel : BindableBase
 {
     private readonly ApiClient _apiClient;
     private readonly SignalRClientFactory _signalRFactory;
+    private readonly NotificationService _notificationService;
 
     private string _statusMessage = "Ready";
     public string StatusMessage
@@ -73,6 +74,7 @@ public class MainViewModel : BindableBase
     {
         _apiClient = apiClient;
         _signalRFactory = signalRFactory;
+        _notificationService = NotificationService.Instance;
 
         RefreshControllersCommand = new DelegateCommand(async () => await RefreshControllersAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
@@ -110,15 +112,18 @@ public class MainViewModel : BindableBase
                     Controllers.Add(controller);
                 }
                 StatusMessage = $"Loaded {Controllers.Count} controllers";
+                _notificationService.ShowSuccess($"已加载 {Controllers.Count} 个控制器");
             }
             else
             {
                 StatusMessage = $"Error: {response.Message}";
+                _notificationService.ShowError($"加载失败: {response.Message}");
             }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Exception: {ex.Message}";
+            _notificationService.ShowError($"异常: {ex.Message}");
         }
         finally
         {
@@ -159,15 +164,18 @@ public class MainViewModel : BindableBase
             {
                 StatusMessage = "Safety command sent successfully";
                 SafetyReason = string.Empty;
+                _notificationService.ShowSuccess($"安全命令 {SafetyCommandType} 发送成功");
             }
             else
             {
                 StatusMessage = $"Error: {response.Message}";
+                _notificationService.ShowError($"发送失败: {response.Message}");
             }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Exception: {ex.Message}";
+            _notificationService.ShowError($"异常: {ex.Message}");
         }
         finally
         {
@@ -189,13 +197,21 @@ public class MainViewModel : BindableBase
             StatusMessage = "Connecting to SignalR...";
 
             await _signalRFactory.GetOrCreateHubConnectionAsync();
-            StatusMessage = _signalRFactory.IsConnected 
-                ? "SignalR connected" 
-                : "SignalR connection failed";
+            if (_signalRFactory.IsConnected)
+            {
+                StatusMessage = "SignalR connected";
+                _notificationService.ShowSuccess("SignalR 连接成功");
+            }
+            else
+            {
+                StatusMessage = "SignalR connection failed";
+                _notificationService.ShowError("SignalR 连接失败");
+            }
         }
         catch (Exception ex)
         {
             StatusMessage = $"SignalR error: {ex.Message}";
+            _notificationService.ShowError($"SignalR 错误: {ex.Message}");
         }
         finally
         {
@@ -217,13 +233,21 @@ public class MainViewModel : BindableBase
             StatusMessage = "Enabling all axes...";
 
             var response = await _apiClient.EnableAxesAsync();
-            StatusMessage = response.Success 
-                ? "All axes enabled successfully" 
-                : $"Error: {response.Message}";
+            if (response.Success)
+            {
+                StatusMessage = "All axes enabled successfully";
+                _notificationService.ShowSuccess("所有轴已成功使能");
+            }
+            else
+            {
+                StatusMessage = $"Error: {response.Message}";
+                _notificationService.ShowError($"使能失败: {response.Message}");
+            }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Exception: {ex.Message}";
+            _notificationService.ShowError($"异常: {ex.Message}");
         }
         finally
         {
@@ -245,13 +269,21 @@ public class MainViewModel : BindableBase
             StatusMessage = "Disabling all axes...";
 
             var response = await _apiClient.DisableAxesAsync();
-            StatusMessage = response.Success 
-                ? "All axes disabled successfully" 
-                : $"Error: {response.Message}";
+            if (response.Success)
+            {
+                StatusMessage = "All axes disabled successfully";
+                _notificationService.ShowSuccess("所有轴已成功禁用");
+            }
+            else
+            {
+                StatusMessage = $"Error: {response.Message}";
+                _notificationService.ShowError($"禁用失败: {response.Message}");
+            }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Exception: {ex.Message}";
+            _notificationService.ShowError($"异常: {ex.Message}");
         }
         finally
         {
@@ -273,13 +305,21 @@ public class MainViewModel : BindableBase
             StatusMessage = $"Setting speed to {TargetSpeed} mm/s...";
 
             var response = await _apiClient.SetAxesSpeedAsync(TargetSpeed);
-            StatusMessage = response.Success 
-                ? $"Speed set to {TargetSpeed} mm/s successfully" 
-                : $"Error: {response.Message}";
+            if (response.Success)
+            {
+                StatusMessage = $"Speed set to {TargetSpeed} mm/s successfully";
+                _notificationService.ShowSuccess($"速度已设置为 {TargetSpeed} mm/s");
+            }
+            else
+            {
+                StatusMessage = $"Error: {response.Message}";
+                _notificationService.ShowError($"设置失败: {response.Message}");
+            }
         }
         catch (Exception ex)
         {
             StatusMessage = $"Exception: {ex.Message}";
+            _notificationService.ShowError($"异常: {ex.Message}");
         }
         finally
         {

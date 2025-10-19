@@ -3,11 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
              xmlns:services="clr-namespace:ZakYip.Singulation.MauiApp.Services"
+             xmlns:controls="clr-namespace:ZakYip.Singulation.MauiApp.Controls"
              x:Class="ZakYip.Singulation.MauiApp.Views.SettingsPage"
              x:DataType="viewmodels:SettingsViewModel"
              Title="设置">
 
-    <ScrollView>
+    <Grid>
+        <!-- Main content -->
+        <ScrollView>
         <VerticalStackLayout
             Padding="20"
             Spacing="15">
@@ -15,7 +18,8 @@
             <!-- 标题 -->
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
                 <Label
-                    Text="⚙"
+                    Text="&#xf013;"
+                    FontFamily="FontAwesomeSolid"
                     FontSize="32"
                     TextColor="#666"
                     VerticalOptions="Center" />
@@ -31,7 +35,8 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="◉"
+                            Text="&#xf6ff;"
+                            FontFamily="FontAwesomeSolid"
                             FontSize="22"
                             TextColor="#2196F3"
                             VerticalOptions="Center" />
@@ -63,7 +68,8 @@
                         <CollectionView.EmptyView>
                             <VerticalStackLayout HorizontalOptions="Center" Spacing="10" Margin="10">
                                 <Label
-                                    Text="○"
+                                    Text="&#xf6ff;"
+                                    FontFamily="FontAwesomeSolid"
                                     FontSize="48"
                                     TextColor="LightGray"
                                     HorizontalOptions="Center" />
@@ -126,53 +132,15 @@
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- API 配置 -->
-            <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F5F5F5">
-                <VerticalStackLayout Spacing="10">
-                    <HorizontalStackLayout Spacing="8">
-                        <Label
-                            Text="◆"
-                            FontSize="22"
-                            TextColor="#4CAF50"
-                            VerticalOptions="Center" />
-                        <Label
-                            Text="API 配置"
-                            FontAttributes="Bold"
-                            FontSize="18"
-                            VerticalOptions="Center" />
-                    </HorizontalStackLayout>
-
-                    <Label Text="API 基础地址" FontSize="14" />
-                    <Entry
-                        Text="{Binding ApiBaseUrl}"
-                        Placeholder="http://localhost:5005"
-                        Keyboard="Url" />
-
-                    <Label Text="连接超时 (秒)" FontSize="14" />
-                    <Entry
-                        Text="{Binding TimeoutSeconds}"
-                        Placeholder="30"
-                        Keyboard="Numeric" />
-
-                    <Button
-                        Command="{Binding SaveSettingsCommand}"
-                        BackgroundColor="Green"
-                        HorizontalOptions="Fill"
-                        Margin="0,10,0,0">
-                        <Button.Content>
-                            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
-                                <Label Text="✓" FontSize="20" TextColor="White" VerticalOptions="Center" />
-                                <Label Text="保存设置" FontSize="16" TextColor="White" VerticalOptions="Center" />
-                            </HorizontalStackLayout>
-                        </Button.Content>
-                    </Button>
-
-                    <Label
-                        Text="{Binding StatusMessage}"
-                        FontSize="12"
-                        HorizontalTextAlignment="Center"
-                        Margin="0,5,0,0" />
-                </VerticalStackLayout>
+            <!-- API 配置 - Hidden for security (Requirement 3) -->
+            <!-- Users should use UDP discovery to automatically find and connect to services -->
+            
+            <!-- Status Message -->
+            <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F5F5F5" IsVisible="{Binding StatusMessage, Converter={StaticResource StringToBoolConverter}}">
+                <Label
+                    Text="{Binding StatusMessage}"
+                    FontSize="14"
+                    HorizontalTextAlignment="Center" />
             </Frame>
 
             <!-- 应用信息 -->
@@ -180,7 +148,8 @@
                 <VerticalStackLayout Spacing="5">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="i"
+                            Text="&#xf05a;"
+                            FontFamily="FontAwesomeSolid"
                             FontSize="22"
                             TextColor="#666"
                             VerticalOptions="Center" />
@@ -192,15 +161,15 @@
                     </HorizontalStackLayout>
 
                     <HorizontalStackLayout Spacing="5" Margin="0,5,0,0">
-                        <Label Text="▪" FontSize="14" TextColor="#666" />
+                        <Label Text="&#xf058;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#4CAF50" />
                         <Label Text="版本: 1.0.0" FontSize="14" />
                     </HorizontalStackLayout>
                     <HorizontalStackLayout Spacing="5">
-                        <Label Text="▪" FontSize="14" TextColor="#666" />
+                        <Label Text="&#xf058;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#4CAF50" />
                         <Label Text="平台: .NET MAUI 8.0" FontSize="14" />
                     </HorizontalStackLayout>
                     <HorizontalStackLayout Spacing="5">
-                        <Label Text="▪" FontSize="14" TextColor="#666" />
+                        <Label Text="&#xf058;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#4CAF50" />
                         <Label Text="项目: ZakYip.Singulation" FontSize="14" />
                     </HorizontalStackLayout>
                 </VerticalStackLayout>
@@ -208,5 +177,13 @@
 
         </VerticalStackLayout>
     </ScrollView>
+    
+    <!-- Notification overlay -->
+    <controls:NotificationOverlay 
+        VerticalOptions="Start"
+        HorizontalOptions="Fill"
+        Margin="0,10,0,0"
+        ZIndex="1000" />
+    </Grid>
 
 </ContentPage>

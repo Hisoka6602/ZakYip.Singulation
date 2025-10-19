@@ -11,6 +11,7 @@ namespace ZakYip.Singulation.MauiApp.ViewModels;
 public class SettingsViewModel : BindableBase, IDisposable
 {
     private readonly UdpDiscoveryClient _discoveryClient;
+    private readonly NotificationService _notificationService;
 
     private string _apiBaseUrl = "http://localhost:5005";
     public string ApiBaseUrl
@@ -64,6 +65,7 @@ public class SettingsViewModel : BindableBase, IDisposable
     public SettingsViewModel(UdpDiscoveryClient discoveryClient)
     {
         _discoveryClient = discoveryClient;
+        _notificationService = NotificationService.Instance;
 
         // 从本地存储加载设置
         LoadSettings();
@@ -90,12 +92,16 @@ public class SettingsViewModel : BindableBase, IDisposable
             await Task.Delay(500); // 延迟启动，确保UI已加载
             await _discoveryClient.StartListeningAsync();
             IsDiscovering = true;
-            StatusMessage = "自动搜索服务中...";
+            const string message = "自动搜索服务中...";
+            StatusMessage = message;
+            _notificationService.ShowInfo(message);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"❌ 自动启动发现失败: {ex.Message}";
+            var message = $"自动启动发现失败: {ex.Message}";
+            StatusMessage = $"❌ {message}";
             IsDiscovering = false;
+            _notificationService.ShowError(message);
         }
     }
 
@@ -112,19 +118,25 @@ public class SettingsViewModel : BindableBase, IDisposable
             {
                 _discoveryClient.StopListening();
                 IsDiscovering = false;
-                StatusMessage = "服务发现已停止";
+                const string message = "服务发现已停止";
+                StatusMessage = message;
+                _notificationService.ShowInfo(message);
             }
             else
             {
                 await _discoveryClient.StartListeningAsync();
                 IsDiscovering = true;
-                StatusMessage = "正在搜索服务...";
+                const string message = "正在搜索服务...";
+                StatusMessage = message;
+                _notificationService.ShowInfo(message);
             }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"❌ 服务发现失败: {ex.Message}";
+            var message = $"服务发现失败: {ex.Message}";
+            StatusMessage = $"❌ {message}";
             IsDiscovering = false;
+            _notificationService.ShowError(message);
         }
     }
 
@@ -142,11 +154,15 @@ public class SettingsViewModel : BindableBase, IDisposable
             ApiBaseUrl = service.HttpBaseUrl;
             await SaveSettingsAsync();
             
-            StatusMessage = $"✅ 已连接到 {service.ServiceName}";
+            var message = $"已连接到 {service.ServiceName}";
+            StatusMessage = $"✅ {message}";
+            _notificationService.ShowSuccess(message);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"❌ 连接失败: {ex.Message}";
+            var message = $"连接失败: {ex.Message}";
+            StatusMessage = $"❌ {message}";
+            _notificationService.ShowError(message);
         }
     }
 
@@ -163,14 +179,18 @@ public class SettingsViewModel : BindableBase, IDisposable
             // 验证 URL 格式
             if (!Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out var uri))
             {
-                StatusMessage = "❌ 无效的 URL 格式";
+                const string message = "无效的 URL 格式";
+                StatusMessage = $"❌ {message}";
+                _notificationService.ShowError(message);
                 return;
             }
 
             // 验证超时值
             if (!int.TryParse(TimeoutSeconds, out var timeout) || timeout <= 0)
             {
-                StatusMessage = "❌ 无效的超时时间";
+                const string message = "无效的超时时间";
+                StatusMessage = $"❌ {message}";
+                _notificationService.ShowError(message);
                 return;
             }
 
@@ -178,15 +198,21 @@ public class SettingsViewModel : BindableBase, IDisposable
             Preferences.Set("ApiBaseUrl", ApiBaseUrl);
             Preferences.Set("TimeoutSeconds", TimeoutSeconds);
 
-            StatusMessage = "✅ 设置已保存";
+            const string successMsg = "设置已保存";
+            StatusMessage = $"✅ {successMsg}";
+            _notificationService.ShowSuccess(successMsg);
             
             // 提示用户需要重启应用
             await Task.Delay(1500);
-            StatusMessage = "ℹ️ 请重启应用以应用新设置";
+            const string infoMsg = "请重启应用以应用新设置";
+            StatusMessage = $"ℹ️ {infoMsg}";
+            _notificationService.ShowInfo(infoMsg);
         }
         catch (Exception ex)
         {
-            StatusMessage = $"❌ 保存失败: {ex.Message}";
+            var message = $"保存失败: {ex.Message}";
+            StatusMessage = $"❌ {message}";
+            _notificationService.ShowError(message);
         }
     }
 
@@ -204,6 +230,7 @@ public class SettingsViewModel : BindableBase, IDisposable
         MainThread.BeginInvokeOnMainThread(() =>
         {
             StatusMessage = $"🔍 发现服务: {service.ServiceName}";
+            _notificationService.ShowInfo($"发现服务: {service.ServiceName}");
         });
     }
 
@@ -212,6 +239,7 @@ public class SettingsViewModel : BindableBase, IDisposable
         MainThread.BeginInvokeOnMainThread(() =>
         {
             StatusMessage = $"❌ 服务失联: {service.ServiceName}";
+            _notificationService.ShowWarning($"服务失联: {service.ServiceName}");
         });
     }
 

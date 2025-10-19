@@ -16,6 +16,7 @@ namespace ZakYip.Singulation.MauiApp {
                 .ConfigureFonts(fonts => {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                    fonts.AddFont("FontAwesome6FreeSolid.otf", "FontAwesomeSolid");
                 });
 
 #if DEBUG
