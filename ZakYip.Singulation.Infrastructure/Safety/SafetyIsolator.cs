@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Abstractions.Safety;
@@ -19,8 +18,8 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         private readonly IRealtimeNotifier _realtime;
         private readonly object _gate = new();
 
-        private SafetyIsolationState _state = SafetyIsolationState.Normal;
-        private SafetyTriggerKind _lastTriggerKind = SafetyTriggerKind.Unknown;
+        private int _state = (int)SafetyIsolationState.Normal;
+        private int _lastTriggerKind = (int)SafetyTriggerKind.Unknown;
         private string? _lastTriggerReason;
 
         public SafetyIsolator(ILogger<SafetyIsolator> log, IRealtimeNotifier realtime) {
@@ -30,14 +29,13 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
 
         public event EventHandler<SafetyStateChangedEventArgs>? StateChanged;
 
-        public SafetyIsolationState State => Volatile.Read(ref _state);
+        public SafetyIsolationState State => (SafetyIsolationState)Volatile.Read(ref _state);
 
         public bool IsDegraded => State == SafetyIsolationState.Degraded;
 
         public bool IsIsolated => State == SafetyIsolationState.Isolated;
 
-        public SafetyTriggerKind LastTriggerKind
-            => (SafetyTriggerKind)Volatile.Read(ref Unsafe.As<SafetyTriggerKind, int>(ref _lastTriggerKind));
+        public SafetyTriggerKind LastTriggerKind => (SafetyTriggerKind)Volatile.Read(ref _lastTriggerKind);
 
         public string? LastTriggerReason => Volatile.Read(ref _lastTriggerReason);
 
@@ -65,10 +63,10 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         private bool Transition(SafetyTriggerKind kind, string reason, SafetyIsolationState target) {
             SafetyStateChangedEventArgs? ev = null;
             lock (_gate) {
-                var current = _state;
+                var current = (SafetyIsolationState)_state;
                 if (current == target) {
                     if (target == SafetyIsolationState.Degraded) {
-                        _lastTriggerKind = kind;
+                        _lastTriggerKind = (int)kind;
                         _lastTriggerReason = reason;
                     }
                     return false;
@@ -80,8 +78,8 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                 if (target == SafetyIsolationState.Isolated && current == SafetyIsolationState.Isolated)
                     return false;
 
-                _state = target;
-                _lastTriggerKind = kind;
+                _state = (int)target;
+                _lastTriggerKind = (int)kind;
                 _lastTriggerReason = reason;
                 ev = new SafetyStateChangedEventArgs(current, target, kind, reason);
             }

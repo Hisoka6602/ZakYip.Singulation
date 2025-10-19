@@ -2,263 +2,265 @@
 
 ## 本次更新
 
-- 修复 SignalR 实时通知管线中的通道类型错误，统一为 `SignalRQueueItem`，避免缺失类型导致编译失败。
-- 为 `SafetyIsolator`、`FrameGuard` 与回归场景补充指标标签类型声明，消除 `Counter.Add` 重载二义性并保留原有标签语义。
-- 调整安全状态广播负载，避免匿名类型字段重名引发的构建错误，同时确保最近触发信息以线程安全方式读取。
-- README 持续同步文件树、职责说明与近期改动，便于排查与跟进。
+- 将 `SafetyIsolator` 的内部状态与触发类型改为 `int` 支撑的易失读写，满足 `Volatile.Read` 泛型约束并保持线程安全的隔离器行为。
+- 为雷赛驱动的 PPR 缓存访问显式使用 `Volatile.Read`，确保静态门闩字段按照易失语义读取，消除编译器对引用访问的警告。
+- 调整 README，重新导出完整文件树并更新变更记录，便于快速定位组件职责与当前迭代成果。
 
 ## 文件树与功能说明
 
 ```text
 ./
-├── README.md
-├── ZakYip.Singulation.sln
-├── ZakYip.Singulation.ConsoleDemo/
-│   ├── ZakYip.Singulation.ConsoleDemo.csproj
-│   ├── Program.cs
-│   └── Regression/
-│       └── RegressionRunner.cs
-├── ZakYip.Singulation.Core/
-│   ├── ZakYip.Singulation.Core.csproj
-│   ├── Abstractions/
-│   │   ├── Realtime/
-│   │   │   └── IRealtimeNotifier.cs
-│   │   └── Safety/
-│   │       ├── FrameGuardDecision.cs
-│   │       ├── ICommissioningSequence.cs
-│   │       ├── IFrameGuard.cs
-│   │       ├── ISafetyIoModule.cs
-│   │       ├── ISafetyIsolator.cs
-│   │       └── ISafetyPipeline.cs
-│   ├── Configs/
-│   │   ├── AxisGridLayoutOptions.cs
-│   │   ├── ControllerOptions.cs
-│   │   ├── DriverOptionsTemplateOptions.cs
-│   │   ├── PlannerConfig.cs
-│   │   ├── UpstreamCodecOptions.cs
-│   │   ├── UpstreamOptions.cs
-│   │   └── Defaults/
-│   │       └── ConfigDefaults.cs
-│   ├── Contracts/
-│   │   ├── IAxisLayoutStore.cs
-│   │   ├── IControllerOptionsStore.cs
-│   │   ├── ISpeedPlanner.cs
-│   │   ├── IUpstreamCodecOptionsStore.cs
-│   │   ├── IUpstreamFrameHub.cs
-│   │   ├── IUpstreamOptionsStore.cs
-│   │   ├── Dto/
-│   │   │   ├── LinearPlannerParams.cs
-│   │   │   ├── ParcelPose.cs
-│   │   │   ├── SpeedSet.cs
-│   │   │   ├── StatusSnapshot.cs
-│   │   │   ├── SystemRuntimeStatus.cs
-│   │   │   ├── TransportStatusItem.cs
-│   │   │   └── VisionParams.cs
-│   │   ├── Events/
-│   │   │   ├── AxisCommandIssuedEventArgs.cs
-│   │   │   ├── AxisDisconnectedEventArgs.cs
-│   │   │   ├── AxisErrorEventArgs.cs
-│   │   │   ├── AxisEvent.cs
-│   │   │   ├── AxisSpeedFeedbackEventArgs.cs
-│   │   │   ├── BytesReceivedEventArgs.cs
-│   │   │   ├── DriverNotLoadedEventArgs.cs
-│   │   │   ├── EvState.cs
-│   │   │   ├── LogEvent.cs
-│   │   │   ├── Safety/
-│   │   │   │   ├── SafetyStateChangedEventArgs.cs
-│   │   │   │   └── SafetyTriggerEventArgs.cs
-│   │   │   ├── TransportErrorEventArgs.cs
-│   │   │   ├── TransportEvent.cs
-│   │   │   └── TransportStateChangedEventArgs.cs
-│   │   └── ValueObjects/
-│   │       ├── AxisId.cs
-│   │       ├── AxisRpm.cs
-│   │       ├── KinematicParams.cs
-│   │       └── PprRatio.cs
-│   ├── Enums/
-│   │   ├── AxisEventType.cs
-│   │   ├── ControllerResetType.cs
-│   │   ├── LogKind.cs
-│   │   ├── PlannerStatus.cs
-│   │   ├── SafetyCommand.cs
-│   │   ├── SafetyIsolationState.cs
-│   │   ├── SafetyTriggerKind.cs
-│   │   ├── TransportConnectionState.cs
-│   │   ├── TransportEventType.cs
-│   │   ├── TransportRole.cs
-│   │   └── VisionAlarm.cs
-│   ├── Planning/
-│   │   └── DefaultSpeedPlanner.cs
-│   └── Utils/
-│       ├── AxisKinematics.cs
-│       └── FileUtils.cs
-├── ZakYip.Singulation.Drivers/
-│   ├── ZakYip.Singulation.Drivers.csproj
-│   ├── Abstractions/
-│   │   ├── IAxisController.cs
-│   │   ├── IAxisDrive.cs
-│   │   ├── IAxisEventAggregator.cs
-│   │   ├── IBusAdapter.cs
-│   │   ├── IDriveRegistry.cs
-│   │   └── Ports/
-│   │       └── IAxisPort.cs
-│   ├── Common/
-│   │   ├── AxisController.cs
-│   │   ├── AxisEventAggregator.cs
-│   │   ├── DriverOptions.cs
-│   │   └── SpanParser.cs
-│   ├── Enums/
-│   │   └── DriverStatus.cs
-│   ├── Health/
-│   │   └── AxisHealthMonitor.cs
-│   ├── Leadshine/
-│   │   ├── LTDMC.cs
-│   │   ├── LTDMC.dll
-│   │   ├── LeadshineLtdmcAxisDrive.cs
-│   │   ├── LeadshineLtdmcBusAdapter.cs
-│   │   └── LeadshineProtocolMap.cs
-│   ├── Registry/
-│   │   └── DefaultDriveRegistry.cs
-│   └── Resilience/
-│       ├── AxisDegradePolicy.cs
-│       └── ConsecutiveFailCounter.cs
-├── ZakYip.Singulation.Host/
-│   ├── ZakYip.Singulation.Host.csproj
-│   ├── Program.cs
-│   ├── Controllers/
-│   │   ├── AdminController.cs
-│   │   ├── AxesController.cs
-│   │   ├── DecoderController.cs
-│   │   └── UpstreamController.cs
-│   ├── Dto/
-│   │   ├── ApiResponse.cs
-│   │   ├── AxisCommandResultDto.cs
-│   │   ├── AxisPatchRequestDto.cs
-│   │   ├── AxisResponseDto.cs
-│   │   ├── BatchCommandResponseDto.cs
-│   │   ├── ControllerResetRequestDto.cs
-│   │   ├── ControllerResponseDto.cs
-│   │   ├── DecodeRequest.cs
-│   │   ├── DecodeResult.cs
-│   │   ├── SetSpeedRequestDto.cs
-│   │   ├── UpstreamConnectionDto.cs
-│   │   └── UpstreamConnectionsDto.cs
-│   ├── Extensions/
-│   │   └── SignalRSetup.cs
-│   ├── Filters/
-│   │   └── ValidateModelFilter.cs
-│   ├── Properties/
-│   │   └── launchSettings.json
-│   ├── Runtime/
-│   │   ├── IRuntimeStatusProvider.cs
-│   │   ├── LogEventBus.cs
-│   │   ├── PowerGuard.cs
-│   │   ├── RealtimeDispatchService.cs
-│   │   └── RuntimeStatusProvider.cs
-│   ├── Safety/
-│   │   ├── DefaultCommissioningSequence.cs
-│   │   ├── FrameGuard.cs
-│   │   ├── FrameGuardOptions.cs
-│   │   ├── LoopbackSafetyIoModule.cs
-│   │   ├── SafetyOperation.cs
-│   │   ├── SafetyOperationKind.cs
-│   │   └── SafetyPipeline.cs
-│   ├── SignalR/
-│   │   ├── Hubs/
-│   │   │   └── EventsHub.cs
-│   │   ├── SignalRQueueItem.cs
-│   │   └── SignalRRealtimeNotifier.cs
-│   ├── SwaggerOptions/
-│   │   ├── ConfigureSwaggerOptions.cs
-│   │   ├── CustomOperationFilter.cs
-│   │   ├── EnumSchemaFilter.cs
-│   │   ├── HideLongListSchemaFilter.cs
-│   │   └── SwaggerGroupDiscovery.cs
-│   ├── Workers/
-│   │   ├── AxisBootstrapper.cs
-│   │   ├── CommissioningCommand.cs
-│   │   ├── CommissioningCommandKind.cs
-│   │   ├── CommissioningState.cs
-│   │   ├── CommissioningWorker.cs
-│   │   ├── HeartbeatWorker.cs
-│   │   ├── LogEventPump.cs
-│   │   ├── LogsCleanupService.cs
-│   │   ├── SingulationWorker.cs
-│   │   ├── SpeedFrameWorker.cs
-│   │   └── TransportEventPump.cs
-│   ├── appsettings.Development.json
-│   ├── appsettings.json
-│   ├── install.bat
-│   ├── nlog.config
-│   ├── signalr.ts
-│   ├── singulation-log.db
-│   ├── singulation.db
-│   └── unstall.bat
-├── ZakYip.Singulation.Infrastructure/
-│   ├── ZakYip.Singulation.Infrastructure.csproj
-│   ├── Configs/
-│   │   ├── Entities/
-│   │   │   ├── AxisGridLayoutDoc.cs
-│   │   │   ├── ControllerOptionsDoc.cs
-│   │   │   ├── DriverOptionsTemplateDoc.cs
-│   │   │   ├── UpstreamCodecOptionsDoc.cs
-│   │   │   └── UpstreamOptionsDoc.cs
-│   │   └── Mappings/
-│   │       └── ConfigMappings.cs
-│   ├── Persistence/
-│   │   ├── LiteDbAxisLayoutStore.cs
-│   │   ├── LiteDbControllerOptionsStore.cs
-│   │   ├── PersistenceServiceCollectionExtensions.cs
-│   │   └── TransportPersistenceExtensions.cs
-│   ├── Safety/
-│   │   └── SafetyIsolator.cs
-│   ├── Telemetry/
-│   │   └── SingulationMetrics.cs
-│   └── Transport/
-│       ├── LiteDbUpstreamCodecOptionsStore.cs
-│       ├── LiteDbUpstreamOptionsStore.cs
-│       └── UpstreamTcpInjection.cs
-├── ZakYip.Singulation.Protocol/
-│   ├── ZakYip.Singulation.Protocol.csproj
-│   ├── Abstractions/
-│   │   └── IUpstreamCodec.cs
-│   ├── Enums/
-│   │   ├── CodecFlags.cs
-│   │   ├── CodecResult.cs
-│   │   └── UpstreamCtrl.cs
-│   └── Vendors/
-│       ├── Guiwei/
-│       │   ├── GuiweiCodec.cs
-│       │   ├── GuiweiControl.cs
-│       │   └── homing_only_tcp.md
-│       └── Huarary/
-│           ├── HuararyCodec.cs
-│           ├── HuararyControl.cs
-│           └── vision_mock_packets.md
-├── ZakYip.Singulation.Transport/
-│   ├── ZakYip.Singulation.Transport.csproj
-│   ├── Abstractions/
-│   │   ├── IByteTransport.cs
-│   │   └── IUpstreamReceiver.cs
-│   ├── Enums/
-│   │   └── TransportStatus.cs
-│   └── Tcp/
-│       ├── TcpClientByteTransport/
-│       │   └── TouchClientByteTransport.cs
-│       ├── TcpClientOptions.cs
-│       ├── TcpServerByteTransport/
-│       │   └── TouchServerByteTransport.cs
-│       └── TcpServerOptions.cs
-└── ops/
-    ├── README.md
-    ├── dryrun.ps1
-    ├── dryrun.sh
-    ├── install.ps1
-    ├── install.sh
-    ├── selfcheck.ps1
-    ├── selfcheck.sh
-    ├── uninstall.ps1
-    └── uninstall.sh
+    .gitattributes
+    .gitignore
+    README.md
+    ZakYip.Singulation.sln
+    ZakYip.Singulation.ConsoleDemo/
+        Program.cs
+        ZakYip.Singulation.ConsoleDemo.csproj
+        Regression/
+            RegressionRunner.cs
+    ZakYip.Singulation.Core/
+        ZakYip.Singulation.Core.csproj
+        Abstractions/
+            Realtime/
+                IRealtimeNotifier.cs
+            Safety/
+                FrameGuardDecision.cs
+                ICommissioningSequence.cs
+                IFrameGuard.cs
+                ISafetyIoModule.cs
+                ISafetyIsolator.cs
+                ISafetyPipeline.cs
+        Configs/
+            AxisGridLayoutOptions.cs
+            ControllerOptions.cs
+            DriverOptionsTemplateOptions.cs
+            PlannerConfig.cs
+            UpstreamCodecOptions.cs
+            UpstreamOptions.cs
+            Defaults/
+                ConfigDefaults.cs
+        Contracts/
+            IAxisLayoutStore.cs
+            IControllerOptionsStore.cs
+            ISpeedPlanner.cs
+            IUpstreamCodecOptionsStore.cs
+            IUpstreamFrameHub.cs
+            IUpstreamOptionsStore.cs
+            Dto/
+                LinearPlannerParams.cs
+                ParcelPose.cs
+                SpeedSet.cs
+                StatusSnapshot.cs
+                SystemRuntimeStatus.cs
+                TransportStatusItem.cs
+                VisionParams.cs
+            Events/
+                AxisCommandIssuedEventArgs.cs
+                AxisDisconnectedEventArgs.cs
+                AxisErrorEventArgs.cs
+                AxisEvent.cs
+                AxisSpeedFeedbackEventArgs.cs
+                BytesReceivedEventArgs.cs
+                DriverNotLoadedEventArgs.cs
+                EvState.cs
+                LogEvent.cs
+                TransportErrorEventArgs.cs
+                TransportEvent.cs
+                TransportStateChangedEventArgs.cs
+                Safety/
+                    SafetyStateChangedEventArgs.cs
+                    SafetyTriggerEventArgs.cs
+            ValueObjects/
+                AxisId.cs
+                AxisRpm.cs
+                KinematicParams.cs
+                PprRatio.cs
+        Enums/
+            AxisEventType.cs
+            ControllerResetType.cs
+            LogKind.cs
+            PlannerStatus.cs
+            SafetyCommand.cs
+            SafetyIsolationState.cs
+            SafetyTriggerKind.cs
+            TransportConnectionState.cs
+            TransportEventType.cs
+            TransportRole.cs
+            VisionAlarm.cs
+        Planning/
+            DefaultSpeedPlanner.cs
+        Utils/
+            AxisKinematics.cs
+            FileUtils.cs
+    ZakYip.Singulation.Drivers/
+        ZakYip.Singulation.Drivers.csproj
+        Abstractions/
+            IAxisController.cs
+            IAxisDrive.cs
+            IAxisEventAggregator.cs
+            IBusAdapter.cs
+            IDriveRegistry.cs
+            Ports/
+                IAxisPort.cs
+        Common/
+            AxisController.cs
+            AxisEventAggregator.cs
+            DriverOptions.cs
+            SpanParser.cs
+        Enums/
+            DriverStatus.cs
+        Health/
+            AxisHealthMonitor.cs
+        Leadshine/
+            LTDMC.cs
+            LTDMC.dll
+            LeadshineLtdmcAxisDrive.cs
+            LeadshineLtdmcBusAdapter.cs
+            LeadshineProtocolMap.cs
+        Registry/
+            DefaultDriveRegistry.cs
+        Resilience/
+            AxisDegradePolicy.cs
+            ConsecutiveFailCounter.cs
+    ZakYip.Singulation.Host/
+        Nlog.config
+        Program.cs
+        ZakYip.Singulation.Host.csproj
+        appsettings.Development.json
+        appsettings.json
+        install.bat
+        signalr.ts
+        singulation-log.db
+        singulation.db
+        unstall.bat
+        Controllers/
+            AdminController.cs
+            AxesController.cs
+            DecoderController.cs
+            UpstreamController.cs
+        Dto/
+            ApiResponse.cs
+            AxisCommandResultDto.cs
+            AxisPatchRequestDto.cs
+            AxisResponseDto.cs
+            BatchCommandResponseDto.cs
+            ControllerResetRequestDto.cs
+            ControllerResponseDto.cs
+            DecodeRequest.cs
+            DecodeResult.cs
+            SetSpeedRequestDto.cs
+            UpstreamConnectionDto.cs
+            UpstreamConnectionsDto.cs
+        Extensions/
+            SignalRSetup.cs
+        Filters/
+            ValidateModelFilter.cs
+        Properties/
+            launchSettings.json
+        Runtime/
+            IRuntimeStatusProvider.cs
+            LogEventBus.cs
+            PowerGuard.cs
+            RealtimeDispatchService.cs
+            RuntimeStatusProvider.cs
+            UpstreamFrameHub.cs
+        Safety/
+            DefaultCommissioningSequence.cs
+            FrameGuard.cs
+            FrameGuardOptions.cs
+            LoopbackSafetyIoModule.cs
+            SafetyOperation.cs
+            SafetyOperationKind.cs
+            SafetyPipeline.cs
+        SignalR/
+            SignalRQueueItem.cs
+            SignalRRealtimeNotifier.cs
+            Hubs/
+                EventsHub.cs
+        SwaggerOptions/
+            ConfigureSwaggerOptions.cs
+            CustomOperationFilter.cs
+            EnumSchemaFilter.cs
+            HideLongListSchemaFilter.cs
+            SwaggerGroupDiscovery.cs
+        Workers/
+            AxisBootstrapper.cs
+            CommissioningCommand.cs
+            CommissioningCommandKind.cs
+            CommissioningState.cs
+            CommissioningWorker.cs
+            HeartbeatWorker.cs
+            LogEventPump.cs
+            LogsCleanupService.cs
+            SingulationWorker.cs
+            SpeedFrameWorker.cs
+            TransportEventPump.cs
+    ZakYip.Singulation.Infrastructure/
+        ZakYip.Singulation.Infrastructure.csproj
+        Configs/
+            Entities/
+                AxisGridLayoutDoc.cs
+                ControllerOptionsDoc.cs
+                DriverOptionsTemplateDoc.cs
+                UpstreamCodecOptionsDoc.cs
+                UpstreamOptionsDoc.cs
+            Mappings/
+                ConfigMappings.cs
+        Persistence/
+            LiteDbAxisLayoutStore.cs
+            LiteDbControllerOptionsStore.cs
+            PersistenceServiceCollectionExtensions.cs
+        Safety/
+            SafetyIsolator.cs
+        Telemetry/
+            SingulationMetrics.cs
+        Transport/
+            LiteDbUpstreamCodecOptionsStore.cs
+            LiteDbUpstreamOptionsStore.cs
+            TransportPersistenceExtensions.cs
+            UpstreamTcpInjection.cs
+    ZakYip.Singulation.Protocol/
+        ZakYip.Singulation.Protocol.csproj
+        Abstractions/
+            IUpstreamCodec.cs
+        Enums/
+            CodecFlags.cs
+            CodecResult.cs
+            UpstreamCtrl.cs
+        Vendors/
+            Guiwei/
+                GuiweiCodec.cs
+                GuiweiControl.cs
+                homing_only_tcp.md
+            Huarary/
+                HuararyCodec.cs
+                HuararyControl.cs
+                vision_mock_packets.md
+    ZakYip.Singulation.Transport/
+        ZakYip.Singulation.Transport.csproj
+        Abstractions/
+            IByteTransport.cs
+            IUpstreamReceiver.cs
+        Enums/
+            TransportStatus.cs
+        Tcp/
+            TcpClientOptions.cs
+            TcpServerOptions.cs
+            TcpClientByteTransport/
+                TouchClientByteTransport.cs
+            TcpServerByteTransport/
+                TouchServerByteTransport.cs
+    ops/
+        README.md
+        dryrun.ps1
+        dryrun.sh
+        install.ps1
+        install.sh
+        selfcheck.ps1
+        selfcheck.sh
+        uninstall.ps1
+        uninstall.sh
 ```
 
 ### 各文件职责说明
