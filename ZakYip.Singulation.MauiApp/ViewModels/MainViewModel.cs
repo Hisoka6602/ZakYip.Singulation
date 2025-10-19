@@ -3,6 +3,7 @@ using Prism.Mvvm;
 using Prism.Navigation;
 using System.Collections.ObjectModel;
 using ZakYip.Singulation.MauiApp.Services;
+using ZakYip.Singulation.MauiApp.Helpers;
 
 namespace ZakYip.Singulation.MauiApp.ViewModels;
 
@@ -30,11 +31,25 @@ public class MainViewModel : BindableBase
         set => SetProperty(ref _isLoading, value);
     }
 
-    private string _signalRStatus = "Disconnected";
+    private string _signalRStatus = "未连接";
     public string SignalRStatus
     {
         get => _signalRStatus;
         set => SetProperty(ref _signalRStatus, value);
+    }
+    
+    private int _signalRLatency = 0;
+    public int SignalRLatency
+    {
+        get => _signalRLatency;
+        set => SetProperty(ref _signalRLatency, value);
+    }
+    
+    private string _signalRLatencyText = "";
+    public string SignalRLatencyText
+    {
+        get => _signalRLatencyText;
+        set => SetProperty(ref _signalRLatencyText, value);
     }
 
     private ObservableCollection<string> _realtimeEvents = new();
@@ -124,6 +139,7 @@ public class MainViewModel : BindableBase
         _signalRFactory.SafetyEventOccurred += OnSafetyEventOccurred;
         _signalRFactory.ConnectionStateChanged += OnConnectionStateChanged;
         _signalRFactory.MessageReceived += OnMessageReceived;
+        _signalRFactory.LatencyUpdated += OnLatencyUpdated;
     }
 
     /// <summary>
@@ -153,7 +169,7 @@ public class MainViewModel : BindableBase
             AddRealtimeEvent(message);
             
             // 更新对应轴的速度显示
-            var axis = Controllers.FirstOrDefault(a => a.Id == e.AxisId);
+            var axis = Controllers.FirstOrDefault(a => a.AxisId == e.AxisId.ToString() || a.AxisId == $"axis{e.AxisId}");
             if (axis != null)
             {
                 axis.CurrentSpeed = e.Speed;
@@ -183,13 +199,42 @@ public class MainViewModel : BindableBase
         {
             SignalRStatus = state switch
             {
-                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected => "Connected",
-                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connecting => "Connecting...",
-                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Reconnecting => "Reconnecting...",
-                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Disconnected => "Disconnected",
-                _ => "Unknown"
+                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected => "已连接",
+                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connecting => "连接中...",
+                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Reconnecting => "重新连接中...",
+                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Disconnected => "未连接",
+                _ => "未知状态"
             };
+            
+            UpdateLatencyText();
         });
+    }
+    
+    /// <summary>
+    /// 处理延迟更新
+    /// </summary>
+    private void OnLatencyUpdated(object? sender, int latencyMs)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SignalRLatency = latencyMs;
+            UpdateLatencyText();
+        });
+    }
+    
+    /// <summary>
+    /// 更新延迟显示文本
+    /// </summary>
+    private void UpdateLatencyText()
+    {
+        if (SignalRStatus == "已连接" && SignalRLatency > 0)
+        {
+            SignalRLatencyText = $"延迟: {SignalRLatency}ms";
+        }
+        else
+        {
+            SignalRLatencyText = "";
+        }
     }
 
     /// <summary>
@@ -326,8 +371,9 @@ public class MainViewModel : BindableBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Exception: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -362,8 +408,9 @@ public class MainViewModel : BindableBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"SignalR error: {ex.Message}";
-            _notificationService.ShowError($"SignalR 错误: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -398,8 +445,9 @@ public class MainViewModel : BindableBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Exception: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -434,8 +482,9 @@ public class MainViewModel : BindableBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Exception: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -470,8 +519,9 @@ public class MainViewModel : BindableBase
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Exception: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
