@@ -27,12 +27,11 @@ namespace ZakYip.Singulation.MauiApp {
 
         private static void RegisterTypes(IContainerRegistry containerRegistry)
         {
-            // 注册 HttpClient 和 ApiClient
-            containerRegistry.Register<ApiClient>();
+            // 注册 HttpClient 工厂
             containerRegistry.Register<HttpClient>(provider =>
             {
                 // 从本地存储读取API地址
-                var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5000");
+                var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5005");
                 var timeoutSeconds = Preferences.Get("TimeoutSeconds", "30");
                 
                 // 安全解析超时值，失败时使用默认值
@@ -49,10 +48,22 @@ namespace ZakYip.Singulation.MauiApp {
                 return client;
             });
 
+            // 注册 UDP 服务发现客户端
+            containerRegistry.RegisterSingleton<UdpDiscoveryClient>();
+
+            // 注册所有 API 服务（按功能划分）
+            containerRegistry.Register<ApiClient>();
+            containerRegistry.Register<AxisApiService>();
+            containerRegistry.Register<ControllerApiService>();
+            containerRegistry.Register<DecoderApiService>();
+            containerRegistry.Register<UpstreamApiService>();
+            containerRegistry.Register<SystemApiService>();
+            containerRegistry.Register<SafetyApiService>();
+
             // 注册 SignalR 客户端工厂
             containerRegistry.RegisterSingleton<SignalRClientFactory>(provider => 
             {
-                var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5000");
+                var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5005");
                 return new SignalRClientFactory(apiBaseUrl);
             });
 

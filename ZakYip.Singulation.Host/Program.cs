@@ -32,6 +32,7 @@ using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Infrastructure.Safety;
 using ZakYip.Singulation.Host.Safety;
 using ZakYip.Singulation.Infrastructure.Persistence;
+using ZakYip.Singulation.Host.Services;
 
 ThreadPool.SetMinThreads(128, 128);
 System.Runtime.GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
@@ -129,6 +130,10 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
         // ---------- Hosted Services ----------
+
+        // ---------- UDP 服务发现 ----------
+        services.Configure<UdpDiscoveryOptions>(configuration.GetSection("UdpDiscovery"));
+        services.AddHostedService<UdpDiscoveryService>();
 
         services.AddHostedService<SingulationWorker>();
         // ---------- 初始化轴 ----------
