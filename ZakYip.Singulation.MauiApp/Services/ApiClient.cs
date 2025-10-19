@@ -24,14 +24,14 @@ public class ApiClient
     /// <summary>
     /// 获取所有控制器信息
     /// </summary>
-    public async Task<ApiResponse<List<ControllerInfo>>> GetControllersAsync()
+    public async Task<ApiResponse<List<AxisInfo>>> GetControllersAsync()
     {
         try
         {
             var responseMessage = await _httpClient.GetAsync("/api/axes/axes");
             var content = await responseMessage.Content.ReadAsStringAsync();
-            var response = JsonConvert.DeserializeObject<ApiResponse<List<ControllerInfo>>>(content, _jsonSettings);
-            return response ?? new ApiResponse<List<ControllerInfo>> 
+            var response = JsonConvert.DeserializeObject<ApiResponse<List<AxisInfo>>>(content, _jsonSettings);
+            return response ?? new ApiResponse<List<AxisInfo>> 
             { 
                 Result = false, 
                 Msg = "Response is null" 
@@ -39,7 +39,7 @@ public class ApiClient
         }
         catch (Exception ex)
         {
-            return new ApiResponse<List<ControllerInfo>>
+            return new ApiResponse<List<AxisInfo>>
             {
                 Result = false,
                 Msg = ex.Message
@@ -205,7 +205,7 @@ public class ApiResponse<T>
 /// <summary>
 /// 轴信息 - 与服务器端 AxisResponseDto 保持一致
 /// </summary>
-public class ControllerInfo
+public class AxisInfo
 {
     public string AxisId { get; set; } = string.Empty;
     public int Status { get; set; }  // DriverStatus 枚举
@@ -220,12 +220,12 @@ public class ControllerInfo
     public string Name => $"Axis {AxisId}";
     public string StatusText => Status switch
     {
-        0 => "Offline",
-        1 => "Initializing", 
-        2 => "Ready",
-        3 => "Running",
-        4 => "Faulted",
-        _ => "Unknown"
+        0 => "离线",
+        1 => "初始化中", 
+        2 => "就绪",
+        3 => "运行中",
+        4 => "故障",
+        _ => "未知"
     };
 }
 
