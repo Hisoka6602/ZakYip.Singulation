@@ -1,6 +1,7 @@
 using Prism.Commands;
 using Prism.Mvvm;
 using ZakYip.Singulation.MauiApp.Services;
+using ZakYip.Singulation.MauiApp.Helpers;
 using System.Collections.ObjectModel;
 
 namespace ZakYip.Singulation.MauiApp.ViewModels;
@@ -40,6 +41,13 @@ public class SettingsViewModel : BindableBase, IDisposable
         get => _isDiscovering;
         set => SetProperty(ref _isDiscovering, value);
     }
+    
+    private string _networkStatusMessage = string.Empty;
+    public string NetworkStatusMessage
+    {
+        get => _networkStatusMessage;
+        set => SetProperty(ref _networkStatusMessage, value);
+    }
 
     private DiscoveredService? _selectedService;
     public DiscoveredService? SelectedService
@@ -57,10 +65,19 @@ public class SettingsViewModel : BindableBase, IDisposable
     }
 
     public ObservableCollection<DiscoveredService> DiscoveredServices => _discoveryClient.DiscoveredServices;
+    
+    private ObservableCollection<CachedServiceInfo> _cachedServices = new();
+    public ObservableCollection<CachedServiceInfo> CachedServices
+    {
+        get => _cachedServices;
+        set => SetProperty(ref _cachedServices, value);
+    }
 
     public DelegateCommand SaveSettingsCommand { get; }
     public DelegateCommand ToggleDiscoveryCommand { get; }
     public DelegateCommand<DiscoveredService> ConnectToServiceCommand { get; }
+    public DelegateCommand CheckNetworkCommand { get; }
+    public DelegateCommand<CachedServiceInfo> UseCachedServiceCommand { get; }
 
     public SettingsViewModel(UdpDiscoveryClient discoveryClient)
     {
@@ -73,6 +90,14 @@ public class SettingsViewModel : BindableBase, IDisposable
         SaveSettingsCommand = new DelegateCommand(async () => await SaveSettingsAsync());
         ToggleDiscoveryCommand = new DelegateCommand(async () => await ToggleDiscoveryAsync());
         ConnectToServiceCommand = new DelegateCommand<DiscoveredService>(async (service) => await ConnectToServiceAsync(service));
+        CheckNetworkCommand = new DelegateCommand(CheckNetwork);
+        UseCachedServiceCommand = new DelegateCommand<CachedServiceInfo>(async (service) => await UseCachedServiceAsync(service));
+        
+        // 加载缓存的服务
+        LoadCachedServices();
+        
+        // 检查网络状态
+        CheckNetwork();
 
         // 订阅服务发现事件
         _discoveryClient.ServiceDiscovered += OnServiceDiscovered;
@@ -89,6 +114,15 @@ public class SettingsViewModel : BindableBase, IDisposable
     {
         try
         {
+            // 检查网络是否可用
+            var availability = NetworkDiagnostics.CheckDiscoveryAvailability();
+            if (!availability.IsAvailable)
+            {
+                StatusMessage = $"⚠️ {availability.Message}";
+                NetworkStatusMessage = availability.Suggestion;
+                return;
+            }
+            
             await Task.Delay(500); // 延迟启动，确保UI已加载
             await _discoveryClient.StartListeningAsync();
             IsDiscovering = true;
@@ -98,13 +132,38 @@ public class SettingsViewModel : BindableBase, IDisposable
         }
         catch (Exception ex)
         {
-            var message = $"自动启动发现失败: {ex.Message}";
-            StatusMessage = $"❌ {message}";
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = $"❌ {friendlyMessage}";
             IsDiscovering = false;
-            _notificationService.ShowError(message);
+            _notificationService.ShowError(friendlyMessage);
         }
     }
 
+    /// <summary>
+    /// 检查网络状态
+    /// </summary>
+    private void CheckNetwork()
+    {
+        try
+        {
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+            
+            var availability = NetworkDiagnostics.CheckDiscoveryAvailability();
+            NetworkStatusMessage = availability.Message;
+            
+            if (!availability.IsAvailable && !string.IsNullOrEmpty(availability.Suggestion))
+            {
+                NetworkStatusMessage += $"\n\n{availability.Suggestion}";
+            }
+            
+            StatusMessage = availability.IsAvailable ? "✅ 网络连接正常" : "⚠️ 网络连接异常";
+        }
+        catch (Exception ex)
+        {
+            NetworkStatusMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+        }
+    }
+    
     /// <summary>
     /// 切换服务发现
     /// </summary>
@@ -124,6 +183,16 @@ public class SettingsViewModel : BindableBase, IDisposable
             }
             else
             {
+                // 检查网络状态
+                var availability = NetworkDiagnostics.CheckDiscoveryAvailability();
+                if (!availability.IsAvailable)
+                {
+                    StatusMessage = $"⚠️ {availability.Message}";
+                    NetworkStatusMessage = availability.Suggestion;
+                    _notificationService.ShowWarning(availability.Message);
+                    return;
+                }
+                
                 await _discoveryClient.StartListeningAsync();
                 IsDiscovering = true;
                 const string message = "正在搜索服务...";
@@ -133,10 +202,10 @@ public class SettingsViewModel : BindableBase, IDisposable
         }
         catch (Exception ex)
         {
-            var message = $"服务发现失败: {ex.Message}";
-            StatusMessage = $"❌ {message}";
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = $"❌ {friendlyMessage}";
             IsDiscovering = false;
-            _notificationService.ShowError(message);
+            _notificationService.ShowError(friendlyMessage);
         }
     }
 
@@ -152,6 +221,11 @@ public class SettingsViewModel : BindableBase, IDisposable
             HapticFeedback.Default.Perform(HapticFeedbackType.Click);
 
             ApiBaseUrl = service.HttpBaseUrl;
+            
+            // 缓存服务信息
+            ServiceCacheHelper.CacheService(service);
+            LoadCachedServices(); // 刷新缓存列表
+            
             await SaveSettingsAsync();
             
             var message = $"已连接到 {service.ServiceName}";
@@ -160,9 +234,35 @@ public class SettingsViewModel : BindableBase, IDisposable
         }
         catch (Exception ex)
         {
-            var message = $"连接失败: {ex.Message}";
-            StatusMessage = $"❌ {message}";
-            _notificationService.ShowError(message);
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = $"❌ {friendlyMessage}";
+            _notificationService.ShowError(friendlyMessage);
+        }
+    }
+    
+    /// <summary>
+    /// 使用缓存的服务
+    /// </summary>
+    private async Task UseCachedServiceAsync(CachedServiceInfo? service)
+    {
+        if (service == null) return;
+        
+        try
+        {
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+            
+            ApiBaseUrl = service.HttpBaseUrl;
+            await SaveSettingsAsync();
+            
+            var message = $"已选择缓存服务: {service.ServiceName}";
+            StatusMessage = $"✅ {message}";
+            _notificationService.ShowSuccess(message);
+        }
+        catch (Exception ex)
+        {
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = $"❌ {friendlyMessage}";
+            _notificationService.ShowError(friendlyMessage);
         }
     }
 
@@ -197,6 +297,10 @@ public class SettingsViewModel : BindableBase, IDisposable
             // 保存到本地存储
             Preferences.Set("ApiBaseUrl", ApiBaseUrl);
             Preferences.Set("TimeoutSeconds", TimeoutSeconds);
+            
+            // 缓存当前API地址
+            ServiceCacheHelper.CacheCurrentApiUrl(ApiBaseUrl);
+            LoadCachedServices(); // 刷新缓存列表
 
             const string successMsg = "设置已保存";
             StatusMessage = $"✅ {successMsg}";
@@ -221,8 +325,31 @@ public class SettingsViewModel : BindableBase, IDisposable
     /// </summary>
     private void LoadSettings()
     {
-        ApiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5005");
+        // 尝试从缓存加载最近使用的服务
+        var recentService = ServiceCacheHelper.GetMostRecentService();
+        if (recentService != null)
+        {
+            ApiBaseUrl = Preferences.Get("ApiBaseUrl", recentService.HttpBaseUrl);
+        }
+        else
+        {
+            ApiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5005");
+        }
+        
         TimeoutSeconds = Preferences.Get("TimeoutSeconds", "30");
+    }
+    
+    /// <summary>
+    /// 加载缓存的服务列表
+    /// </summary>
+    private void LoadCachedServices()
+    {
+        var cached = ServiceCacheHelper.GetCachedServices();
+        CachedServices.Clear();
+        foreach (var service in cached)
+        {
+            CachedServices.Add(service);
+        }
     }
 
     private void OnServiceDiscovered(object? sender, DiscoveredService service)

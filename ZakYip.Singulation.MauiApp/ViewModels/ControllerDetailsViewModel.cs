@@ -2,6 +2,7 @@ using Prism.Commands;
 using Prism.Mvvm;
 using Prism.Navigation;
 using ZakYip.Singulation.MauiApp.Services;
+using ZakYip.Singulation.MauiApp.Helpers;
 
 namespace ZakYip.Singulation.MauiApp.ViewModels;
 
@@ -150,8 +151,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
         }
         catch (Exception ex)
         {
-            StatusMessage = $"异常: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -168,7 +170,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
             IsLoading = true;
             StatusMessage = "使能中...";
             
-            var response = await _apiClient.EnableAxesAsync(AxisInfo.AxisId);
+            // Parse AxisId to int array for API call
+            int axisIdInt = int.TryParse(AxisInfo.AxisId.Replace("axis", ""), out var id) ? id : 0;
+            var response = await _apiClient.EnableAxesAsync(new[] { axisIdInt });
             if (response.Success)
             {
                 StatusMessage = "使能成功";
@@ -183,8 +187,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
         }
         catch (Exception ex)
         {
-            StatusMessage = $"异常: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -201,7 +206,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
             IsLoading = true;
             StatusMessage = "禁用中...";
             
-            var response = await _apiClient.DisableAxesAsync(AxisInfo.AxisId);
+            // Parse AxisId to int array for API call
+            int axisIdInt = int.TryParse(AxisInfo.AxisId.Replace("axis", ""), out var id) ? id : 0;
+            var response = await _apiClient.DisableAxesAsync(new[] { axisIdInt });
             if (response.Success)
             {
                 StatusMessage = "禁用成功";
@@ -216,8 +223,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
         }
         catch (Exception ex)
         {
-            StatusMessage = $"异常: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {
@@ -248,7 +256,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
             IsLoading = true;
             StatusMessage = $"设置速度为 {speed} mm/s...";
             
-            var response = await _apiClient.SetAxesSpeedAsync(speed, AxisInfo.AxisId);
+            // Parse AxisId to int array for API call
+            int axisIdInt = int.TryParse(AxisInfo.AxisId.Replace("axis", ""), out var id) ? id : 0;
+            var response = await _apiClient.SetAxesSpeedAsync(speed, new[] { axisIdInt });
             if (response.Success)
             {
                 StatusMessage = $"速度设置为 {speed} mm/s 成功";
@@ -263,8 +273,9 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
         }
         catch (Exception ex)
         {
-            StatusMessage = $"异常: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
+            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+            StatusMessage = friendlyMessage;
+            _notificationService.ShowError(friendlyMessage);
         }
         finally
         {

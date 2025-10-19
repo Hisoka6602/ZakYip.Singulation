@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
              xmlns:services="clr-namespace:ZakYip.Singulation.MauiApp.Services"
+             xmlns:helpers="clr-namespace:ZakYip.Singulation.MauiApp.Helpers"
              xmlns:controls="clr-namespace:ZakYip.Singulation.MauiApp.Controls"
              x:Class="ZakYip.Singulation.MauiApp.Views.SettingsPage"
              x:DataType="viewmodels:SettingsViewModel"
@@ -30,6 +31,38 @@
                     SemanticProperties.HeadingLevel="Level1" />
             </HorizontalStackLayout>
 
+            <!-- 网络状态 -->
+            <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#E3F2FD" IsVisible="{Binding NetworkStatusMessage, Converter={StaticResource StringToBoolConverter}}">
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="&#xf1eb;"
+                            FontFamily="FontAwesomeSolid"
+                            FontSize="20"
+                            TextColor="#2196F3"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="网络状态"
+                            FontAttributes="Bold"
+                            FontSize="16"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    
+                    <Label
+                        Text="{Binding NetworkStatusMessage}"
+                        FontSize="14"
+                        TextColor="#333" />
+                    
+                    <Button
+                        Text="🔍 检查网络"
+                        Command="{Binding CheckNetworkCommand}"
+                        BackgroundColor="#2196F3"
+                        TextColor="White"
+                        FontSize="14"
+                        Padding="10,5" />
+                </VerticalStackLayout>
+            </Frame>
+
             <!-- UDP 服务发现 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F5F5F5">
                 <VerticalStackLayout Spacing="10">
@@ -48,7 +81,7 @@
                     </HorizontalStackLayout>
 
                     <Label
-                        Text="通过 UDP 广播自动发现网络中的 Singulation 服务"
+                        Text="自动搜索网络中的 Singulation 服务"
                         FontSize="12"
                         TextColor="Gray" />
 
@@ -132,6 +165,63 @@
                 </VerticalStackLayout>
             </Frame>
 
+            <!-- 最近连接的服务 -->
+            <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#FFF3E0" IsVisible="{Binding CachedServices.Count, Converter={StaticResource StringToBoolConverter}}">
+                <VerticalStackLayout Spacing="10">
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="&#xf017;"
+                            FontFamily="FontAwesomeSolid"
+                            FontSize="20"
+                            TextColor="#FF9800"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="最近连接"
+                            FontAttributes="Bold"
+                            FontSize="16"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
+                    
+                    <Label
+                        Text="快速连接到最近使用的服务"
+                        FontSize="12"
+                        TextColor="Gray" />
+                    
+                    <CollectionView
+                        ItemsSource="{Binding CachedServices}"
+                        SelectionMode="None"
+                        HeightRequest="150">
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="helpers:CachedServiceInfo">
+                                <Frame
+                                    Padding="10"
+                                    Margin="0,3"
+                                    BorderColor="#FFB74D"
+                                    BackgroundColor="White">
+                                    <Grid RowDefinitions="Auto,Auto">
+                                        <Label
+                                            Grid.Row="0"
+                                            Text="{Binding DisplayName}"
+                                            FontAttributes="Bold"
+                                            FontSize="14" />
+                                        <Label
+                                            Grid.Row="1"
+                                            Text="{Binding DisplayInfo}"
+                                            FontSize="11"
+                                            TextColor="Gray" />
+                                    </Grid>
+                                    <Frame.GestureRecognizers>
+                                        <TapGestureRecognizer
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SettingsViewModel}}, Path=UseCachedServiceCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Frame.GestureRecognizers>
+                                </Frame>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+                </VerticalStackLayout>
+            </Frame>
+            
             <!-- API 配置 - Hidden for security (Requirement 3) -->
             <!-- Users should use UDP discovery to automatically find and connect to services -->
             

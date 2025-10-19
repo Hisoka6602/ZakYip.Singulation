@@ -10,16 +10,27 @@ public class SignalRClientFactory
 {
     private readonly string _baseUrl;
     private HubConnection? _hubConnection;
+    private DateTime _lastMessageTime;
+    private readonly System.Timers.Timer _latencyTimer;
     
     // 事件订阅
     public event EventHandler<string>? MessageReceived;
     public event EventHandler<SpeedChangedEventArgs>? SpeedChanged;
     public event EventHandler<SafetyEventArgs>? SafetyEventOccurred;
     public event EventHandler<HubConnectionState>? ConnectionStateChanged;
+    public event EventHandler<int>? LatencyUpdated;
+    
+    // 连接延迟（毫秒）
+    public int LatencyMs { get; private set; }
 
     public SignalRClientFactory(string baseUrl)
     {
         _baseUrl = baseUrl;
+        _lastMessageTime = DateTime.UtcNow;
+        
+        // 创建延迟监测定时器（每5秒检查一次）
+        _latencyTimer = new System.Timers.Timer(5000);
+        _latencyTimer.Elapsed += OnLatencyTimerElapsed;
     }
 
     /// <summary>
@@ -29,15 +40,13 @@ public class SignalRClientFactory
     {
         if (_hubConnection == null)
         {
-            // 使用指数退避重连策略：0s, 2s, 10s, 30s, 然后每60s重试
+            // 使用指数退避重连策略：0s, 2s, 10s，最长等待10秒
             _hubConnection = new HubConnectionBuilder()
                 .WithUrl($"{_baseUrl}{hubPath}")
                 .WithAutomaticReconnect(new[] { 
                     TimeSpan.Zero, 
                     TimeSpan.FromSeconds(2), 
-                    TimeSpan.FromSeconds(10), 
-                    TimeSpan.FromSeconds(30),
-                    TimeSpan.FromMinutes(1)
+                    TimeSpan.FromSeconds(10)
                 })
                 .Build();
 
@@ -87,8 +96,15 @@ public class SignalRClientFactory
             {
                 System.Diagnostics.Debug.WriteLine($"[SignalR] Connection closed. Error: {error?.Message}");
                 ConnectionStateChanged?.Invoke(this, HubConnectionState.Disconnected);
+                _latencyTimer.Stop();
                 return Task.CompletedTask;
             };
+            
+            // 注册心跳/ping处理器
+            _hubConnection.On("Ping", () =>
+            {
+                _lastMessageTime = DateTime.UtcNow;
+            });
         }
 
         if (_hubConnection.State == HubConnectionState.Disconnected)
@@ -98,6 +114,8 @@ public class SignalRClientFactory
                 await _hubConnection.StartAsync();
                 System.Diagnostics.Debug.WriteLine("[SignalR] Connected successfully");
                 ConnectionStateChanged?.Invoke(this, HubConnectionState.Connected);
+                _latencyTimer.Start();
+                _lastMessageTime = DateTime.UtcNow;
             }
             catch (Exception ex)
             {
@@ -108,18 +126,56 @@ public class SignalRClientFactory
 
         return _hubConnection;
     }
+    
+    /// <summary>
+    /// 延迟监测定时器触发
+    /// </summary>
+    private async void OnLatencyTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+    {
+        if (_hubConnection?.State == HubConnectionState.Connected)
+        {
+            try
+            {
+                var startTime = DateTime.UtcNow;
+                
+                // 发送ping请求
+                await _hubConnection.InvokeAsync("Ping");
+                
+                var latency = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
+                LatencyMs = latency;
+                LatencyUpdated?.Invoke(this, latency);
+                
+                _lastMessageTime = DateTime.UtcNow;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SignalR] Latency check failed: {ex.Message}");
+            }
+        }
+    }
 
     /// <summary>
     /// 断开连接
     /// </summary>
     public async Task DisconnectAsync()
     {
+        _latencyTimer.Stop();
+        
         if (_hubConnection != null)
         {
             await _hubConnection.StopAsync();
             await _hubConnection.DisposeAsync();
             _hubConnection = null;
         }
+    }
+    
+    /// <summary>
+    /// 清理资源
+    /// </summary>
+    public void Dispose()
+    {
+        _latencyTimer?.Dispose();
+        _hubConnection?.DisposeAsync().AsTask().Wait();
     }
 
     /// <summary>
