@@ -9,14 +9,12 @@
 
     <TabBar>
         <ShellContent
-            Title="控制台"
-            Icon="home.png"
+            Title="● 控制台"
             ContentTemplate="{DataTemplate local:MainPage}"
             Route="MainPage" />
 
         <ShellContent
-            Title="设置"
-            Icon="settings.png"
+            Title="⚙ 设置"
             ContentTemplate="{DataTemplate views:SettingsPage}"
             Route="SettingsPage" />
     </TabBar>

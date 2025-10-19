@@ -13,19 +13,34 @@
             Spacing="15">
 
             <!-- 标题 -->
-            <Label
-                Text="⚙️ 应用设置"
-                Style="{StaticResource Headline}"
-                HorizontalTextAlignment="Center"
-                SemanticProperties.HeadingLevel="Level1" />
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
+                <Label
+                    Text="⚙"
+                    FontSize="32"
+                    TextColor="#666"
+                    VerticalOptions="Center" />
+                <Label
+                    Text="应用设置"
+                    Style="{StaticResource Headline}"
+                    VerticalOptions="Center"
+                    SemanticProperties.HeadingLevel="Level1" />
+            </HorizontalStackLayout>
 
             <!-- UDP 服务发现 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F5F5F5">
                 <VerticalStackLayout Spacing="10">
-                    <Label
-                        Text="🔍 自动发现服务"
-                        FontAttributes="Bold"
-                        FontSize="18" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="◉"
+                            FontSize="22"
+                            TextColor="#2196F3"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="自动发现服务"
+                            FontAttributes="Bold"
+                            FontSize="18"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
                     <Label
                         Text="通过 UDP 广播自动发现网络中的 Singulation 服务"
@@ -46,11 +61,39 @@
                         HeightRequest="200"
                         Margin="0,10,0,0">
                         <CollectionView.EmptyView>
-                            <Label
-                                Text="📡 没有发现任何服务\n\n请确保：\n1. 设备连接到同一网络\n2. 主服务已启动\n3. 防火墙允许 UDP 端口 18888"
-                                HorizontalTextAlignment="Center"
-                                TextColor="Gray"
-                                Margin="10" />
+                            <VerticalStackLayout HorizontalOptions="Center" Spacing="10" Margin="10">
+                                <Label
+                                    Text="○"
+                                    FontSize="48"
+                                    TextColor="LightGray"
+                                    HorizontalOptions="Center" />
+                                <Label
+                                    Text="没有发现任何服务"
+                                    HorizontalTextAlignment="Center"
+                                    TextColor="Gray"
+                                    FontSize="16"
+                                    FontAttributes="Bold" />
+                                <Label
+                                    Text="请确保："
+                                    HorizontalTextAlignment="Center"
+                                    TextColor="Gray"
+                                    FontSize="14" />
+                                <Label
+                                    Text="1. 设备连接到同一网络"
+                                    HorizontalTextAlignment="Center"
+                                    TextColor="Gray"
+                                    FontSize="12" />
+                                <Label
+                                    Text="2. 主服务已启动"
+                                    HorizontalTextAlignment="Center"
+                                    TextColor="Gray"
+                                    FontSize="12" />
+                                <Label
+                                    Text="3. 防火墙允许 UDP 端口 18888"
+                                    HorizontalTextAlignment="Center"
+                                    TextColor="Gray"
+                                    FontSize="12" />
+                            </VerticalStackLayout>
                         </CollectionView.EmptyView>
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="services:DiscoveredService">
@@ -86,10 +129,18 @@
             <!-- API 配置 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F5F5F5">
                 <VerticalStackLayout Spacing="10">
-                    <Label
-                        Text="🔗 API 配置"
-                        FontAttributes="Bold"
-                        FontSize="18" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="◆"
+                            FontSize="22"
+                            TextColor="#4CAF50"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="API 配置"
+                            FontAttributes="Bold"
+                            FontSize="18"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
                     <Label Text="API 基础地址" FontSize="14" />
                     <Entry
@@ -104,11 +155,17 @@
                         Keyboard="Numeric" />
 
                     <Button
-                        Text="💾 保存设置"
                         Command="{Binding SaveSettingsCommand}"
                         BackgroundColor="Green"
                         HorizontalOptions="Fill"
-                        Margin="0,10,0,0" />
+                        Margin="0,10,0,0">
+                        <Button.Content>
+                            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
+                                <Label Text="✓" FontSize="20" TextColor="White" VerticalOptions="Center" />
+                                <Label Text="保存设置" FontSize="16" TextColor="White" VerticalOptions="Center" />
+                            </HorizontalStackLayout>
+                        </Button.Content>
+                    </Button>
 
                     <Label
                         Text="{Binding StatusMessage}"
@@ -121,14 +178,31 @@
             <!-- 应用信息 -->
             <Frame BorderColor="LightGray" Padding="15" BackgroundColor="#F5F5F5">
                 <VerticalStackLayout Spacing="5">
-                    <Label
-                        Text="ℹ️ 应用信息"
-                        FontAttributes="Bold"
-                        FontSize="18" />
+                    <HorizontalStackLayout Spacing="8">
+                        <Label
+                            Text="i"
+                            FontSize="22"
+                            TextColor="#666"
+                            VerticalOptions="Center" />
+                        <Label
+                            Text="应用信息"
+                            FontAttributes="Bold"
+                            FontSize="18"
+                            VerticalOptions="Center" />
+                    </HorizontalStackLayout>
 
-                    <Label Text="版本: 1.0.0" FontSize="14" />
-                    <Label Text="平台: .NET MAUI 8.0" FontSize="14" />
-                    <Label Text="项目: ZakYip.Singulation" FontSize="14" />
+                    <HorizontalStackLayout Spacing="5" Margin="0,5,0,0">
+                        <Label Text="▪" FontSize="14" TextColor="#666" />
+                        <Label Text="版本: 1.0.0" FontSize="14" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="5">
+                        <Label Text="▪" FontSize="14" TextColor="#666" />
+                        <Label Text="平台: .NET MAUI 8.0" FontSize="14" />
+                    </HorizontalStackLayout>
+                    <HorizontalStackLayout Spacing="5">
+                        <Label Text="▪" FontSize="14" TextColor="#666" />
+                        <Label Text="项目: ZakYip.Singulation" FontSize="14" />
+                    </HorizontalStackLayout>
                 </VerticalStackLayout>
             </Frame>
 
