@@ -75,16 +75,17 @@ namespace ZakYip.Singulation.Host.Safety {
         public bool TryResetIsolation(string reason, CancellationToken ct = default) => _isolator.TryResetIsolation(reason, ct);
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-            foreach (var module in _ioModules) {
-                _ = module.StartAsync(stoppingToken);
-            }
+            var startTasks = _ioModules
+                .Select(module => module.StartAsync(stoppingToken))
+                .ToArray();
+            await Task.WhenAll(startTasks).ConfigureAwait(false);
 
             var reader = _operations.Reader;
             while (!stoppingToken.IsCancellationRequested) {
-                SafetyOperation? op = null;
+                SafetyOperation currentOp = default!;
                 try {
-                    op = await reader.ReadAsync(stoppingToken).ConfigureAwait(false);
-                    await HandleOperationAsync(op.Value, stoppingToken).ConfigureAwait(false);
+                    currentOp = await reader.ReadAsync(stoppingToken).ConfigureAwait(false);
+                    await HandleOperationAsync(currentOp, stoppingToken).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
                     break;
@@ -93,7 +94,7 @@ namespace ZakYip.Singulation.Host.Safety {
                     break;
                 }
                 catch (Exception ex) {
-                    _log.LogError(ex, "Safety pipeline error when processing {Operation}", op);
+                    _log.LogError(ex, "Safety pipeline error when processing {Operation}", currentOp);
                 }
             }
         }

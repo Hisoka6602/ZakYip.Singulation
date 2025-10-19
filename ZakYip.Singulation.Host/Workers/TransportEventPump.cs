@@ -231,7 +231,7 @@ namespace ZakYip.Singulation.Host.Workers {
             if (_axisSubscribed) return;
             _axisController.ControllerFaulted += (sender, s) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
-                    Source: $"axisController",
+                    source: $"axisController",
                     Type: AxisEventType.ControllerFaulted,
                     Reason: s,
                     Exception: null,
@@ -243,7 +243,7 @@ namespace ZakYip.Singulation.Host.Workers {
             // 轴故障（真正异常对象）→ AxisEvent.Faulted
             _axisEventAggregator.AxisFaulted += (s, e) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
-                    Source: $"axis:{e.Axis}",
+                    source: $"axis:{e.Axis}",
                     Type: AxisEventType.Faulted,
                     AxisId: e.Axis,
                     Reason: null,
@@ -256,7 +256,7 @@ namespace ZakYip.Singulation.Host.Workers {
             // 轴断开/掉线（文本原因）→ AxisEvent.Disconnected
             _axisEventAggregator.AxisDisconnected += (s, e) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
-                    Source: $"axis:{e.Axis}",
+                    source: $"axis:{e.Axis}",
                     Type: AxisEventType.Disconnected,
                     AxisId: e.Axis,
                     Reason: e.Reason,
@@ -269,7 +269,7 @@ namespace ZakYip.Singulation.Host.Workers {
             // 驱动未加载（库级问题）→ AxisEvent.DriverNotLoaded
             _axisEventAggregator.DriverNotLoaded += (s, e) => {
                 var ok = _axisChannel.Writer.TryWrite(new AxisEvent(
-                    Source: $"driver:{e.LibraryName}",
+                    source: $"driver:{e.LibraryName}",
                     Type: AxisEventType.DriverNotLoaded,
                     AxisId: null,
                     Reason: e.Message,
