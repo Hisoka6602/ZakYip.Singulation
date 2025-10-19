@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
+             x:Class="ZakYip.Singulation.MauiApp.Views.ControllerDetailsPage"
+             x:DataType="vm:ControllerDetailsViewModel"
+             Title="控制器详情">
+    
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+            
+            <!-- 页面标题 -->
+            <Label Text="🎯 控制器详细信息"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   Margin="0,0,0,20"/>
+            
+            <!-- 加载指示器 -->
+            <ActivityIndicator IsRunning="{Binding IsLoading}"
+                              IsVisible="{Binding IsLoading}"
+                              Color="{StaticResource Primary}"
+                              HeightRequest="50"/>
+            
+            <!-- 基本信息卡片 -->
+            <Frame BackgroundColor="LightBlue"
+                   Padding="15"
+                   CornerRadius="10"
+                   HasShadow="True">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="📊 基本信息"
+                           FontSize="18"
+                           FontAttributes="Bold"/>
+                    
+                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="轴 ID:" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding AxisInfo.AxisId}"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="名称:" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding AxisInfo.Name}"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="状态:" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding AxisInfo.StatusText}"/>
+                        
+                        <Label Grid.Row="3" Grid.Column="0" Text="使能状态:" FontAttributes="Bold"/>
+                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding EnabledText}"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- 速度信息卡片 -->
+            <Frame BackgroundColor="LightGreen"
+                   Padding="15"
+                   CornerRadius="10"
+                   HasShadow="True">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="⚡ 速度信息"
+                           FontSize="18"
+                           FontAttributes="Bold"/>
+                    
+                    <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="目标速度:" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding TargetSpeedText}"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="反馈速度:" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding FeedbackSpeedText}"/>
+                        
+                        <Label Grid.Row="2" Grid.Column="0" Text="实时速度:" FontAttributes="Bold"/>
+                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding CurrentSpeedText}" FontAttributes="Bold" TextColor="Green"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- 错误信息卡片 -->
+            <Frame BackgroundColor="LightCoral"
+                   Padding="15"
+                   CornerRadius="10"
+                   HasShadow="True"
+                   IsVisible="{Binding HasError}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="❌ 错误信息"
+                           FontSize="18"
+                           FontAttributes="Bold"/>
+                    
+                    <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto" RowSpacing="8">
+                        <Label Grid.Row="0" Grid.Column="0" Text="错误码:" FontAttributes="Bold"/>
+                        <Label Grid.Row="0" Grid.Column="1" Text="{Binding AxisInfo.LastErrorCode}"/>
+                        
+                        <Label Grid.Row="1" Grid.Column="0" Text="错误消息:" FontAttributes="Bold"/>
+                        <Label Grid.Row="1" Grid.Column="1" Text="{Binding AxisInfo.LastErrorMessage}" LineBreakMode="WordWrap"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- 操作按钮 -->
+            <Frame BackgroundColor="LightYellow"
+                   Padding="15"
+                   CornerRadius="10"
+                   HasShadow="True">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🔧 操作"
+                           FontSize="18"
+                           FontAttributes="Bold"/>
+                    
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="10">
+                        <Button Grid.Row="0" Grid.Column="0"
+                                Text="✅ 使能"
+                                BackgroundColor="Green"
+                                TextColor="White"
+                                Command="{Binding EnableCommand}"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"/>
+                        
+                        <Button Grid.Row="0" Grid.Column="1"
+                                Text="❌ 禁用"
+                                BackgroundColor="Red"
+                                TextColor="White"
+                                Command="{Binding DisableCommand}"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"/>
+                        
+                        <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                                Text="🔄 刷新"
+                                BackgroundColor="Blue"
+                                TextColor="White"
+                                Command="{Binding RefreshCommand}"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"/>
+                    </Grid>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- 速度设置 -->
+            <Frame BackgroundColor="LightCyan"
+                   Padding="15"
+                   CornerRadius="10"
+                   HasShadow="True">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="🚀 速度设置"
+                           FontSize="18"
+                           FontAttributes="Bold"/>
+                    
+                    <HorizontalStackLayout Spacing="10">
+                        <Entry Text="{Binding NewSpeed}"
+                               Placeholder="输入速度 (0-2000 mm/s)"
+                               Keyboard="Numeric"
+                               HorizontalOptions="FillAndExpand"/>
+                        
+                        <Button Text="⚡ 设置"
+                                BackgroundColor="DarkBlue"
+                                TextColor="White"
+                                Command="{Binding SetSpeedCommand}"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"/>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+            
+            <!-- 状态消息 -->
+            <Frame BackgroundColor="LightGray"
+                   Padding="15"
+                   CornerRadius="10"
+                   HasShadow="True">
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="📢 状态消息"
+                           FontSize="16"
+                           FontAttributes="Bold"/>
+                    <Label Text="{Binding StatusMessage}"
+                           LineBreakMode="WordWrap"/>
+                </VerticalStackLayout>
+            </Frame>
+            
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
