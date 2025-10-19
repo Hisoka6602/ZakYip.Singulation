@@ -1,5 +1,6 @@
 using Prism.Commands;
 using Prism.Mvvm;
+using Prism.Navigation;
 using System.Collections.ObjectModel;
 using ZakYip.Singulation.MauiApp.Services;
 
@@ -13,6 +14,7 @@ public class MainViewModel : BindableBase
     private readonly ApiClient _apiClient;
     private readonly SignalRClientFactory _signalRFactory;
     private readonly NotificationService _notificationService;
+    private readonly INavigationService _navigationService;
 
     private string _statusMessage = "Ready";
     public string StatusMessage
@@ -83,12 +85,14 @@ public class MainViewModel : BindableBase
     public DelegateCommand EnableAllAxesCommand { get; }
     public DelegateCommand DisableAllAxesCommand { get; }
     public DelegateCommand SetAllAxesSpeedCommand { get; }
+    public DelegateCommand<AxisInfo> ViewDetailsCommand { get; }
 
-    public MainViewModel(ApiClient apiClient, SignalRClientFactory signalRFactory)
+    public MainViewModel(ApiClient apiClient, SignalRClientFactory signalRFactory, INavigationService navigationService)
     {
         _apiClient = apiClient;
         _signalRFactory = signalRFactory;
         _notificationService = NotificationService.Instance;
+        _navigationService = navigationService;
 
         RefreshControllersCommand = new DelegateCommand(async () => await RefreshControllersAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
@@ -102,6 +106,7 @@ public class MainViewModel : BindableBase
             .ObservesProperty(() => IsLoading);
         SetAllAxesSpeedCommand = new DelegateCommand(async () => await SetAllAxesSpeedAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
+        ViewDetailsCommand = new DelegateCommand<AxisInfo>(async (axis) => await ViewDetailsAsync(axis));
 
         // 订阅SignalR事件
         SubscribeToSignalREvents();
@@ -210,6 +215,30 @@ public class MainViewModel : BindableBase
         while (RealtimeEvents.Count > 50)
         {
             RealtimeEvents.RemoveAt(RealtimeEvents.Count - 1);
+        }
+    }
+
+    /// <summary>
+    /// 查看轴详情
+    /// </summary>
+    private async Task ViewDetailsAsync(AxisInfo? axis)
+    {
+        if (axis == null) return;
+        
+        try
+        {
+            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+            
+            var parameters = new NavigationParameters
+            {
+                { "axis", axis }
+            };
+            
+            await _navigationService.NavigateAsync("ControllerDetailsPage", parameters);
+        }
+        catch (Exception ex)
+        {
+            _notificationService.ShowError($"导航失败: {ex.Message}");
         }
     }
 

@@ -100,7 +100,12 @@
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="services:AxisInfo">
                                 <Frame Margin="0,5" Padding="15" BorderColor="#2196F3" BackgroundColor="White">
-                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="5" ColumnSpacing="10">
+                                    <Frame.GestureRecognizers>
+                                        <TapGestureRecognizer 
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainViewModel}}, Path=ViewDetailsCommand}"
+                                            CommandParameter="{Binding .}" />
+                                    </Frame.GestureRecognizers>
+                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="5" ColumnSpacing="10">
                                         <Label Grid.Row="0" Grid.Column="0" Text="&#xf085;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="#666" />
                                         <Label Grid.Row="0" Grid.Column="1" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" />
                                         
@@ -112,6 +117,8 @@
                                         
                                         <Label Grid.Row="3" Grid.Column="0" Text="&#xf624;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" />
                                         <Label Grid.Row="3" Grid.Column="1" Text="{Binding Enabled, StringFormat='已使能: {0}'}" FontSize="14" />
+                                        
+                                        <Label Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Text="👉 点击查看详情" FontSize="12" TextColor="#2196F3" HorizontalOptions="End" />
                                     </Grid>
                                 </Frame>
                             </DataTemplate>
