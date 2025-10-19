@@ -28,19 +28,44 @@ public class ApiClient
         try
         {
             var response = await _httpClient.GetFromJsonAsync<ApiResponse<List<ControllerInfo>>>(
-                "/api/controllers", _jsonOptions);
+                "/api/axes/axes", _jsonOptions);
             return response ?? new ApiResponse<List<ControllerInfo>> 
             { 
-                Success = false, 
-                Message = "Response is null" 
+                Result = false, 
+                Msg = "Response is null" 
             };
         }
         catch (Exception ex)
         {
             return new ApiResponse<List<ControllerInfo>>
             {
-                Success = false,
-                Message = ex.Message
+                Result = false,
+                Msg = ex.Message
+            };
+        }
+    }
+
+    /// <summary>
+    /// 获取控制器状态
+    /// </summary>
+    public async Task<ApiResponse<ControllerStatus>> GetControllerStatusAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetFromJsonAsync<ApiResponse<ControllerStatus>>(
+                "/api/axes/controller", _jsonOptions);
+            return response ?? new ApiResponse<ControllerStatus> 
+            { 
+                Result = false, 
+                Msg = "Response is null" 
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ControllerStatus>
+            {
+                Result = false,
+                Msg = ex.Message
             };
         }
     }
@@ -58,53 +83,156 @@ public class ApiClient
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
                 return result ?? new ApiResponse<object> 
                 { 
-                    Success = true, 
-                    Message = "Command sent successfully" 
+                    Result = true, 
+                    Msg = "Command sent successfully" 
                 };
             }
             return new ApiResponse<object>
             {
-                Success = false,
-                Message = $"HTTP {response.StatusCode}"
+                Result = false,
+                Msg = $"HTTP {response.StatusCode}"
             };
         }
         catch (Exception ex)
         {
             return new ApiResponse<object>
             {
-                Success = false,
-                Message = ex.Message
+                Result = false,
+                Msg = ex.Message
             };
+        }
+    }
+
+    /// <summary>
+    /// 使能指定轴
+    /// </summary>
+    public async Task<ApiResponse<object>> EnableAxesAsync(int[]? axisIds = null)
+    {
+        try
+        {
+            var query = axisIds != null && axisIds.Length > 0 
+                ? $"?{string.Join("&", axisIds.Select(id => $"axisIds={id}"))}"
+                : "";
+            var response = await _httpClient.PostAsync($"/api/axes/axes/enable{query}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                return result ?? new ApiResponse<object> { Result = true, Msg = "Axes enabled" };
+            }
+            return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Result = false, Msg = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// 禁用指定轴
+    /// </summary>
+    public async Task<ApiResponse<object>> DisableAxesAsync(int[]? axisIds = null)
+    {
+        try
+        {
+            var query = axisIds != null && axisIds.Length > 0 
+                ? $"?{string.Join("&", axisIds.Select(id => $"axisIds={id}"))}"
+                : "";
+            var response = await _httpClient.PostAsync($"/api/axes/axes/disable{query}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                return result ?? new ApiResponse<object> { Result = true, Msg = "Axes disabled" };
+            }
+            return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Result = false, Msg = ex.Message };
+        }
+    }
+
+    /// <summary>
+    /// 设置轴速度
+    /// </summary>
+    public async Task<ApiResponse<object>> SetAxesSpeedAsync(double speedMmps, int[]? axisIds = null)
+    {
+        try
+        {
+            var query = axisIds != null && axisIds.Length > 0 
+                ? $"?{string.Join("&", axisIds.Select(id => $"axisIds={id}"))}"
+                : "";
+            var request = new { LinearMmps = speedMmps };
+            var response = await _httpClient.PostAsJsonAsync($"/api/axes/axes/speed{query}", request, _jsonOptions);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(_jsonOptions);
+                return result ?? new ApiResponse<object> { Result = true, Msg = "Speed set" };
+            }
+            return new ApiResponse<object> { Result = false, Msg = $"HTTP {response.StatusCode}" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> { Result = false, Msg = ex.Message };
         }
     }
 }
 
 /// <summary>
-/// API响应包装器
+/// API响应包装器 - 与服务器端 ApiResponse 保持一致
 /// </summary>
 public class ApiResponse<T>
 {
-    public bool Success { get; set; }
-    public string Message { get; set; } = string.Empty;
+    public bool Result { get; set; }
+    public string Msg { get; set; } = string.Empty;
     public T? Data { get; set; }
+    
+    // 便捷属性，与 Result 保持一致
+    public bool Success => Result;
+    public string Message => Msg;
 }
 
 /// <summary>
-/// 控制器信息
+/// 轴信息 - 与服务器端 AxisResponseDto 保持一致
 /// </summary>
 public class ControllerInfo
 {
-    public string Id { get; set; } = string.Empty;
-    public string Name { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
+    public string AxisId { get; set; } = string.Empty;
+    public int Status { get; set; }  // DriverStatus 枚举
+    public double? TargetLinearMmps { get; set; }
+    public double? FeedbackLinearMmps { get; set; }
+    public bool? Enabled { get; set; }
+    public int? LastErrorCode { get; set; }
+    public string? LastErrorMessage { get; set; }
+    
+    // 便捷显示属性
+    public string Id => AxisId;
+    public string Name => $"Axis {AxisId}";
+    public string StatusText => Status switch
+    {
+        0 => "Offline",
+        1 => "Initializing", 
+        2 => "Ready",
+        3 => "Running",
+        4 => "Faulted",
+        _ => "Unknown"
+    };
 }
 
 /// <summary>
-/// 安全命令请求
+/// 安全命令请求 - 与服务器端 SafetyCommandRequestDto 保持一致
 /// </summary>
 public class SafetyCommandRequest
 {
-    public string CommandType { get; set; } = string.Empty;
-    public string Reason { get; set; } = string.Empty;
-    public Dictionary<string, object>? Parameters { get; set; }
+    public int Command { get; set; }  // SafetyCommand 枚举值: Start=1, Stop=2, Reset=3
+    public string? Reason { get; set; }
+}
+
+/// <summary>
+/// 控制器状态 - 与服务器端 ControllerResponseDto 保持一致
+/// </summary>
+public class ControllerStatus
+{
+    public int AxisCount { get; set; }
+    public int ErrorCode { get; set; }
+    public bool Initialized { get; set; }
 }

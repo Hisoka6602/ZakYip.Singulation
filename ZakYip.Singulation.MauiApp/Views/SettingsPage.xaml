@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
+             x:Class="ZakYip.Singulation.MauiApp.Views.SettingsPage"
+             x:DataType="viewmodels:SettingsViewModel"
+             Title="Settings">
+
+    <ScrollView>
+        <VerticalStackLayout
+            Padding="20"
+            Spacing="15">
+
+            <!-- 标题 -->
+            <Label
+                Text="应用设置"
+                Style="{StaticResource Headline}"
+                HorizontalTextAlignment="Center"
+                SemanticProperties.HeadingLevel="Level1" />
+
+            <!-- API 配置 -->
+            <Frame BorderColor="LightGray" Padding="15">
+                <VerticalStackLayout Spacing="10">
+                    <Label
+                        Text="API 配置"
+                        FontAttributes="Bold"
+                        FontSize="18" />
+
+                    <Label Text="API 基础地址" FontSize="14" />
+                    <Entry
+                        Text="{Binding ApiBaseUrl}"
+                        Placeholder="http://localhost:5000"
+                        Keyboard="Url" />
+
+                    <Label Text="连接超时 (秒)" FontSize="14" />
+                    <Entry
+                        Text="{Binding TimeoutSeconds}"
+                        Placeholder="30"
+                        Keyboard="Numeric" />
+
+                    <Button
+                        Text="保存设置"
+                        Command="{Binding SaveSettingsCommand}"
+                        BackgroundColor="Green"
+                        HorizontalOptions="Fill"
+                        Margin="0,10,0,0" />
+
+                    <Label
+                        Text="{Binding StatusMessage}"
+                        FontSize="12"
+                        HorizontalTextAlignment="Center"
+                        Margin="0,5,0,0" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- 应用信息 -->
+            <Frame BorderColor="LightGray" Padding="15">
+                <VerticalStackLayout Spacing="5">
+                    <Label
+                        Text="应用信息"
+                        FontAttributes="Bold"
+                        FontSize="18" />
+
+                    <Label Text="版本: 1.0.0" FontSize="14" />
+                    <Label Text="平台: .NET MAUI 8.0" FontSize="14" />
+                    <Label Text="作者: ZakYip Team" FontSize="14" />
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

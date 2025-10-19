@@ -20,20 +20,34 @@ namespace ZakYip.Singulation.MauiApp {
             // 注册 HttpClient 和 ApiClient
             builder.Services.AddHttpClient<ApiClient>(client =>
             {
-                // 默认API地址，可通过配置文件或环境变量修改
-                client.BaseAddress = new Uri("http://localhost:5000");
-                client.Timeout = TimeSpan.FromSeconds(30);
+                // 从本地存储读取API地址
+                var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5000");
+                var timeoutSeconds = Preferences.Get("TimeoutSeconds", "30");
+                
+                // 安全解析超时值，失败时使用默认值
+                if (!int.TryParse(timeoutSeconds, out var timeout) || timeout <= 0)
+                {
+                    timeout = 30;
+                }
+                
+                client.BaseAddress = new Uri(apiBaseUrl);
+                client.Timeout = TimeSpan.FromSeconds(timeout);
             });
 
             // 注册 SignalR 客户端工厂
             builder.Services.AddSingleton(sp => 
-                new SignalRClientFactory("http://localhost:5000"));
+            {
+                var apiBaseUrl = Preferences.Get("ApiBaseUrl", "http://localhost:5000");
+                return new SignalRClientFactory(apiBaseUrl);
+            });
 
             // 注册 ViewModels
             builder.Services.AddTransient<MainViewModel>();
+            builder.Services.AddTransient<SettingsViewModel>();
 
             // 注册 Pages
             builder.Services.AddTransient<MainPage>();
+            builder.Services.AddTransient<Views.SettingsPage>();
 
             return builder.Build();
         }

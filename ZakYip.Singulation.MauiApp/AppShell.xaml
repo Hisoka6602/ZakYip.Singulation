@@ -4,12 +4,21 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:ZakYip.Singulation.MauiApp"
-    Shell.FlyoutBehavior="Disabled"
+    xmlns:views="clr-namespace:ZakYip.Singulation.MauiApp.Views"
     Title="ZakYip.Singulation.MauiApp">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <TabBar>
+        <ShellContent
+            Title="控制台"
+            Icon="home.png"
+            ContentTemplate="{DataTemplate local:MainPage}"
+            Route="MainPage" />
+
+        <ShellContent
+            Title="设置"
+            Icon="settings.png"
+            ContentTemplate="{DataTemplate views:SettingsPage}"
+            Route="SettingsPage" />
+    </TabBar>
 
 </Shell>

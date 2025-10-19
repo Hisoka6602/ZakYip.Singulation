@@ -53,8 +53,9 @@
                         <Frame Margin="0,5" Padding="10" BorderColor="LightGray">
                             <VerticalStackLayout Spacing="5">
                                 <Label Text="{Binding Name}" FontAttributes="Bold" />
-                                <Label Text="{Binding Id, StringFormat='ID: {0}'}" FontSize="12" />
-                                <Label Text="{Binding Status, StringFormat='Status: {0}'}" FontSize="12" />
+                                <Label Text="{Binding AxisId, StringFormat='Axis ID: {0}'}" FontSize="12" />
+                                <Label Text="{Binding StatusText, StringFormat='Status: {0}'}" FontSize="12" />
+                                <Label Text="{Binding Enabled, StringFormat='Enabled: {0}'}" FontSize="12" />
                             </VerticalStackLayout>
                         </Frame>
                     </DataTemplate>
@@ -72,10 +73,9 @@
                 SelectedItem="{Binding SafetyCommandType}">
                 <Picker.ItemsSource>
                     <x:Array Type="{x:Type x:String}">
-                        <x:String>Emergency</x:String>
+                        <x:String>Start</x:String>
                         <x:String>Stop</x:String>
                         <x:String>Reset</x:String>
-                        <x:String>Resume</x:String>
                     </x:Array>
                 </Picker.ItemsSource>
             </Picker>
@@ -90,6 +90,42 @@
                 IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                 BackgroundColor="Orange"
                 HorizontalOptions="Fill" />
+
+            <!-- 轴控制区域 -->
+            <Label
+                Text="Axis Control"
+                Style="{StaticResource SubHeadline}"
+                Margin="0,20,0,0" />
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                <Button
+                    Grid.Column="0"
+                    Text="Enable All"
+                    Command="{Binding EnableAllAxesCommand}"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                    BackgroundColor="Green" />
+
+                <Button
+                    Grid.Column="1"
+                    Text="Disable All"
+                    Command="{Binding DisableAllAxesCommand}"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                    BackgroundColor="Red" />
+            </Grid>
+
+            <Label Text="Target Speed (mm/s)" FontSize="14" />
+            <HorizontalStackLayout Spacing="10">
+                <Entry
+                    Text="{Binding TargetSpeed}"
+                    Placeholder="100"
+                    Keyboard="Numeric"
+                    HorizontalOptions="FillAndExpand" />
+                <Button
+                    Text="Set Speed"
+                    Command="{Binding SetAllAxesSpeedCommand}"
+                    IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                    BackgroundColor="Blue" />
+            </HorizontalStackLayout>
 
             <!-- SignalR连接区域 -->
             <Label
