@@ -11,22 +11,22 @@
         private async void OnNavigating(object? sender, ShellNavigatingEventArgs e)
         {
             // 添加平滑的页面切换过渡动画
-            var page = CurrentPage;
-            if (page != null && e.Current?.Location?.OriginalString != e.Target?.Location?.OriginalString)
+            var currentPage = CurrentPage;
+            if (currentPage != null && e.Current?.Location?.OriginalString != e.Target?.Location?.OriginalString)
             {
                 // 使用淡出动画实现流畅过渡
-                await page.FadeTo(0, 100, Easing.CubicOut);
+                await currentPage.FadeTo(0, 100, Easing.CubicOut);
             }
         }
 
         private async void OnNavigated(object? sender, ShellNavigatedEventArgs e)
         {
             // 淡入新页面
-            var page = CurrentPage;
-            if (page != null)
+            var currentPage = CurrentPage;
+            if (currentPage != null)
             {
-                page.Opacity = 0;
-                await page.FadeTo(1, 150, Easing.CubicIn);
+                currentPage.Opacity = 0;
+                await currentPage.FadeTo(1, 150, Easing.CubicIn);
             }
         }
     }
