@@ -92,8 +92,8 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         // ---------------- 在线解码 ----------------
-        [HttpPost("decode")]
-        public ActionResult<ApiResponse<DecodeResult>> Decode([FromBody] DecodeRequest req) {
+        [HttpPost("frames")]
+        public ActionResult<ApiResponse<DecodeResult>> CreateDecodeJob([FromBody] DecodeRequest req) {
             if (!TryMaterializeBytes(req, out var bytes, out var err))
                 return ApiResponse<DecodeResult>.Fail(err!);
 

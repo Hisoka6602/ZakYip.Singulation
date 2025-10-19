@@ -410,7 +410,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<bool> Safe(Func<Task> act, string operationName) {
             try {
-                await act();
+                await act().ConfigureAwait(false);
                 ClearError();
                 return true;
             }
@@ -431,7 +431,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<T> Safe<T>(Func<Task<T>> func, string operationName, T defaultValue = default!) {
             try {
-                var result = await func();
+                var result = await func().ConfigureAwait(false);
                 ClearError();
                 return result;
             }
