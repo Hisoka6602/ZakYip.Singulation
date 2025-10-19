@@ -18,7 +18,7 @@ public class SignalRClientFactory
     /// <summary>
     /// 创建或获取Hub连接
     /// </summary>
-    public async Task<HubConnection> GetOrCreateHubConnectionAsync(string hubPath = "/hubs/realtime")
+    public async Task<HubConnection> GetOrCreateHubConnectionAsync(string hubPath = "/hubs/events")
     {
         if (_hubConnection == null)
         {

@@ -23,7 +23,7 @@ public partial class MainViewModel : ObservableObject
     private ObservableCollection<ControllerInfo> _controllers = new();
 
     [ObservableProperty]
-    private string _safetyCommandType = "Emergency";
+    private string _safetyCommandType = "Start";
 
     [ObservableProperty]
     private string _safetyReason = string.Empty;
@@ -81,9 +81,18 @@ public partial class MainViewModel : ObservableObject
             IsLoading = true;
             StatusMessage = "Sending safety command...";
 
+            // 将字符串命令类型转换为枚举值
+            int commandValue = SafetyCommandType switch
+            {
+                "Start" => 1,
+                "Stop" => 2,
+                "Reset" => 3,
+                _ => 0
+            };
+
             var request = new SafetyCommandRequest
             {
-                CommandType = SafetyCommandType,
+                Command = commandValue,
                 Reason = SafetyReason
             };
 
