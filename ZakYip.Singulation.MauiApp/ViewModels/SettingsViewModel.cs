@@ -93,11 +93,13 @@ public class SettingsViewModel : BindableBase, IDisposable
             await _discoveryClient.StartListeningAsync();
             IsDiscovering = true;
             StatusMessage = "自动搜索服务中...";
+            _notificationService.ShowInfo("自动搜索服务中...");
         }
         catch (Exception ex)
         {
             StatusMessage = $"❌ 自动启动发现失败: {ex.Message}";
             IsDiscovering = false;
+            _notificationService.ShowError($"自动启动发现失败: {ex.Message}");
         }
     }
 
@@ -115,18 +117,21 @@ public class SettingsViewModel : BindableBase, IDisposable
                 _discoveryClient.StopListening();
                 IsDiscovering = false;
                 StatusMessage = "服务发现已停止";
+                _notificationService.ShowInfo("服务发现已停止");
             }
             else
             {
                 await _discoveryClient.StartListeningAsync();
                 IsDiscovering = true;
                 StatusMessage = "正在搜索服务...";
+                _notificationService.ShowInfo("正在搜索服务...");
             }
         }
         catch (Exception ex)
         {
             StatusMessage = $"❌ 服务发现失败: {ex.Message}";
             IsDiscovering = false;
+            _notificationService.ShowError($"服务发现失败: {ex.Message}");
         }
     }
 
@@ -145,10 +150,12 @@ public class SettingsViewModel : BindableBase, IDisposable
             await SaveSettingsAsync();
             
             StatusMessage = $"✅ 已连接到 {service.ServiceName}";
+            _notificationService.ShowSuccess($"已连接到 {service.ServiceName}");
         }
         catch (Exception ex)
         {
             StatusMessage = $"❌ 连接失败: {ex.Message}";
+            _notificationService.ShowError($"连接失败: {ex.Message}");
         }
     }
 
@@ -166,6 +173,7 @@ public class SettingsViewModel : BindableBase, IDisposable
             if (!Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out var uri))
             {
                 StatusMessage = "❌ 无效的 URL 格式";
+                _notificationService.ShowError("无效的 URL 格式");
                 return;
             }
 
@@ -173,6 +181,7 @@ public class SettingsViewModel : BindableBase, IDisposable
             if (!int.TryParse(TimeoutSeconds, out var timeout) || timeout <= 0)
             {
                 StatusMessage = "❌ 无效的超时时间";
+                _notificationService.ShowError("无效的超时时间");
                 return;
             }
 
@@ -181,14 +190,17 @@ public class SettingsViewModel : BindableBase, IDisposable
             Preferences.Set("TimeoutSeconds", TimeoutSeconds);
 
             StatusMessage = "✅ 设置已保存";
+            _notificationService.ShowSuccess("设置已保存");
             
             // 提示用户需要重启应用
             await Task.Delay(1500);
             StatusMessage = "ℹ️ 请重启应用以应用新设置";
+            _notificationService.ShowInfo("请重启应用以应用新设置");
         }
         catch (Exception ex)
         {
             StatusMessage = $"❌ 保存失败: {ex.Message}";
+            _notificationService.ShowError($"保存失败: {ex.Message}");
         }
     }
 
