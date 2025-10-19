@@ -13,6 +13,9 @@ namespace ZakYip.Singulation.Core.Enums {
         AxisDisconnected = 6,
         HeartbeatTimeout = 7,
         HealthRecovered = 8,
-        CommissioningFailure = 9
+        CommissioningFailure = 9,
+        RemoteStartCommand = 10,
+        RemoteStopCommand = 11,
+        RemoteResetCommand = 12
     }
 }

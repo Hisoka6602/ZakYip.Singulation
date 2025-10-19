@@ -2,9 +2,11 @@
 
 ## 本次更新
 
-- 修正 `TransportEventPump` 推送轴事件时的命名参数，统一使用记录构造函数的小写参数名称，解决编译器报错 “无名为 Type 的参数”。
-- 将 `TouchClientByteTransport` 中的连接关闭流程迁移到 `CloseAsync`，并在停止与重连路径上补充 `await`，避免异步方法同步执行与潜在的阻塞。
-- 更新本 README，保留完整文件树与职责说明，并同步记录本轮改动与后续优化方向。
+- 安全管线在接收到急停信号后会立即清零所有轴速度并输出中文日志，确保急停响应毫秒级生效。
+- 新增应用重启调度器，支持在 IO 恢复/复位与管理 API 两条链路上触发自动重启，并统一中文提示。
+- 增补 `SafetyController` 远程启停/复位接口与 `SafetyCommandRequestDto`，满足 IO 与 API 双通道启动需求。
+- 拓展 `ISafetyPipeline` 与 `SafetyTriggerKind` 枚举，补充远程指令标识，并完善中文化日志输出。
+- 新增 `ZakYip.Singulation.Tests` 轻量单元测试工程，覆盖急停零速、IO 重启、驱动停机等底层逻辑，并更新本 README 的文件树与改动说明。
 
 ## 文件树与功能说明
 
@@ -369,6 +371,7 @@
 - `Controllers/AxesController.cs`：轴控制接口。
 - `Controllers/DecoderController.cs`：上位协议解析接口。
 - `Controllers/UpstreamController.cs`：上位通道管理接口。
+- `Controllers/SafetyController.cs`：远程安全启停/复位接口。
 - `Dto/ApiResponse.cs`：统一 API 返回包装。
 - `Dto/AxisCommandResultDto.cs`：轴命令执行结果。
 - `Dto/AxisPatchRequestDto.cs`：轴参数补丁请求。
@@ -381,6 +384,7 @@
 - `Dto/SetSpeedRequestDto.cs`：设速请求。
 - `Dto/UpstreamConnectionDto.cs`：单个上位连接信息。
 - `Dto/UpstreamConnectionsDto.cs`：上位连接列表信息。
+- `Dto/SafetyCommandRequestDto.cs`：安全命令通用请求。
 - `Extensions/SignalRSetup.cs`：SignalR 依赖注入扩展。
 - `Filters/ValidateModelFilter.cs`：模型校验过滤器。
 - `Properties/launchSettings.json`：本地启动配置。
@@ -389,6 +393,8 @@
 - `Runtime/PowerGuard.cs`：电源防护逻辑。
 - `Runtime/RealtimeDispatchService.cs`：实时分发服务。
 - `Runtime/RuntimeStatusProvider.cs`：运行状态提供实现。
+- `Runtime/IApplicationRestarter.cs`：应用重启调度抽象。
+- `Runtime/ProcessApplicationRestarter.cs`：进程级重启实现。
 - `Safety/DefaultCommissioningSequence.cs`：默认调试顺序。
 - `Safety/FrameGuard.cs`：速度帧守卫逻辑。
 - `Safety/FrameGuardOptions.cs`：帧守卫配置。
@@ -467,6 +473,14 @@
 - `Tcp/TcpClientOptions.cs`：TCP 客户端选项。
 - `Tcp/TcpServerByteTransport/TouchServerByteTransport.cs`：TCP 服务端传输实现。
 - `Tcp/TcpServerOptions.cs`：TCP 服务端选项。
+
+#### ZakYip.Singulation.Tests
+
+- `ZakYip.Singulation.Tests.csproj`：轻量测试控制台项目，避免外部 NuGet 依赖。
+- `Program.cs`：测试发现与执行入口。
+- `MiniTestFramework.cs`：自研最小化测试框架与断言工具。
+- `SafetyPipelineTests.cs`：验证急停零速与 IO 启停重启流程。
+- `AxisControllerTests.cs`：验证驱动控制器的停机行为。
 
 #### ops
 

@@ -11,6 +11,7 @@ using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Host.Runtime;
 
 namespace ZakYip.Singulation.Host.Safety {
 
@@ -24,6 +25,7 @@ namespace ZakYip.Singulation.Host.Safety {
         private readonly IAxisController _axisController;
         private readonly IAxisEventAggregator _axisEvents;
         private readonly IRealtimeNotifier _realtime;
+        private readonly IApplicationRestarter _restarter;
         private readonly Channel<SafetyOperation> _operations;
 
         public SafetyPipeline(
@@ -32,13 +34,15 @@ namespace ZakYip.Singulation.Host.Safety {
             IEnumerable<ISafetyIoModule> ioModules,
             IAxisController axisController,
             IAxisEventAggregator axisEvents,
-            IRealtimeNotifier realtime) {
+            IRealtimeNotifier realtime,
+            IApplicationRestarter restarter) {
             _log = log;
             _isolator = isolator;
             _ioModules = ioModules.ToArray();
             _axisController = axisController;
             _axisEvents = axisEvents;
             _realtime = realtime;
+            _restarter = restarter;
             _operations = Channel.CreateUnbounded<SafetyOperation>(new UnboundedChannelOptions {
                 SingleReader = true,
                 SingleWriter = false,
@@ -48,10 +52,10 @@ namespace ZakYip.Singulation.Host.Safety {
             _isolator.StateChanged += (_, e) => Enqueue(SafetyOperation.StateChanged(e));
 
             foreach (var module in _ioModules) {
-                module.EmergencyStop += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, SafetyTriggerKind.EmergencyStop, e.Description));
-                module.StopRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, SafetyTriggerKind.StopButton, e.Description));
-                module.StartRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Start, SafetyTriggerKind.StartButton, e.Description));
-                module.ResetRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Reset, SafetyTriggerKind.ResetButton, e.Description));
+                module.EmergencyStop += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, SafetyTriggerKind.EmergencyStop, e.Description, true));
+                module.StopRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, SafetyTriggerKind.StopButton, e.Description, true));
+                module.StartRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Start, SafetyTriggerKind.StartButton, e.Description, true));
+                module.ResetRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Reset, SafetyTriggerKind.ResetButton, e.Description, true));
             }
 
             _axisEvents.AxisFaulted += (_, e) => Enqueue(SafetyOperation.AxisHealth(SafetyTriggerKind.AxisFault, e.Axis.ToString(), e.Exception?.Message));
@@ -74,6 +78,15 @@ namespace ZakYip.Singulation.Host.Safety {
 
         public bool TryResetIsolation(string reason, CancellationToken ct = default) => _isolator.TryResetIsolation(reason, ct);
 
+        public void RequestStart(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
+            => Enqueue(SafetyOperation.Trigger(SafetyCommand.Start, kind, reason, triggeredByIo));
+
+        public void RequestStop(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
+            => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, kind, reason, triggeredByIo));
+
+        public void RequestReset(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
+            => Enqueue(SafetyOperation.Trigger(SafetyCommand.Reset, kind, reason, triggeredByIo));
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             var startTasks = _ioModules
                 .Select(module => module.StartAsync(stoppingToken))
@@ -94,14 +107,14 @@ namespace ZakYip.Singulation.Host.Safety {
                     break;
                 }
                 catch (Exception ex) {
-                    _log.LogError(ex, "Safety pipeline error when processing {Operation}", currentOp);
+                    _log.LogError(ex, "处理安全操作 {Operation} 时发生异常", currentOp);
                 }
             }
         }
 
         private void Enqueue(SafetyOperation op) {
             var ok = _operations.Writer.TryWrite(op);
-            if (!ok) _log.LogWarning("Safety pipeline busy, dropping operation {Operation}", op.Kind);
+            if (!ok) _log.LogWarning("安全管线繁忙，已丢弃操作 {Operation}", op.Kind);
         }
 
         private async Task HandleOperationAsync(SafetyOperation op, CancellationToken ct) {
@@ -116,7 +129,7 @@ namespace ZakYip.Singulation.Host.Safety {
                     HandleAxisHealth(op.AxisKind, op.AxisName, op.AxisReason);
                     break;
                 default:
-                    _log.LogWarning("Unhandled safety operation {Kind}", op.Kind);
+                    _log.LogWarning("未处理的安全操作类型 {Kind}", op.Kind);
                     break;
             }
         }
@@ -131,7 +144,7 @@ namespace ZakYip.Singulation.Host.Safety {
                     await StopAllAsync("safety-degraded", ev.ReasonText, ct).ConfigureAwait(false);
                     break;
                 case SafetyIsolationState.Normal:
-                    _log.LogInformation("Safety pipeline recovered: {Reason}", ev.ReasonText);
+                    _log.LogInformation("安全状态已恢复：{Reason}", ev.ReasonText);
                     break;
             }
         }
@@ -141,62 +154,73 @@ namespace ZakYip.Singulation.Host.Safety {
             switch (operation.Command) {
                 case SafetyCommand.Start:
                     if (_isolator.IsIsolated) {
-                        _log.LogWarning("Start ignored: system isolated");
+                        _log.LogWarning("忽略启动请求：系统处于隔离状态");
                         return;
                     }
                     StartRequested?.Invoke(this, args);
                     await _realtime.PublishDeviceAsync(new {
                         kind = "safety.start", reason = operation.CommandReason
                     }, ct).ConfigureAwait(false);
+                    if (operation.TriggeredByIo) {
+                        await _restarter.RestartAsync($"IO 启动信号({operation.CommandKind})", ct).ConfigureAwait(false);
+                    }
                     break;
                 case SafetyCommand.Stop:
                     StopRequested?.Invoke(this, args);
+                    if (operation.CommandKind == SafetyTriggerKind.EmergencyStop) {
+                        await StopAllAsync("emergency-stop", operation.CommandReason, ct).ConfigureAwait(false);
+                    }
                     _ = _isolator.TryEnterDegraded(operation.CommandKind, operation.CommandReason ?? "stop");
                     break;
                 case SafetyCommand.Reset:
                     ResetRequested?.Invoke(this, args);
                     if (_isolator.IsIsolated) {
                         var reset = _isolator.TryResetIsolation(operation.CommandReason ?? "reset", ct);
-                        _log.LogInformation("Safety reset result={Result}", reset);
+                        _log.LogInformation("隔离复位结果={Result}", reset);
                     }
                     else if (_isolator.IsDegraded) {
                         var ok = _isolator.TryRecoverFromDegraded(operation.CommandReason ?? "reset");
-                        _log.LogInformation("Safety degrade recovery result={Result}", ok);
+                        _log.LogInformation("降级恢复结果={Result}", ok);
+                    }
+                    if (operation.TriggeredByIo) {
+                        await _restarter.RestartAsync($"IO 复位信号({operation.CommandKind})", ct).ConfigureAwait(false);
                     }
                     break;
             }
         }
 
         private void HandleAxisHealth(SafetyTriggerKind kind, string? axisName, string? reason) {
-            var text = string.IsNullOrWhiteSpace(reason) ? "axis health" : reason;
+            var text = string.IsNullOrWhiteSpace(reason) ? "轴状态异常" : reason;
             switch (kind) {
                 case SafetyTriggerKind.AxisFault:
                     if (_isolator.TryEnterDegraded(kind, text)) {
-                        _log.LogWarning("Axis fault detected ({Axis}): {Reason}", axisName, text);
+                        _log.LogWarning("检测到轴故障（{Axis}）：{Reason}", axisName, text);
                         SingulationMetrics.Instance.AxisFaultCounter.Add(1);
                     }
                     break;
                 case SafetyTriggerKind.AxisDisconnected:
                     if (_isolator.TryTrip(kind, text)) {
-                        _log.LogError("Axis disconnected ({Axis}): {Reason}", axisName, text);
+                        _log.LogError("检测到轴掉线（{Axis}）：{Reason}", axisName, text);
                     }
                     break;
                 default:
-                    _log.LogWarning("Unhandled axis safety kind {Kind}", kind);
+                    _log.LogWarning("未处理的轴安全类型 {Kind}", kind);
                     break;
             }
         }
 
         private async Task StopAllAsync(string source, string? reason, CancellationToken ct) {
             try {
-                _log.LogWarning("[{Source}] StopAll due to {Reason}", source, reason);
+                var text = string.IsNullOrWhiteSpace(reason) ? "未知原因" : reason;
+                _log.LogWarning("【{Source}】执行紧急停机，原因：{Reason}", source, text);
+                await _axisController.WriteSpeedAllAsync(0m, ct).ConfigureAwait(false);
                 await _axisController.StopAllAsync(ct).ConfigureAwait(false);
                 await _realtime.PublishDeviceAsync(new {
-                    kind = "safety.stopall", source, reason
+                    kind = "safety.stopall", source, reason = text
                 }, ct).ConfigureAwait(false);
             }
             catch (Exception ex) {
-                _log.LogError(ex, "Safety StopAll failed");
+                _log.LogError(ex, "执行紧急停机失败");
             }
         }
 

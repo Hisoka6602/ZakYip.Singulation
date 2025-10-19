@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Infrastructure", "Infrastru
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Infrastructure", "ZakYip.Singulation.Infrastructure\ZakYip.Singulation.Infrastructure.csproj", "{EB2902B1-0A41-408B-9538-5E910EA52C8C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Tests", "ZakYip.Singulation.Tests\ZakYip.Singulation.Tests.csproj", "{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -65,6 +67,10 @@ Global
 		{EB2902B1-0A41-408B-9538-5E910EA52C8C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EB2902B1-0A41-408B-9538-5E910EA52C8C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EB2902B1-0A41-408B-9538-5E910EA52C8C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
