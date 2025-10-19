@@ -1,8 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using System;
 
 namespace ZakYip.Singulation.Core.Contracts.Events {
     /// <summary>
@@ -29,6 +25,6 @@ namespace ZakYip.Singulation.Core.Contracts.Events {
         public int? Port { get; init; }
 
         /// <summary>事件时间（UTC）。</summary>
-        public DateTime TimestampUtc { get; init; } = DateTime.Now;
+        public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
     }
 }

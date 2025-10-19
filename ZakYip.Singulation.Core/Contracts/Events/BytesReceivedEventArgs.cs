@@ -1,16 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using System;
 
 namespace ZakYip.Singulation.Core.Contracts.Events {
     /// <summary>
     /// 收到上游字节数据时的事件参数。
     /// </summary>
     /// <remarks>
-    /// - <see cref="Buffer"/> 为只读内存；如果实现侧使用了缓冲池，请在事件触发前确保内存生存期安全，
-    ///   或在实现层提供独立的“带释放语义”的事件变体。<br/>
+    /// - <see cref="Buffer"/> 为只读内存；如果实现侧使用了缓冲池，请在事件触发前确保内存生存期安全。
     /// - <see cref="TimestampUtc"/> 使用 UTC，便于日志与多机排障。
     /// </remarks>
     public sealed record class BytesReceivedEventArgs {
@@ -21,6 +16,6 @@ namespace ZakYip.Singulation.Core.Contracts.Events {
         public int Port { get; init; }
 
         /// <summary>接收时间（UTC）。</summary>
-        public DateTime TimestampUtc { get; init; } = DateTime.Now;
+        public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
     }
 }

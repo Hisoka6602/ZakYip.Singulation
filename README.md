@@ -2,67 +2,272 @@
 
 ## 本次更新
 
-- 新增安全链路：`SafetyIsolator`、`SafetyPipeline`、`FrameGuard` 以及 `CommissioningWorker`，打通 IO → 隔离 → StopAll 的闭环，并支持心跳降级/恢复。 
-- 新增结构化指标（`SingulationMetrics`）记录帧循环耗时、速度差、降级次数等核心指标。
-- ConsoleDemo 支持 `--regression` 回归脚本，模拟“启动→三档→停机→恢复→断连→降级→恢复”。
-- 新增 `ops/` 运维脚本套件（安装/卸载/自检/试跑）及上线手册。
+- 统一整理所有 record 定义，显式暴露属性注释并补充中文文档；拆分嵌套类型，落实“一文件一类”规范。
+- 新增 `SafetyOperation`/`SignalRQueueItem`/`CommissioningCommand` 等独立类文件，消除内部类与匿名 record 的使用。
+- 为安全/联机/DTO 等核心模型补充中文注释，并调整默认时间戳为 UTC，以提升日志可读性。
+- 更新 README 结构树与进度说明，涵盖最新文件划分与后续优化建议。
 
 ## 项目结构与功能说明
 
 ```text
-ZakYip.Singulation/
-├─ ops/                                # 运维脚本与上线手册
-│  ├─ install.(ps1|sh)                 # 发布 Host 二进制
-│  ├─ uninstall.(ps1|sh)               # Windows 服务卸载（Linux 提示）
-│  ├─ selfcheck.(ps1|sh)               # dotnet build 自检
-│  ├─ dryrun.(ps1|sh)                  # Console 回归脚本
-│  └─ README.md                        # 上线手册
-├─ ZakYip.Singulation.Core/
-│  ├─ Abstractions/
-│  │  ├─ Realtime/IRealtimeNotifier.cs
-│  │  └─ Safety/                       # 新增安全相关接口
-│  │     ├─ IFrameGuard.cs
-│  │     ├─ ICommissioningSequence.cs
-│  │     ├─ ISafetyIoModule.cs
-│  │     ├─ ISafetyIsolator.cs
-│  │     └─ ISafetyPipeline.cs
-│  ├─ Contracts/
-│  │  ├─ Events/
-│  │  │  ├─ Safety/                    # 安全事件参数
-│  │  │  │  ├─ SafetyStateChangedEventArgs.cs
-│  │  │  │  └─ SafetyTriggerEventArgs.cs
-│  │  │  └─ (Axis/Transport/...)
-│  │  └─ Dto/SpeedSet.cs 等
-│  ├─ Enums/                           # 新增安全枚举
-│  │  ├─ SafetyCommand.cs
-│  │  ├─ SafetyIsolationState.cs
-│  │  └─ SafetyTriggerKind.cs
-│  └─ ...
-├─ ZakYip.Singulation.Infrastructure/
-│  ├─ Safety/SafetyIsolator.cs         # 默认隔离器实现
-│  └─ Telemetry/SingulationMetrics.cs  # Prom/结构化指标入口
-├─ ZakYip.Singulation.Host/
-│  ├─ Safety/
-│  │  ├─ FrameGuard.cs                 # 帧滑窗+心跳降级
-│  │  ├─ FrameGuardOptions.cs
-│  │  ├─ LoopbackSafetyIoModule.cs     # 内存 IO 模块（回归/开发）
-│  │  └─ DefaultCommissioningSequence.cs
-│  ├─ Workers/
-│  │  ├─ CommissioningWorker.cs        # 上电顺序机状态机
-│  │  ├─ SpeedFrameWorker.cs           # 接入 FrameGuard + 指标
-│  │  └─ ...
-│  ├─ Program.cs                       # 注册安全链路/指标/回归
-│  └─ ...
-├─ ZakYip.Singulation.ConsoleDemo/
-│  ├─ Regression/RegressionRunner.cs   # 最小回归脚本
-│  └─ Program.cs (支持 --regression)
-├─ ZakYip.Singulation.Drivers/
-│  ├─ Common/AxisController.cs 等
-│  └─ ...
-├─ ZakYip.Singulation.Transport/
-├─ ZakYip.Singulation.Protocol/
-└─ ZakYip.Singulation.sln
+./
+    .gitattributes
+    .gitignore
+    README.md
+    ZakYip.Singulation.sln
+    ZakYip.Singulation.ConsoleDemo/
+        Program.cs
+        ZakYip.Singulation.ConsoleDemo.csproj
+        Regression/
+            RegressionRunner.cs
+    ZakYip.Singulation.Core/
+        ZakYip.Singulation.Core.csproj
+        Abstractions/
+            Realtime/
+                IRealtimeNotifier.cs
+            Safety/
+                FrameGuardDecision.cs
+                ICommissioningSequence.cs
+                IFrameGuard.cs
+                ISafetyIoModule.cs
+                ISafetyIsolator.cs
+                ISafetyPipeline.cs
+        Configs/
+            AxisGridLayoutOptions.cs
+            ControllerOptions.cs
+            DriverOptionsTemplateOptions.cs
+            PlannerConfig.cs
+            UpstreamCodecOptions.cs
+            UpstreamOptions.cs
+            Defaults/
+                ConfigDefaults.cs
+        Contracts/
+            IAxisLayoutStore.cs
+            IControllerOptionsStore.cs
+            ISpeedPlanner.cs
+            IUpstreamCodecOptionsStore.cs
+            IUpstreamFrameHub.cs
+            IUpstreamOptionsStore.cs
+            Dto/
+                LinearPlannerParams.cs
+                ParcelPose.cs
+                SpeedSet.cs
+                StatusSnapshot.cs
+                SystemRuntimeStatus.cs
+                TransportStatusItem.cs
+                VisionParams.cs
+            Events/
+                AxisCommandIssuedEventArgs.cs
+                AxisDisconnectedEventArgs.cs
+                AxisErrorEventArgs.cs
+                AxisEvent.cs
+                AxisSpeedFeedbackEventArgs.cs
+                BytesReceivedEventArgs.cs
+                DriverNotLoadedEventArgs.cs
+                EvState.cs
+                LogEvent.cs
+                TransportErrorEventArgs.cs
+                TransportEvent.cs
+                TransportStateChangedEventArgs.cs
+                Safety/
+                    SafetyStateChangedEventArgs.cs
+                    SafetyTriggerEventArgs.cs
+            ValueObjects/
+                AxisId.cs
+                AxisRpm.cs
+                KinematicParams.cs
+                PprRatio.cs
+        Enums/
+            AxisEventType.cs
+            ControllerResetType.cs
+            LogKind.cs
+            PlannerStatus.cs
+            SafetyCommand.cs
+            SafetyIsolationState.cs
+            SafetyTriggerKind.cs
+            TransportConnectionState.cs
+            TransportEventType.cs
+            TransportRole.cs
+            VisionAlarm.cs
+        Planning/
+            DefaultSpeedPlanner.cs
+        Utils/
+            FileUtils.cs
+    ZakYip.Singulation.Drivers/
+        ZakYip.Singulation.Drivers.csproj
+        Abstractions/
+            IAxisController.cs
+            IAxisDrive.cs
+            IAxisEventAggregator.cs
+            IBusAdapter.cs
+            IDriveRegistry.cs
+            Ports/
+                IAxisPort.cs
+        Common/
+            AxisController.cs
+            AxisEventAggregator.cs
+            DriverOptions.cs
+            SpanParser.cs
+        Enums/
+            DriverStatus.cs
+        Health/
+            AxisHealthMonitor.cs
+        Leadshine/
+            LTDMC.cs
+            LTDMC.dll
+            LeadshineLtdmcAxisDrive.cs
+            LeadshineLtdmcBusAdapter.cs
+            LeadshineProtocolMap.cs
+        Registry/
+            DefaultDriveRegistry.cs
+        Resilience/
+            AxisDegradePolicy.cs
+            ConsecutiveFailCounter.cs
+    ZakYip.Singulation.Host/
+        Nlog.config
+        Program.cs
+        ZakYip.Singulation.Host.csproj
+        appsettings.Development.json
+        appsettings.json
+        install.bat
+        signalr.ts
+        singulation-log.db
+        singulation.db
+        unstall.bat
+        Controllers/
+            AdminController.cs
+            AxesController.cs
+            DecoderController.cs
+            UpstreamController.cs
+        Dto/
+            ApiResponse.cs
+            AxisCommandResultDto.cs
+            AxisPatchRequestDto.cs
+            AxisResponseDto.cs
+            BatchCommandResponseDto.cs
+            ControllerResetRequestDto.cs
+            ControllerResponseDto.cs
+            DecodeRequest.cs
+            DecodeResult.cs
+            SetSpeedRequestDto.cs
+            UpstreamConnectionDto.cs
+            UpstreamConnectionsDto.cs
+        Extensions/
+            SignalRSetup.cs
+        Filters/
+            ValidateModelFilter.cs
+        Properties/
+            launchSettings.json
+        Runtime/
+            IRuntimeStatusProvider.cs
+            LogEventBus.cs
+            PowerGuard.cs
+            RealtimeDispatchService.cs
+            RuntimeStatusProvider.cs
+            UpstreamFrameHub.cs
+        Safety/
+            DefaultCommissioningSequence.cs
+            FrameGuard.cs
+            FrameGuardOptions.cs
+            LoopbackSafetyIoModule.cs
+            SafetyOperation.cs
+            SafetyOperationKind.cs
+            SafetyPipeline.cs
+        SignalR/
+            SignalRQueueItem.cs
+            SignalRRealtimeNotifier.cs
+            Hubs/
+                EventsHub.cs
+        SwaggerOptions/
+            ConfigureSwaggerOptions.cs
+            CustomOperationFilter.cs
+            EnumSchemaFilter.cs
+            HideLongListSchemaFilter.cs
+            SwaggerGroupDiscovery.cs
+        Workers/
+            AxisBootstrapper.cs
+            CommissioningCommand.cs
+            CommissioningCommandKind.cs
+            CommissioningState.cs
+            CommissioningWorker.cs
+            HeartbeatWorker.cs
+            LogEventPump.cs
+            LogsCleanupService.cs
+            SingulationWorker.cs
+            SpeedFrameWorker.cs
+            TransportEventPump.cs
+    ZakYip.Singulation.Infrastructure/
+        ZakYip.Singulation.Infrastructure.csproj
+        Configs/
+            Entities/
+                AxisGridLayoutDoc.cs
+                ControllerOptionsDoc.cs
+                DriverOptionsTemplateDoc.cs
+                UpstreamCodecOptionsDoc.cs
+                UpstreamOptionsDoc.cs
+            Mappings/
+                ConfigMappings.cs
+        Persistence/
+            LiteDbAxisLayoutStore.cs
+            LiteDbControllerOptionsStore.cs
+            PersistenceServiceCollectionExtensions.cs
+        Safety/
+            SafetyIsolator.cs
+        Telemetry/
+            SingulationMetrics.cs
+        Transport/
+            LiteDbUpstreamCodecOptionsStore.cs
+            LiteDbUpstreamOptionsStore.cs
+            TransportPersistenceExtensions.cs
+            UpstreamTcpInjection.cs
+    ZakYip.Singulation.Protocol/
+        ZakYip.Singulation.Protocol.csproj
+        Abstractions/
+            IUpstreamCodec.cs
+        Enums/
+            CodecFlags.cs
+            CodecResult.cs
+            UpstreamCtrl.cs
+        Vendors/
+            Guiwei/
+                GuiweiCodec.cs
+                GuiweiControl.cs
+                homing_only_tcp.md
+            Huarary/
+                HuararyCodec.cs
+                HuararyControl.cs
+                vision_mock_packets.md
+    ZakYip.Singulation.Transport/
+        ZakYip.Singulation.Transport.csproj
+        Abstractions/
+            IByteTransport.cs
+            IUpstreamReceiver.cs
+        Enums/
+            TransportStatus.cs
+        Tcp/
+            TcpClientOptions.cs
+            TcpServerOptions.cs
+            TcpClientByteTransport/
+                TouchClientByteTransport.cs
+            TcpServerByteTransport/
+                TouchServerByteTransport.cs
+    ops/
+        README.md
+        dryrun.ps1
+        dryrun.sh
+        install.ps1
+        install.sh
+        selfcheck.ps1
+        selfcheck.sh
+        uninstall.ps1
+        uninstall.sh
 ```
+
+## 项目完成度
+
+- 核心：安全联动（SafetyPipeline/SafetyIsolator）、联机流程（CommissioningWorker）、驱动封装与速度规划链路均已可用，具备基础产线运行能力。
+- 配套：提供 ConsoleDemo、运维脚本、结构化指标，适合离线回归与部署自检。
+- 待补：部分 Demo/驱动仍依赖模拟数据，真实硬件联调与多厂商扩展尚待集成。
 
 ## 关键模块说明
 
@@ -104,10 +309,10 @@ pwsh ops/dryrun.ps1
 
 ## 可继续完善
 
-- 引入真实硬件 IO 模块，替换 `LoopbackSafetyIoModule`。 
-- 在降级状态下引入渐进式限速而非 StopAll，支持自动速度恢复策略。 
-- 结合 Prometheus/OTLP 将 `SingulationMetrics` 暴露到观测平台。 
-- 扩展 `RegressionRunner`，覆盖更多异常场景（如多轴故障、重连成功）。
+- 引入真实硬件 IO 模块，替换 `LoopbackSafetyIoModule`，并补全异常自检逻辑。
+- 在降级状态下引入渐进式限速而非 StopAll，支持自动速度恢复策略与多档降级。
+- 结合 Prometheus/OTLP 将 `SingulationMetrics` 暴露到观测平台，完善报警策略。
+- 扩展 `RegressionRunner` 与 Host API 测试，覆盖多轴故障、断电恢复、批量命令等场景。
 
 ```mermaid
 ---

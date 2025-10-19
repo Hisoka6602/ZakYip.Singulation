@@ -1,8 +1,3 @@
-﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using ZakYip.Singulation.Drivers.Enums;
 
 namespace ZakYip.Singulation.Host.Dto {
@@ -14,7 +9,7 @@ namespace ZakYip.Singulation.Host.Dto {
     /// 可在此 DTO 中扩展对应字段。
     /// </para>
     /// </summary>
-    public record AxisResponseDto {
+    public sealed record class AxisResponseDto {
         /// <summary>
         /// 轴 ID（字符串形式）。
         /// <para>

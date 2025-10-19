@@ -109,7 +109,7 @@ namespace ZakYip.Singulation.Host.Safety {
                     await HandleStateChangedAsync(op.StateArgs!, ct).ConfigureAwait(false);
                     break;
                 case SafetyOperationKind.Command:
-                    await HandleCommandAsync(op.Command!, ct).ConfigureAwait(false);
+                    await HandleCommandAsync(op, ct).ConfigureAwait(false);
                     break;
                 case SafetyOperationKind.AxisHealth:
                     HandleAxisHealth(op.AxisKind, op.AxisName, op.AxisReason);
@@ -135,9 +135,9 @@ namespace ZakYip.Singulation.Host.Safety {
             }
         }
 
-        private async Task HandleCommandAsync(SafetyCommandCommand command, CancellationToken ct) {
-            var args = new SafetyTriggerEventArgs(command.Kind, command.Reason);
-            switch (command.Command) {
+        private async Task HandleCommandAsync(SafetyOperation operation, CancellationToken ct) {
+            var args = new SafetyTriggerEventArgs(operation.CommandKind, operation.CommandReason);
+            switch (operation.Command) {
                 case SafetyCommand.Start:
                     if (_isolator.IsIsolated) {
                         _log.LogWarning("Start ignored: system isolated");
@@ -145,21 +145,21 @@ namespace ZakYip.Singulation.Host.Safety {
                     }
                     StartRequested?.Invoke(this, args);
                     await _realtime.PublishDeviceAsync(new {
-                        kind = "safety.start", reason = command.Reason
+                        kind = "safety.start", reason = operation.CommandReason
                     }, ct).ConfigureAwait(false);
                     break;
                 case SafetyCommand.Stop:
                     StopRequested?.Invoke(this, args);
-                    _ = _isolator.TryEnterDegraded(command.Kind, command.Reason ?? "stop");
+                    _ = _isolator.TryEnterDegraded(operation.CommandKind, operation.CommandReason ?? "stop");
                     break;
                 case SafetyCommand.Reset:
                     ResetRequested?.Invoke(this, args);
                     if (_isolator.IsIsolated) {
-                        var reset = _isolator.TryResetIsolation(command.Reason ?? "reset", ct);
+                        var reset = _isolator.TryResetIsolation(operation.CommandReason ?? "reset", ct);
                         _log.LogInformation("Safety reset result={Result}", reset);
                     }
                     else if (_isolator.IsDegraded) {
-                        var ok = _isolator.TryRecoverFromDegraded(command.Reason ?? "reset");
+                        var ok = _isolator.TryRecoverFromDegraded(operation.CommandReason ?? "reset");
                         _log.LogInformation("Safety degrade recovery result={Result}", ok);
                     }
                     break;
@@ -199,28 +199,5 @@ namespace ZakYip.Singulation.Host.Safety {
             }
         }
 
-        private readonly record struct SafetyOperation(SafetyOperationKind Kind) {
-            public SafetyStateChangedEventArgs? StateArgs { get; init; }
-            public SafetyCommandCommand? Command { get; init; }
-            public SafetyTriggerKind AxisKind { get; init; }
-            public string? AxisName { get; init; }
-            public string? AxisReason { get; init; }
-
-            public static SafetyOperation StateChanged(SafetyStateChangedEventArgs ev) => new(SafetyOperationKind.StateChanged) { StateArgs = ev };
-
-            public static SafetyOperation Trigger(SafetyCommand command, SafetyTriggerKind kind, string? reason)
-                => new(SafetyOperationKind.Command) { Command = new SafetyCommandCommand(command, kind, reason) };
-
-            public static SafetyOperation AxisHealth(SafetyTriggerKind kind, string? name, string? reason)
-                => new(SafetyOperationKind.AxisHealth) { AxisKind = kind, AxisName = name, AxisReason = reason };
-        }
-
-        private readonly record struct SafetyCommandCommand(SafetyCommand Command, SafetyTriggerKind Kind, string? Reason);
-
-        private enum SafetyOperationKind {
-            StateChanged,
-            Command,
-            AxisHealth
-        }
     }
 }

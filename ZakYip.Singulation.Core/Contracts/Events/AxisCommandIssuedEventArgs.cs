@@ -1,10 +1,11 @@
-﻿using ZakYip.Singulation.Core.Contracts.ValueObjects;
+using System;
+using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
 namespace ZakYip.Singulation.Core.Contracts.Events {
     /// <summary>
     /// 函数发送事件参数：用于记录一次底层驱动库函数调用（如 nmc_write_rxpdo / nmc_get_node_od）。
     /// </summary>
-    public sealed record AxisCommandIssuedEventArgs {
+    public sealed record class AxisCommandIssuedEventArgs {
         /// <summary>轴标识。</summary>
         public required AxisId Axis { get; init; }
 
@@ -23,7 +24,7 @@ namespace ZakYip.Singulation.Core.Contracts.Events {
         /// <summary>附加备注（如限幅/换算说明）。</summary>
         public string? Note { get; init; }
 
-        public override string ToString()
-            => $"{Invocation} = {Result}";
+        /// <summary>格式化输出，便于调试日志。</summary>
+        public override string ToString() => $"{Invocation} = {Result}";
     }
 }

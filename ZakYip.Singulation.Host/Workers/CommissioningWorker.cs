@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Channels;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Abstractions.Safety;
@@ -9,15 +10,31 @@ using ZakYip.Singulation.Infrastructure.Telemetry;
 
 namespace ZakYip.Singulation.Host.Workers {
 
+    /// <summary>
+    /// 调试联机流程后台服务：监听安全事件并驱动联机序列。
+    /// </summary>
     public sealed class CommissioningWorker : BackgroundService {
+        /// <summary>日志记录器。</summary>
         private readonly ILogger<CommissioningWorker> _log;
+
+        /// <summary>安全管线，用于监听 Start/Stop/Reset 请求。</summary>
         private readonly ISafetyPipeline _safety;
+
+        /// <summary>联机动作序列执行器。</summary>
         private readonly ICommissioningSequence _sequence;
+
+        /// <summary>内部命令队列。</summary>
         private readonly Channel<CommissioningCommand> _queue;
 
+        /// <summary>当前联机状态。</summary>
         private CommissioningState _state = CommissioningState.Idle;
+
+        /// <summary>当前运行序列的取消源。</summary>
         private CancellationTokenSource? _runCts;
 
+        /// <summary>
+        /// 初始化联机后台服务并订阅安全事件。
+        /// </summary>
         public CommissioningWorker(
             ILogger<CommissioningWorker> log,
             ISafetyPipeline safety,
@@ -36,6 +53,7 @@ namespace ZakYip.Singulation.Host.Workers {
             _safety.StateChanged += (_, e) => Enqueue(new CommissioningCommand(CommissioningCommandKind.SafetyStateChanged, e));
         }
 
+        /// <inheritdoc />
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             var reader = _queue.Reader;
             while (!stoppingToken.IsCancellationRequested) {
@@ -59,11 +77,17 @@ namespace ZakYip.Singulation.Host.Workers {
             }
         }
 
+        /// <summary>
+        /// 将内部命令投递到处理队列。
+        /// </summary>
         private void Enqueue(CommissioningCommand command) {
             var ok = _queue.Writer.TryWrite(command);
             if (!ok) _log.LogWarning("Commissioning queue full, dropping command {Kind}", command.Kind);
         }
 
+        /// <summary>
+        /// 处理单条联机命令。
+        /// </summary>
         private async Task HandleCommandAsync(CommissioningCommand command, CancellationToken outerCt) {
             switch (command.Kind) {
                 case CommissioningCommandKind.Start:
@@ -82,6 +106,9 @@ namespace ZakYip.Singulation.Host.Workers {
             }
         }
 
+        /// <summary>
+        /// 执行上电、回零、对位等联机动作。
+        /// </summary>
         private async Task RunStartSequenceAsync(string? reason, CancellationToken outerCt) {
             if (_safety.State == SafetyIsolationState.Isolated) {
                 _log.LogWarning("Commissioning start ignored: safety isolated.");
@@ -127,6 +154,9 @@ namespace ZakYip.Singulation.Host.Workers {
             }
         }
 
+        /// <summary>
+        /// 停止联机流程并执行故障安全。
+        /// </summary>
         private async Task HandleStopAsync(string? reason, CancellationToken outerCt) {
             _runCts?.Cancel();
             if (_state == CommissioningState.Idle) {
@@ -144,35 +174,14 @@ namespace ZakYip.Singulation.Host.Workers {
             }
         }
 
+        /// <summary>
+        /// 响应重置命令，允许从故障态恢复为待命态。
+        /// </summary>
         private void HandleReset(string? reason) {
             if (_state == CommissioningState.Faulted) {
                 _state = CommissioningState.Idle;
                 _log.LogInformation("Commissioning reset: {Reason}", reason);
             }
-        }
-
-        private enum CommissioningState {
-            Idle,
-            PowerOn,
-            Homing,
-            Aligning,
-            Ready,
-            Faulted
-        }
-
-        private readonly record struct CommissioningCommand(CommissioningCommandKind Kind, string? Reason) {
-            public CommissioningCommand(CommissioningCommandKind kind, SafetyStateChangedEventArgs args) : this(kind, args.ReasonText) {
-                StateArgs = args;
-            }
-
-            public SafetyStateChangedEventArgs? StateArgs { get; init; }
-        }
-
-        private enum CommissioningCommandKind {
-            Start,
-            Stop,
-            Reset,
-            SafetyStateChanged
         }
     }
 }
