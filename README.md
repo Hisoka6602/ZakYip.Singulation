@@ -2,10 +2,10 @@
 
 ## 本次更新
 
-- 统一整理所有 record 定义，显式暴露属性注释并补充中文文档；拆分嵌套类型，落实“一文件一类”规范。
-- 新增 `SafetyOperation`/`SignalRQueueItem`/`CommissioningCommand` 等独立类文件，消除内部类与匿名 record 的使用。
-- 为安全/联机/DTO 等核心模型补充中文注释，并调整默认时间戳为 UTC，以提升日志可读性。
-- 更新 README 结构树与进度说明，涵盖最新文件划分与后续优化建议。
+- 新增 `AxisKinematics` 工具类，集中实现 mm/s ↔ rpm/pps 的换算，供驱动与上层统一使用。
+- 雷赛轴驱动改为内部换算速度/加速度上限与反馈值，外部全部以 mm/s 及 mm/s² 传参。
+- `AxisBootstrapper` 读取模板时自动将 rpm/s 配置转换为 mm/s²，再批量推送给控制器。
+- 更新 README 文件树与进度说明，记录速度单位统一化后的结构与后续计划。
 
 ## 项目结构与功能说明
 
@@ -92,6 +92,7 @@
         Planning/
             DefaultSpeedPlanner.cs
         Utils/
+            AxisKinematics.cs
             FileUtils.cs
     ZakYip.Singulation.Drivers/
         ZakYip.Singulation.Drivers.csproj
@@ -310,6 +311,7 @@ pwsh ops/dryrun.ps1
 ## 可继续完善
 
 - 引入真实硬件 IO 模块，替换 `LoopbackSafetyIoModule`，并补全异常自检逻辑。
+- 扩展 `AxisKinematics` 支持齿条/链传等多种机构换算，并提供模板校验工具避免参数缺失。
 - 在降级状态下引入渐进式限速而非 StopAll，支持自动速度恢复策略与多档降级。
 - 结合 Prometheus/OTLP 将 `SingulationMetrics` 暴露到观测平台，完善报警策略。
 - 扩展 `RegressionRunner` 与 Host API 测试，覆盖多轴故障、断电恢复、批量命令等场景。

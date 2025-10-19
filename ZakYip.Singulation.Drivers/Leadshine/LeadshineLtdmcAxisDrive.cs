@@ -15,6 +15,7 @@ using ZakYip.Singulation.Drivers.Resilience;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
+using ZakYip.Singulation.Core.Utils;
 
 namespace ZakYip.Singulation.Drivers.Leadshine {
 
@@ -119,7 +120,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             await ThrottleAsync(ct);
             var rpmAsync = await WriteTargetVelocityFromRpmAsync(rpm.Value, ct);
             if (rpmAsync) {
-                LastTargetMmps = rpm.ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio);
+                LastTargetMmps = rpm.ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             }
         }
 
@@ -130,13 +131,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             var ppr = await GetPprCachedAsync(ct);
             int deviceVal;
             if (ppr > 0) {
-                var pps = AxisRpm.MmPerSecToPps(mmPerSec, _opts.PulleyPitchDiameterMm, ppr, _opts.GearRatio);
+                var pps = AxisRpm.MmPerSecToPps(mmPerSec, _opts.PulleyPitchDiameterMm, ppr, _opts.GearRatio, _opts.ScrewPitchMm);
                 Debug.WriteLine($"pps:{pps}");
                 deviceVal = (int)Math.Round(pps);
             }
             else {
                 // 退化（保持旧比例）
-                var rpmVo = AxisRpm.FromMmPerSec(mmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio);
+                var rpmVo = AxisRpm.FromMmPerSec(mmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
                 deviceVal = (int)Math.Round(rpmVo.Value);
             }
 
@@ -230,22 +231,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public async ValueTask SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec, CancellationToken ct = default) {
             await ThrottleAsync(ct);
 
-            // 滚筒直径（米）
-            var dm = _opts.PulleyPitchDiameterMm / 1000.0m;
-            if (dm <= 0) {
-                OnAxisFaulted(new InvalidOperationException("drum diameter must be > 0"));
+            if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) {
+                OnAxisFaulted(new InvalidOperationException("mechanics parameters must provide ScrewPitchMm or PulleyPitchDiameterMm"));
                 return;
             }
 
-            // mm/s² → m/s²
-            var accMps2 = accelMmPerSec / (decimal)1000.0;
-            var decMps2 = decelMmPerSec / (decimal)1000.0;
+            var accRpmPerSec = AxisRpm.MmPerSec2ToRpmPerSec(accelMmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            var decRpmPerSec = AxisRpm.MmPerSec2ToRpmPerSec(decelMmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
 
-            // m/s² → rpm/s ： rpm/s = (a / (π·D)) × 60
-            var accRpmPerSec = accMps2 / ((decimal)Math.PI * dm) * (decimal)60.0;
-            var decRpmPerSec = decMps2 / ((decimal)Math.PI * dm) * (decimal)60.0;
-
-            // 复用 RPM/s 版本
             await SetAccelDecelAsync(accRpmPerSec, decRpmPerSec, ct);
         }
 
@@ -287,7 +280,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             var rpmVal = _opts.IsReverse ? -actualRpm : actualRpm;
 
             // 用 mm/s 做一等公民的节流/阈值判断
-            var mmps = new AxisRpm(rpmVal).ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio);
+            var mmps = new AxisRpm(rpmVal).ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
 
             if (ShouldPublishFeedbackMmps(mmps, stamp)) {
                 var ppr = 0;
@@ -475,10 +468,16 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             CancellationToken ct = default) {
             if (maxLinearMmps <= 0 || maxAccelMmps2 <= 0 || maxDecelMmps2 <= 0) return Task.FromResult(false);
 
+            if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return Task.FromResult(false);
+
+            var maxRpm = AxisRpm.FromMmPerSec(maxLinearMmps, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm).Value;
+            var maxAccelRpmPerSec = AxisRpm.MmPerSec2ToRpmPerSec(maxAccelMmps2, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            var maxDecelRpmPerSec = AxisRpm.MmPerSec2ToRpmPerSec(maxDecelMmps2, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+
             try {
-                _opts.MaxRpm = maxLinearMmps;
-                _opts.MaxAccelRpmPerSec = maxAccelMmps2;
-                _opts.MaxDecelRpmPerSec = maxDecelMmps2;
+                _opts.MaxRpm = maxRpm;
+                _opts.MaxAccelRpmPerSec = maxAccelRpmPerSec;
+                _opts.MaxDecelRpmPerSec = maxDecelRpmPerSec;
 
                 return Task.FromResult(true);
             }
@@ -677,14 +676,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             // 2) 用 AxisRpm 统一做换算
             var rpm = new AxisRpm(rpmVal);
-            var speedMmps = rpm.ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio);
+            var speedMmps = rpm.ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             LastFeedbackMmps = speedMmps;
             // pps：考虑齿比（电机轴:负载轴）
-            decimal pps = 0;
+            var pps = 0m;
             if (pulsesPerRev > 0) {
-                // 如果 AxisRpm.ToPulsePerSec 有 gearRatio 参数，直接用它；
-                // 否则按公式算：pps = (rpm/60) * PPR / gearRatio
-                pps = (rpm.Value / 60m) * pulsesPerRev / _opts.GearRatio;
+                var motorPps = rpm.ToPulsePerSec(pulsesPerRev);
+                pps = _opts.GearRatio > 0m ? motorPps / _opts.GearRatio : motorPps;
             }
 
             FireEachNonBlocking(SpeedFeedback, this,
