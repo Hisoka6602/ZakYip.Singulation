@@ -215,6 +215,9 @@ public class AxisInfo
     public int? LastErrorCode { get; set; }
     public string? LastErrorMessage { get; set; }
     
+    // 实时速度（从SignalR更新）
+    public double CurrentSpeed { get; set; }
+    
     // 便捷显示属性
     public string Id => AxisId;
     public string Name => $"Axis {AxisId}";

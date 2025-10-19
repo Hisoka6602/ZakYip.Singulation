@@ -28,6 +28,20 @@ public class MainViewModel : BindableBase
         set => SetProperty(ref _isLoading, value);
     }
 
+    private string _signalRStatus = "Disconnected";
+    public string SignalRStatus
+    {
+        get => _signalRStatus;
+        set => SetProperty(ref _signalRStatus, value);
+    }
+
+    private ObservableCollection<string> _realtimeEvents = new();
+    public ObservableCollection<string> RealtimeEvents
+    {
+        get => _realtimeEvents;
+        set => SetProperty(ref _realtimeEvents, value);
+    }
+
     private ObservableCollection<AxisInfo> _controllers = new();
     public ObservableCollection<AxisInfo> Controllers
     {
@@ -88,6 +102,115 @@ public class MainViewModel : BindableBase
             .ObservesProperty(() => IsLoading);
         SetAllAxesSpeedCommand = new DelegateCommand(async () => await SetAllAxesSpeedAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
+
+        // 订阅SignalR事件
+        SubscribeToSignalREvents();
+        
+        // 自动连接SignalR
+        _ = Task.Run(async () => await AutoConnectSignalRAsync());
+    }
+
+    /// <summary>
+    /// 订阅SignalR事件
+    /// </summary>
+    private void SubscribeToSignalREvents()
+    {
+        _signalRFactory.SpeedChanged += OnSpeedChanged;
+        _signalRFactory.SafetyEventOccurred += OnSafetyEventOccurred;
+        _signalRFactory.ConnectionStateChanged += OnConnectionStateChanged;
+        _signalRFactory.MessageReceived += OnMessageReceived;
+    }
+
+    /// <summary>
+    /// 自动连接SignalR
+    /// </summary>
+    private async Task AutoConnectSignalRAsync()
+    {
+        try
+        {
+            await Task.Delay(1000); // 等待初始化完成
+            await ConnectSignalRAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Auto-connect failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 处理速度变化事件
+    /// </summary>
+    private void OnSpeedChanged(object? sender, SpeedChangedEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            var message = $"⚡ Axis {e.AxisId} speed: {e.Speed:F2} mm/s";
+            AddRealtimeEvent(message);
+            
+            // 更新对应轴的速度显示
+            var axis = Controllers.FirstOrDefault(a => a.Id == e.AxisId);
+            if (axis != null)
+            {
+                axis.CurrentSpeed = e.Speed;
+            }
+        });
+    }
+
+    /// <summary>
+    /// 处理安全事件
+    /// </summary>
+    private void OnSafetyEventOccurred(object? sender, SafetyEventArgs e)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            var message = $"🛡️ {e.EventType}: {e.Message}";
+            AddRealtimeEvent(message);
+            _notificationService.ShowWarning(message);
+        });
+    }
+
+    /// <summary>
+    /// 处理连接状态变化
+    /// </summary>
+    private void OnConnectionStateChanged(object? sender, Microsoft.AspNetCore.SignalR.Client.HubConnectionState state)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SignalRStatus = state switch
+            {
+                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connected => "Connected",
+                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Connecting => "Connecting...",
+                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Reconnecting => "Reconnecting...",
+                Microsoft.AspNetCore.SignalR.Client.HubConnectionState.Disconnected => "Disconnected",
+                _ => "Unknown"
+            };
+        });
+    }
+
+    /// <summary>
+    /// 处理接收到的消息
+    /// </summary>
+    private void OnMessageReceived(object? sender, string message)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            AddRealtimeEvent($"📨 {message}");
+        });
+    }
+
+    /// <summary>
+    /// 添加实时事件到列表（保持最近50条）
+    /// </summary>
+    private void AddRealtimeEvent(string message)
+    {
+        var timestamped = $"[{DateTime.Now:HH:mm:ss}] {message}";
+        RealtimeEvents.Insert(0, timestamped);
+        
+        // 保持最近50条记录
+        while (RealtimeEvents.Count > 50)
+        {
+            RealtimeEvents.RemoveAt(RealtimeEvents.Count - 1);
+        }
     }
 
     /// <summary>
