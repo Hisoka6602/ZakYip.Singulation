@@ -11,6 +11,7 @@ namespace ZakYip.Singulation.MauiApp.ViewModels;
 public class SettingsViewModel : BindableBase, IDisposable
 {
     private readonly UdpDiscoveryClient _discoveryClient;
+    private readonly NotificationService _notificationService;
 
     private string _apiBaseUrl = "http://localhost:5005";
     public string ApiBaseUrl
@@ -64,6 +65,7 @@ public class SettingsViewModel : BindableBase, IDisposable
     public SettingsViewModel(UdpDiscoveryClient discoveryClient)
     {
         _discoveryClient = discoveryClient;
+        _notificationService = NotificationService.Instance;
 
         // 从本地存储加载设置
         LoadSettings();
@@ -204,6 +206,7 @@ public class SettingsViewModel : BindableBase, IDisposable
         MainThread.BeginInvokeOnMainThread(() =>
         {
             StatusMessage = $"🔍 发现服务: {service.ServiceName}";
+            _notificationService.ShowInfo($"发现服务: {service.ServiceName}");
         });
     }
 
@@ -212,6 +215,7 @@ public class SettingsViewModel : BindableBase, IDisposable
         MainThread.BeginInvokeOnMainThread(() =>
         {
             StatusMessage = $"❌ 服务失联: {service.ServiceName}";
+            _notificationService.ShowWarning($"服务失联: {service.ServiceName}");
         });
     }
 

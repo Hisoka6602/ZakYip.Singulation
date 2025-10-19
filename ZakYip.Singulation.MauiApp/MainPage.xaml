@@ -3,11 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
              xmlns:services="clr-namespace:ZakYip.Singulation.MauiApp.Services"
+             xmlns:controls="clr-namespace:ZakYip.Singulation.MauiApp.Controls"
              x:Class="ZakYip.Singulation.MauiApp.MainPage"
              x:DataType="viewmodels:MainViewModel"
              Title="主控制台">
 
-    <ScrollView>
+    <Grid>
+        <!-- Main content -->
+        <ScrollView>
         <VerticalStackLayout
             Padding="20"
             Spacing="15">
@@ -15,7 +18,8 @@
             <!-- 标题 -->
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
                 <Label
-                    Text="●"
+                    Text="&#xf015;"
+                    FontFamily="FontAwesomeSolid"
                     FontSize="32"
                     TextColor="#2196F3"
                     VerticalOptions="Center" />
@@ -47,7 +51,8 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="▣"
+                            Text="&#xf233;"
+                            FontFamily="FontAwesomeSolid"
                             FontSize="24"
                             TextColor="#666"
                             VerticalOptions="Center" />
@@ -67,7 +72,7 @@
                         Padding="15,10">
                         <Button.Content>
                             <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
-                                <Label Text="↻" FontSize="20" TextColor="White" VerticalOptions="Center" />
+                                <Label Text="&#xf021;" FontFamily="FontAwesomeSolid" FontSize="18" TextColor="White" VerticalOptions="Center" />
                                 <Label Text="刷新控制器" FontSize="16" TextColor="White" VerticalOptions="Center" />
                             </HorizontalStackLayout>
                         </Button.Content>
@@ -80,7 +85,8 @@
                         <CollectionView.EmptyView>
                             <VerticalStackLayout HorizontalOptions="Center" Spacing="10" Margin="20">
                                 <Label
-                                    Text="□"
+                                    Text="&#xf233;"
+                                    FontFamily="FontAwesomeSolid"
                                     FontSize="48"
                                     TextColor="LightGray"
                                     HorizontalOptions="Center" />
@@ -100,16 +106,16 @@
                             <DataTemplate x:DataType="services:AxisInfo">
                                 <Frame Margin="0,5" Padding="15" BorderColor="#2196F3" BackgroundColor="White">
                                     <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="5" ColumnSpacing="10">
-                                        <Label Grid.Row="0" Grid.Column="0" Text="⚙" FontSize="16" TextColor="#666" />
+                                        <Label Grid.Row="0" Grid.Column="0" Text="&#xf085;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="#666" />
                                         <Label Grid.Row="0" Grid.Column="1" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" />
                                         
-                                        <Label Grid.Row="1" Grid.Column="0" Text="#" FontSize="14" TextColor="#666" />
+                                        <Label Grid.Row="1" Grid.Column="0" Text="&#xf2db;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" />
                                         <Label Grid.Row="1" Grid.Column="1" Text="{Binding AxisId, StringFormat='轴 ID: {0}'}" FontSize="14" />
                                         
-                                        <Label Grid.Row="2" Grid.Column="0" Text="◆" FontSize="14" TextColor="#666" />
+                                        <Label Grid.Row="2" Grid.Column="0" Text="&#xf05a;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" />
                                         <Label Grid.Row="2" Grid.Column="1" Text="{Binding StatusText, StringFormat='状态: {0}'}" FontSize="14" />
                                         
-                                        <Label Grid.Row="3" Grid.Column="0" Text="◈" FontSize="14" TextColor="#666" />
+                                        <Label Grid.Row="3" Grid.Column="0" Text="&#xf624;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" />
                                         <Label Grid.Row="3" Grid.Column="1" Text="{Binding Enabled, StringFormat='已使能: {0}'}" FontSize="14" />
                                     </Grid>
                                 </Frame>
@@ -124,7 +130,8 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="◈"
+                            Text="&#xf071;"
+                            FontFamily="FontAwesomeSolid"
                             FontSize="24"
                             TextColor="#F57C00"
                             VerticalOptions="Center" />
@@ -164,7 +171,7 @@
                         Padding="15,10">
                         <Button.Content>
                             <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
-                                <Label Text="►" FontSize="20" TextColor="White" VerticalOptions="Center" />
+                                <Label Text="&#xf04b;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="White" VerticalOptions="Center" />
                                 <Label Text="发送安全命令" FontSize="16" TextColor="White" VerticalOptions="Center" />
                             </HorizontalStackLayout>
                         </Button.Content>
@@ -177,7 +184,8 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="⚙"
+                            Text="&#xf085;"
+                            FontFamily="FontAwesomeSolid"
                             FontSize="24"
                             TextColor="#4CAF50"
                             VerticalOptions="Center" />
@@ -198,7 +206,7 @@
                             Padding="15,10">
                             <Button.Content>
                                 <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
-                                    <Label Text="✓" FontSize="18" TextColor="White" VerticalOptions="Center" />
+                                    <Label Text="&#xf00c;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="White" VerticalOptions="Center" />
                                     <Label Text="全部使能" FontSize="14" TextColor="White" VerticalOptions="Center" />
                                 </HorizontalStackLayout>
                             </Button.Content>
@@ -213,7 +221,7 @@
                             Padding="15,10">
                             <Button.Content>
                                 <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
-                                    <Label Text="✕" FontSize="18" TextColor="White" VerticalOptions="Center" />
+                                    <Label Text="&#xf00d;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="White" VerticalOptions="Center" />
                                     <Label Text="全部禁用" FontSize="14" TextColor="White" VerticalOptions="Center" />
                                 </HorizontalStackLayout>
                             </Button.Content>
@@ -221,7 +229,7 @@
                     </Grid>
 
                     <HorizontalStackLayout Spacing="5" Margin="0,10,0,0">
-                        <Label Text="▲" FontSize="14" TextColor="#666" VerticalOptions="Center" />
+                        <Label Text="&#xf624;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" VerticalOptions="Center" />
                         <Label Text="目标速度 (mm/s)" FontSize="14" VerticalOptions="Center" />
                     </HorizontalStackLayout>
                     <HorizontalStackLayout Spacing="10">
@@ -239,7 +247,7 @@
                             Padding="15,10">
                             <Button.Content>
                                 <HorizontalStackLayout Spacing="5">
-                                    <Label Text="►" FontSize="16" TextColor="White" VerticalOptions="Center" />
+                                    <Label Text="&#xf04b;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="White" VerticalOptions="Center" />
                                     <Label Text="设置速度" FontSize="14" TextColor="White" VerticalOptions="Center" />
                                 </HorizontalStackLayout>
                             </Button.Content>
@@ -253,7 +261,8 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="◉"
+                            Text="&#xf0c1;"
+                            FontFamily="FontAwesomeSolid"
                             FontSize="24"
                             TextColor="#9C27B0"
                             VerticalOptions="Center" />
@@ -278,7 +287,7 @@
                         Padding="15,10">
                         <Button.Content>
                             <HorizontalStackLayout Spacing="8" HorizontalOptions="Center">
-                                <Label Text="◉" FontSize="20" TextColor="White" VerticalOptions="Center" />
+                                <Label Text="&#xf0c1;" FontFamily="FontAwesomeSolid" FontSize="18" TextColor="White" VerticalOptions="Center" />
                                 <Label Text="连接 SignalR" FontSize="16" TextColor="White" VerticalOptions="Center" />
                             </HorizontalStackLayout>
                         </Button.Content>
@@ -288,5 +297,13 @@
 
         </VerticalStackLayout>
     </ScrollView>
+    
+    <!-- Notification overlay -->
+    <controls:NotificationOverlay 
+        VerticalOptions="Start"
+        HorizontalOptions="Fill"
+        Margin="0,10,0,0"
+        ZIndex="1000" />
+    </Grid>
 
 </ContentPage>
