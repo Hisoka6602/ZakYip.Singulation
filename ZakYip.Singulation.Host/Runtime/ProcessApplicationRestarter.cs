@@ -1,6 +1,6 @@
 using System;
-using System.Diagnostics;
 using System.Threading;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -64,7 +64,7 @@ namespace ZakYip.Singulation.Host.Runtime {
                     }
 
                     _logger.LogInformation("即将启动新进程 {Path} 以完成重启。", executable);
-                    _ = Process.Start(startInfo);
+                    Process.Start(startInfo);
                 }
                 catch (Exception ex) {
                     _logger.LogError(ex, "进程重启失败");
