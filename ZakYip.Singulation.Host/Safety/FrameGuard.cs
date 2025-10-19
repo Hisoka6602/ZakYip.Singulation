@@ -57,13 +57,15 @@ namespace ZakYip.Singulation.Host.Safety {
         public FrameGuardDecision Evaluate(SpeedSet set) {
             var state = _safety.State;
             if (state == SafetyIsolationState.Isolated) {
-                SingulationMetrics.Instance.FrameDroppedCounter.Add(1, new("reason", "isolated"));
+                SingulationMetrics.Instance.FrameDroppedCounter.Add(1,
+                    new KeyValuePair<string, object?>("reason", "isolated"));
                 return new FrameGuardDecision(false, set, false, "isolated");
             }
 
             var accepted = AcceptSequence(set.Sequence);
             if (!accepted) {
-                SingulationMetrics.Instance.FrameDroppedCounter.Add(1, new("reason", "sequence"));
+                SingulationMetrics.Instance.FrameDroppedCounter.Add(1,
+                    new KeyValuePair<string, object?>("reason", "sequence"));
                 return new FrameGuardDecision(false, set, false, "duplicate");
             }
 
