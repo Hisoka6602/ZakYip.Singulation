@@ -1,27 +1,21 @@
-using CommunityToolkit.Maui;
-using Microsoft.Extensions.Logging;
-using ZakYip.Singulation.MauiApp.Services;
-using ZakYip.Singulation.MauiApp.ViewModels;
-using ZakYip.Singulation.MauiApp.Views;
+﻿using Microsoft.Extensions.Logging;
 
-namespace ZakYip.Singulation.MauiApp;
-
-public static class MauiProgram {
-    public static MauiApp CreateMauiApp() {
-        var builder = MauiApp.CreateBuilder();
-        builder
-            .UseMauiApp<App>()
-            .UseMauiCommunityToolkit();
+namespace ZakYip.Singulation.MauiApp {
+    public static class MauiProgram {
+        public static MauiApp CreateMauiApp() {
+            var builder = MauiApp.CreateBuilder();
+            builder
+                .UseMauiApp<App>()
+                .ConfigureFonts(fonts => {
+                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                });
 
 #if DEBUG
-        builder.Logging.AddDebug();
+    		builder.Logging.AddDebug();
 #endif
 
-        builder.Services.AddSingleton<ApiClient>();
-        builder.Services.AddSingleton<SignalRClientFactory>();
-        builder.Services.AddSingleton<MainViewModel>();
-        builder.Services.AddSingleton<MainPage>();
-
-        return builder.Build();
+            return builder.Build();
+        }
     }
 }

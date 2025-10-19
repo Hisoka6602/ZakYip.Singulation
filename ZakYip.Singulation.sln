@@ -33,7 +33,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Infrastr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.Tests", "ZakYip.Singulation.Tests\ZakYip.Singulation.Tests.csproj", "{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.MauiApp", "ZakYip.Singulation.MauiApp\ZakYip.Singulation.MauiApp.csproj", "{7E49623F-13B6-4370-94BC-7CCF753963A9}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MauiApp", "MauiApp", "{830B7FA2-CE34-4A82-BC6D-ECD68D9C9B33}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZakYip.Singulation.MauiApp", "ZakYip.Singulation.MauiApp\ZakYip.Singulation.MauiApp.csproj", "{CBCBB5F2-5250-4AD2-AA9A-9F3FD5612C59}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -73,10 +75,12 @@ Global
 		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C37F4299-7BF6-4DA3-9185-E74FFE00B2CE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7E49623F-13B6-4370-94BC-7CCF753963A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7E49623F-13B6-4370-94BC-7CCF753963A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7E49623F-13B6-4370-94BC-7CCF753963A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7E49623F-13B6-4370-94BC-7CCF753963A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBCBB5F2-5250-4AD2-AA9A-9F3FD5612C59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBCBB5F2-5250-4AD2-AA9A-9F3FD5612C59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBCBB5F2-5250-4AD2-AA9A-9F3FD5612C59}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{CBCBB5F2-5250-4AD2-AA9A-9F3FD5612C59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBCBB5F2-5250-4AD2-AA9A-9F3FD5612C59}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CBCBB5F2-5250-4AD2-AA9A-9F3FD5612C59}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -89,6 +93,7 @@ Global
 		{04AAADF8-9D6F-414C-873A-E0DAEF0B47C1} = {9A12F129-9237-433E-B718-9286A804205D}
 		{445D90E1-A619-4338-AADE-AD50FCF0BFF4} = {9985423F-4A36-4C9D-8297-33BEECA1EE72}
 		{EB2902B1-0A41-408B-9538-5E910EA52C8C} = {7B1C774D-41C5-435E-AE83-591056619A35}
+		{CBCBB5F2-5250-4AD2-AA9A-9F3FD5612C59} = {830B7FA2-CE34-4A82-BC6D-ECD68D9C9B33}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6DDFE0F1-0377-435D-981C-79DE92661182}
