@@ -66,15 +66,15 @@ internal static class Program {
         // ===== 订阅聚合事件（只订一次）=====
         var aggregator = provider.GetRequiredService<IAxisEventAggregator>();
         aggregator.CommandIssued += (_, e) =>
-            Console.WriteLine($"[CMD][{e.Timestamp:HH:mm:ss.fff}][Axis:{e.Axis}] {e}{(e.Note is null ? "" : $" // {e.Note}")}");
+            Console.WriteLine($"[命令][{e.Timestamp:HH:mm:ss.fff}][轴:{e.Axis}] {e}{(e.Note is null ? string.Empty : $" // 备注:{e.Note}")}");
         aggregator.SpeedFeedback += (_, e) =>
-            Console.WriteLine($"[SPD][Axis:{e.Axis}] rpm={e.Rpm,6}  mm/s={e.SpeedMps,8:F2}  pps={e.PulsesPerSec,8:F2}");
+            Console.WriteLine($"[速度][轴:{e.Axis}] 电机转速rpm={e.Rpm,6}  线速度mm/s={e.SpeedMps,8:F2}  脉冲pps={e.PulsesPerSec,8:F2}");
         aggregator.AxisFaulted += (_, e) =>
-            Console.WriteLine($"[ERR][Axis:{e.Axis}] {e.Exception.Message}");
+            Console.WriteLine($"[故障][轴:{e.Axis}] 触发异常:{e.Exception.Message}");
         aggregator.AxisDisconnected += (_, e) =>
-            Console.WriteLine($"[DISC][Axis:{e.Axis}] {e.Reason}");
+            Console.WriteLine($"[离线][轴:{e.Axis}] 原因:{e.Reason}");
         aggregator.DriverNotLoaded += (_, e) =>
-            Console.WriteLine($"[DRV][{e.LibraryName}] {e.Message}");
+            Console.WriteLine($"[驱动][库:{e.LibraryName}] 未加载原因:{e.Message}");
 
         // ===== 运行主流程 =====
         var controller = provider.GetRequiredService<IAxisController>();
@@ -107,7 +107,7 @@ internal static class Program {
             // 3) 统一设速
             controller.WriteSpeedAllAsync(targetMmps, cts.Token).GetAwaiter().GetResult();
 
-            Console.WriteLine("Running... 按 Ctrl+C 停止。");
+            Console.WriteLine("运行中……按 Ctrl+C 停止。");
 
             // 4) 简单等待：直到 Ctrl+C
             while (!cts.IsCancellationRequested) {
@@ -115,7 +115,7 @@ internal static class Program {
             }
         }
         catch (Exception ex) {
-            Console.WriteLine($"[FATAL] {ex}");
+            Console.WriteLine($"[致命错误] 捕获到异常:{ex}");
         }
         finally {
             // 停机并释放
