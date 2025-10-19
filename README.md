@@ -166,12 +166,13 @@
    - 健康检查端点（/health）
    - 启动脚本和守护进程配置
 
-5. **运维文档（2-3 天）**
-   - 部署手册（环境要求、安装步骤）
-   - 配置指南（参数说明、调优建议）
-   - 故障排查手册（常见问题和解决方案）
-   - 备份恢复流程
-   - 应急预案（设备故障、网络中断）
+5. **✅ 运维文档（已完成）**
+   - ✅ [运维手册](ops/OPERATIONS_MANUAL.md) - 完整的部署、配置、监控、故障排查流程
+   - ✅ [配置指南](ops/CONFIGURATION_GUIDE.md) - 详细的参数说明和调优建议
+   - ✅ [备份恢复流程](ops/BACKUP_RECOVERY.md) - 数据备份和恢复的详细步骤
+   - ✅ [应急响应预案](ops/EMERGENCY_RESPONSE.md) - 各类紧急情况的处理预案
+   - ✅ [部署运维手册](docs/DEPLOYMENT.md) - 详细的部署步骤和环境配置
+   - ✅ [故障排查手册](docs/TROUBLESHOOTING.md) - 常见问题的诊断和解决方案
 
 #### 🟡 强烈建议（提升稳定性和可维护性）
 
@@ -437,6 +438,50 @@
    - 通过压力测试和稳定性测试
 
 这些优化将大幅提升项目的生产就绪度，预计一个月内可达到上线标准。
+
+## 📚 运维文档
+
+完整的运维文档位于 `ops/` 和 `docs/` 目录，涵盖部署、配置、监控、故障排查等运维工作的全流程。
+
+### 核心运维文档
+
+| 文档 | 位置 | 说明 |
+|------|------|------|
+| **运维手册** | [ops/OPERATIONS_MANUAL.md](ops/OPERATIONS_MANUAL.md) | 完整的运维指南，涵盖部署、配置、监控、故障排查 |
+| **配置指南** | [ops/CONFIGURATION_GUIDE.md](ops/CONFIGURATION_GUIDE.md) | 详细的配置参数说明和性能调优建议 |
+| **备份恢复流程** | [ops/BACKUP_RECOVERY.md](ops/BACKUP_RECOVERY.md) | 数据备份策略、自动化脚本和恢复流程 |
+| **应急响应预案** | [ops/EMERGENCY_RESPONSE.md](ops/EMERGENCY_RESPONSE.md) | 各类紧急情况的标准处理流程和预案 |
+| **部署运维手册** | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 详细的部署步骤、环境要求和升级流程 |
+| **故障排查手册** | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 常见问题的诊断方法和解决方案 |
+
+### 技术文档
+
+| 文档 | 位置 | 说明 |
+|------|------|------|
+| **架构设计** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构和设计文档 |
+| **API 文档** | [docs/API.md](docs/API.md) | REST API 接口文档和使用示例 |
+| **MAUI 应用** | [docs/MAUIAPP.md](docs/MAUIAPP.md) | MAUI 客户端功能和使用说明 |
+| **性能优化** | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | 性能优化建议和最佳实践 |
+| **开发指南** | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | 开发者快速入门和代码规范 |
+
+### 运维快速入口
+
+**部署上线**：
+1. 阅读 [运维手册 - 部署章节](ops/OPERATIONS_MANUAL.md#1-部署手册)
+2. 执行 [部署运维手册](docs/DEPLOYMENT.md) 中的部署流程
+3. 参考 [配置指南](ops/CONFIGURATION_GUIDE.md) 进行生产环境配置
+
+**日常运维**：
+1. 查看 [运维手册 - 日常运维章节](ops/OPERATIONS_MANUAL.md#3-日常运维)
+2. 配置 [备份恢复流程](ops/BACKUP_RECOVERY.md#4-自动化备份)
+3. 设置监控告警（参见运维手册）
+
+**故障处理**：
+1. 参考 [故障排查手册](docs/TROUBLESHOOTING.md) 快速诊断
+2. 按照 [应急响应预案](ops/EMERGENCY_RESPONSE.md) 处理紧急情况
+3. 从 [备份恢复](ops/BACKUP_RECOVERY.md#5-数据恢复) 恢复数据（如需要）
+
+---
 
 ## 构建与运行
 
