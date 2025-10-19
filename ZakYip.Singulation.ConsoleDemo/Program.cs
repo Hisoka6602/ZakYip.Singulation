@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using System.Linq;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Registry;
 using ZakYip.Singulation.Drivers.Leadshine;
@@ -10,10 +11,16 @@ using ZakYip.Singulation.Drivers.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 using static System.Runtime.CompilerServices.RuntimeHelpers;
+using ZakYip.Singulation.ConsoleDemo.Regression;
 
 internal static class Program {
 
     private static void Main(string[] args) {
+        if (args.Any(a => string.Equals(a, "--regression", StringComparison.OrdinalIgnoreCase) || string.Equals(a, "regression", StringComparison.OrdinalIgnoreCase))) {
+            RegressionRunner.RunAsync().GetAwaiter().GetResult();
+            return;
+        }
+
         // ===== 可按需修改的运行参数 =====
         ushort cardNo = 8;
         ushort portNo = 2;

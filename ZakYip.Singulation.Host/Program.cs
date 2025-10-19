@@ -28,21 +28,24 @@ using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Protocol.Vendors.Huarary;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
+using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Infrastructure.Safety;
+using ZakYip.Singulation.Host.Safety;
 using ZakYip.Singulation.Infrastructure.Persistence;
 
 ThreadPool.SetMinThreads(128, 128);
 System.Runtime.GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 
 var host = Host.CreateDefaultBuilder(args)
-    // ---------- ÅäÖÃÎÄ¼ş ----------
+    // ---------- é…ç½®æ–‡ä»¶ ----------
     .ConfigureAppConfiguration((context, config) => {
-        // ¼ÓÔØ appsettings.json£¨¿É°´ĞèÔÙµş¼Ó»·¾³ÅäÖÃ£©
+        // åŠ è½½ appsettings.jsonï¼ˆå¯æŒ‰éœ€å†å åŠ ç¯å¢ƒé…ç½®ï¼‰
         config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-        // ×¢£ºÈç¹ûĞèÒª»·¾³ÌØ¶¨ÎÄ¼ş£¬¿ÉÌí¼Ó£º
+        // æ³¨ï¼šå¦‚æœéœ€è¦ç¯å¢ƒç‰¹å®šæ–‡ä»¶ï¼Œå¯æ·»åŠ ï¼š
         // var env = context.HostingEnvironment.EnvironmentName;
         // config.AddJsonFile($"appsettings.{env}.json", optional: true, reloadOnChange: true);
     })
-    // ---------- DI ·şÎñ×¢²á ----------
+    // ---------- DI æœåŠ¡æ³¨å†Œ ----------
     .ConfigureServices((context, services) => {
         var configuration = context.Configuration;
 
@@ -52,14 +55,14 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- Controllers + Newtonsoft.Json ----------
         services
             .AddControllers(options => {
-                // options.Filters.Add<LogRequestResponseAttribute>(); // ÇëÇóÏìÓ¦ÈÕÖ¾£¨ÈçºóĞøĞèÒª£©
+                // options.Filters.Add<LogRequestResponseAttribute>(); // è¯·æ±‚å“åº”æ—¥å¿—ï¼ˆå¦‚åç»­éœ€è¦ï¼‰
             })
             .AddJsonOptions(options => {
-                // System.Text.Json »ù´¡ÉèÖÃ£¨±¸ÓÃ£©
+                // System.Text.Json åŸºç¡€è®¾ç½®ï¼ˆå¤‡ç”¨ï¼‰
                 options.JsonSerializerOptions.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
             })
             .AddNewtonsoftJson(options => {
-                // Í³Ò» JSON ĞĞÎª£¨ÍÕ·å¡¢ºöÂÔÑ­»·¡¢ÈÕÆÚ¸ñÊ½¡¢Ã¶¾Ù×Ö·û´®£©
+                // ç»Ÿä¸€ JSON è¡Œä¸ºï¼ˆé©¼å³°ã€å¿½ç•¥å¾ªç¯ã€æ—¥æœŸæ ¼å¼ã€æšä¸¾å­—ç¬¦ä¸²ï¼‰
                 var s = options.SerializerSettings;
                 s.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
                 s.ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver();
@@ -68,11 +71,11 @@ var host = Host.CreateDefaultBuilder(args)
                 s.Formatting = (Newtonsoft.Json.Formatting)Newtonsoft.Json.Formatting.Indented;
                 s.Converters.Add(new Newtonsoft.Json.Converters.StringEnumConverter());
             })
-            // ½«µ±Ç°³ÌĞò¼¯ÀïµÄ¿ØÖÆÆ÷±©Â¶¸ø MVC£¨±ÜÃâ¿çÏîÄ¿ÕÒ²»µ½ Controller£©
+            // å°†å½“å‰ç¨‹åºé›†é‡Œçš„æ§åˆ¶å™¨æš´éœ²ç»™ MVCï¼ˆé¿å…è·¨é¡¹ç›®æ‰¾ä¸åˆ° Controllerï¼‰
             .AddApplicationPart(typeof(Program).Assembly)
             .AddDataAnnotationsLocalization();
 
-        // ---------- Ä£ĞÍÑéÖ¤Ê§°ÜÍ³Ò»ÏìÓ¦ ----------
+        // ---------- æ¨¡å‹éªŒè¯å¤±è´¥ç»Ÿä¸€å“åº” ----------
         services.Configure<ApiBehaviorOptions>(opt => {
             opt.InvalidModelStateResponseFactory = context => {
                 var errors = context.ModelState
@@ -98,12 +101,12 @@ var host = Host.CreateDefaultBuilder(args)
             });
         });
 
-        // ---------- ±íµ¥ÉÏ´«£¨ÈçÓĞ´óÎÄ¼ş³¡¾°£© ----------
+        // ---------- è¡¨å•ä¸Šä¼ ï¼ˆå¦‚æœ‰å¤§æ–‡ä»¶åœºæ™¯ï¼‰ ----------
         services.Configure<FormOptions>(opt => {
             opt.MultipartBodyLengthLimit = long.MaxValue;
         });
 
-        // ---------- Response Compression£¨ÁãÈëÇÖĞÔÄÜÔöÇ¿£© ----------
+        // ---------- Response Compressionï¼ˆé›¶å…¥ä¾µæ€§èƒ½å¢å¼ºï¼‰ ----------
         services.AddResponseCompression(opt => {
             opt.EnableForHttps = true;
             opt.Providers.Add<BrotliCompressionProvider>();
@@ -117,54 +120,54 @@ var host = Host.CreateDefaultBuilder(args)
                 Title = "ZakYip.Singulation API",
                 Version = "v1"
             });
-            // ÈçĞè XML ×¢ÊÍ£º
+            // å¦‚éœ€ XML æ³¨é‡Šï¼š
             // var xml = Path.Combine(AppContext.BaseDirectory, "ZakYip.Singulation.Host.xml");
             // if (File.Exists(xml)) c.IncludeXmlComments(xml, includeControllerXmlComments: true);
         });
 
-        // Ê¹ÓÃ IConfigureOptions ÑÓ³ÙÅäÖÃ Swagger£¨±ÜÃâÔÚ´Ë´¦ BuildServiceProvider£©
+        // ä½¿ç”¨ IConfigureOptions å»¶è¿Ÿé…ç½® Swaggerï¼ˆé¿å…åœ¨æ­¤å¤„ BuildServiceProviderï¼‰
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
 
         // ---------- Hosted Services ----------
 
         services.AddHostedService<SingulationWorker>();
-        // ---------- ³õÊ¼»¯Öá ----------
+        // ---------- åˆå§‹åŒ–è½´ ----------
         services.AddHostedService<AxisBootstrapper>();
 
         // services.AddHostedService<RuntimeStatusReporter>();
 
         // ---------- SignalR ----------
         services.AddSingulationSignalR();
-        // ---------- ÅäÖÃ´æ´¢ ----------
+        // ---------- é…ç½®å­˜å‚¨ ----------
         services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb();
-        // ---------- Éè±¸Ïà¹Ø×¢Èë ----------
+        // ---------- è®¾å¤‡ç›¸å…³æ³¨å…¥ ----------
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
             r.Register("leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts));
-            // Î´À´ÔÚÕâÀïÔÙ×¢²áÆäËüÆ·ÅÆ£º
+            // æœªæ¥åœ¨è¿™é‡Œå†æ³¨å†Œå…¶å®ƒå“ç‰Œï¼š
             // r.Register("Inovance", (axisId, port, opts) => new InovanceAxisDrive(opts));
             return r;
         });
 
-        // Program.cs / DI ×¢²á´¦
+        // Program.cs / DI æ³¨å†Œå¤„
         services.AddSingleton<IBusAdapter>(sp => {
             var store = sp.GetRequiredService<IControllerOptionsStore>();
 
-            // 1) Í¬²½»ñÈ¡ÅäÖÃ£¨LiteDB ±¾ÉíÊÇ±¾µØ´æÈ¡£¬Í¬²½ÄÃ¼´¿É£©
+            // 1) åŒæ­¥è·å–é…ç½®ï¼ˆLiteDB æœ¬èº«æ˜¯æœ¬åœ°å­˜å–ï¼ŒåŒæ­¥æ‹¿å³å¯ï¼‰
             var dto = store.GetAsync().GetAwaiter().GetResult();
 
-            //¸ù¾İ Vendor Ñ¡Ôñ BusAdapter£¨ÎªÎ´À´À©Õ¹×ö·ÖÅÉ£©
+            //æ ¹æ® Vendor é€‰æ‹© BusAdapterï¼ˆä¸ºæœªæ¥æ‰©å±•åšåˆ†æ´¾ï¼‰
             var vendor = dto.Vendor?.Trim().ToLowerInvariant();
             switch (vendor) {
                 case "leadshine":
                 case "ltdmc":
                     return new LeadshineLtdmcBusAdapter(
                         cardNo: (ushort)dto.Template.Card,
-                        portNo: (ushort)dto.Template.Port,  // ¡û ĞŞÕıÇ¿×ª
+                        portNo: (ushort)dto.Template.Port,  // â† ä¿®æ­£å¼ºè½¬
                         controllerIp: dto.ControllerIp
                     );
 
-                // Î´À´½Ó±ğµÄ³§ÉÌ£ºÔÚÕâÀïĞÂÔö case
+                // æœªæ¥æ¥åˆ«çš„å‚å•†ï¼šåœ¨è¿™é‡Œæ–°å¢ case
                 // case "inovance": return new InovanceBusAdapter(...);
 
                 default:
@@ -176,13 +179,25 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
         services.AddSingleton<IAxisController, AxisController>();
-        // ---------- ÉÏÓÎÊı¾İÁ¬½ÓTcpÏà¹Ø×¢Èë ----------
+        // ---------- Ë°È« ----------
+        services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
+        services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
+        services.AddSingleton<LoopbackSafetyIoModule>();
+        services.AddSingleton<ISafetyIoModule>(sp => sp.GetRequiredService<LoopbackSafetyIoModule>());
+        services.AddSingleton<ICommissioningSequence, DefaultCommissioningSequence>();
+        services.AddSingleton<FrameGuard>();
+        services.AddSingleton<IFrameGuard>(sp => sp.GetRequiredService<FrameGuard>());
+        services.AddSingleton<SafetyPipeline>();
+        services.AddSingleton<ISafetyPipeline>(sp => sp.GetRequiredService<SafetyPipeline>());
+        services.AddHostedService(sp => sp.GetRequiredService<SafetyPipeline>());
+        services.AddHostedService<CommissioningWorker>();
+        // ---------- ä¸Šæ¸¸æ•°æ®è¿æ¥Tcpç›¸å…³æ³¨å…¥ ----------
         services.AddUpstreamTcpFromLiteDb();
-        // ---------- ½âÂëÆ÷Ïà¹Ø×¢Èë ----------
+        // ---------- è§£ç å™¨ç›¸å…³æ³¨å…¥ ----------
         services.AddSingleton<IUpstreamCodec>(provider => {
             var store = provider.GetRequiredService<IUpstreamCodecOptionsStore>();
 
-            // »ñÈ¡ÅäÖÃ£¨Èô²»´æÔÚÔò·µ»ØÄ¬ÈÏ£©
+            // è·å–é…ç½®ï¼ˆè‹¥ä¸å­˜åœ¨åˆ™è¿”å›é»˜è®¤ï¼‰
             var options = store.GetAsync().GetAwaiter().GetResult();
 
             store.UpsertAsync(options).GetAwaiter().GetResult();
@@ -192,23 +207,23 @@ var host = Host.CreateDefaultBuilder(args)
                 ejectCount: options.EjectCount
             );
         });
-        // ---------- ËÙ¶È¶à·¢ ----------
+        // ---------- é€Ÿåº¦å¤šå‘ ----------
         services.AddSingleton<IUpstreamFrameHub, UpstreamFrameHub>();
-        // ---------- ÊÂ¼ş±Ã ----------
+        // ---------- äº‹ä»¶æ³µ ----------
         services.AddHostedService<TransportEventPump>();
-        // ---------- ËÙ¶ÈÖ´ĞĞÆ÷ ----------
+        // ---------- é€Ÿåº¦æ‰§è¡Œå™¨ ----------
         services.AddHostedService<SpeedFrameWorker>();
-        // ---------- ĞÄÌøÖ´ĞĞÆ÷ ----------
+        // ---------- å¿ƒè·³æ‰§è¡Œå™¨ ----------
         services.AddHostedService<HeartbeatWorker>();
-        // ---------- ÈÕÖ¾±Ã ----------
+        // ---------- æ—¥å¿—æ³µ ----------
         services.AddSingleton<LogEventBus>();
         services.AddHostedService<LogEventPump>();
-        // ---------- ÈÕÖ¾ÇåÀí ----------
+        // ---------- æ—¥å¿—æ¸…ç† ----------
         services.AddHostedService<LogsCleanupService>();
     })
-    // ---------- ÈÕÖ¾ ----------
+    // ---------- æ—¥å¿— ----------
     .ConfigureLogging(logging => {
-        // Ñ¹µÍ¿ØÖÆÌ¨Êä³ö£¬±ÜÃâ IO Ñ¹Á¦£»Éú²ú½¨ÒéÓÃ NLog/Serilog ÊÕÁ²ÈÕÖ¾
+        // å‹ä½æ§åˆ¶å°è¾“å‡ºï¼Œé¿å… IO å‹åŠ›ï¼›ç”Ÿäº§å»ºè®®ç”¨ NLog/Serilog æ”¶æ•›æ—¥å¿—
         logging.ClearProviders();
         logging.SetMinimumLevel(LogLevel.Warning);
     })
@@ -221,35 +236,35 @@ var host = Host.CreateDefaultBuilder(args)
 #endif
             webBuilder.UseUrls(url);
 
-            // ÇëÇóÌåÉÏÏŞ£¨°´Ğèµ÷Õû£©
+            // è¯·æ±‚ä½“ä¸Šé™ï¼ˆæŒ‰éœ€è°ƒæ•´ï¼‰
             options.Limits.MaxRequestBodySize = 30L * 1024 * 1024 * 1024; // 30GB
         });
 
         webBuilder.Configure((context, app) => {
             // ---------- Response Compression ----------
-            app.UseResponseCompression(); // ÔçÆôÓÃ£¬¾²Ì¬Óë API ¶¼ÊÜÒæ
+            app.UseResponseCompression(); // æ—©å¯ç”¨ï¼Œé™æ€ä¸ API éƒ½å—ç›Š
 
-            // ---------- È«¾ÖÒì³£´¦Àí ----------
+            // ---------- å…¨å±€å¼‚å¸¸å¤„ç† ----------
             app.UseExceptionHandler(errorApp => {
                 errorApp.Run(async httpContext => {
                     httpContext.Response.StatusCode = 500;
                     httpContext.Response.ContentType = "application/json";
                     var ex = httpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
-                    NLog.LogManager.GetCurrentClassLogger().Error($"ÏµÍ³Òì³£ {ex}");
+                    NLog.LogManager.GetCurrentClassLogger().Error($"ç³»ç»Ÿå¼‚å¸¸ {ex}");
                     await httpContext.Response.WriteAsJsonAsync(new {
                         Result = false,
-                        Msg = "ÏµÍ³Òì³£"
+                        Msg = "ç³»ç»Ÿå¼‚å¸¸"
                     });
                 });
             });
 
-            // ---------- ³£¹æÖĞ¼ä¼ş ----------
+            // ---------- å¸¸è§„ä¸­é—´ä»¶ ----------
             app.UseRouting();
             app.UseCors("CorsPolicy");
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // ---------- È«¾ÖÇëÇóÌå»º´æ£¨ÔÊĞíºóĞø×é¼şÖØ¸´¶ÁÈ¡£»×¢ÒâÄÚ´æ/IO ¿ªÏú£© ----------
+            // ---------- å…¨å±€è¯·æ±‚ä½“ç¼“å­˜ï¼ˆå…è®¸åç»­ç»„ä»¶é‡å¤è¯»å–ï¼›æ³¨æ„å†…å­˜/IO å¼€é”€ï¼‰ ----------
             app.Use(next => async http => {
                 http.Request.EnableBuffering();
                 await next(http);
@@ -259,16 +274,16 @@ var host = Host.CreateDefaultBuilder(args)
             app.UseSwagger();
             app.UseSwaggerUI(opt => {
                 opt.RoutePrefix = "swagger";
-                opt.DocumentTitle = "ZakYip.Singulation ¨D API ÎÄµµ";
+                opt.DocumentTitle = "ZakYip.Singulation â€• API æ–‡æ¡£";
                 opt.SwaggerEndpoint("/swagger/v1/swagger.json", "ZakYip.Singulation API v1");
             });
 
-            // ---------- ÖÕ½áµã ----------
+            // ---------- ç»ˆç»“ç‚¹ ----------
             app.UseEndpoints(endpoints => {
                 endpoints.MapControllers();
                 endpoints.MapHub<EventsHub>("/hubs/events");
 
-                // ÈçĞè½¡¿µ¼ì²é£¨ÈôÏîÄ¿ÒÑÌí¼Ó AddHealthChecks£©
+                // å¦‚éœ€å¥åº·æ£€æŸ¥ï¼ˆè‹¥é¡¹ç›®å·²æ·»åŠ  AddHealthChecksï¼‰
                 // endpoints.MapHealthChecks("/health");
             });
         });
@@ -279,11 +294,11 @@ var host = Host.CreateDefaultBuilder(args)
 #endif
     // ---------- NLog ----------
     .UseNLog()
-    // ---------- ¹¹½¨ Host ----------
+    // ---------- æ„å»º Host ----------
     .Build();
 
 try {
-    // ×èÖ¹µçÄÔË¯Ãß/Ï¨ÆÁ
+    // é˜»æ­¢ç”µè„‘ç¡çœ /ç†„å±
     PowerGuard.SetThreadExecutionState(
         PowerGuard.EXECUTION_STATE.ES_CONTINUOUS |
         PowerGuard.EXECUTION_STATE.ES_SYSTEM_REQUIRED |
@@ -291,7 +306,7 @@ try {
     host.Run();
 }
 catch (Exception e) {
-    NLog.LogManager.GetCurrentClassLogger().Error(e, "ÔËĞĞÒì³£");
+    NLog.LogManager.GetCurrentClassLogger().Error(e, "è¿è¡Œå¼‚å¸¸");
 }
 finally {
     PowerGuard.SetThreadExecutionState(PowerGuard.EXECUTION_STATE.ES_CONTINUOUS);
