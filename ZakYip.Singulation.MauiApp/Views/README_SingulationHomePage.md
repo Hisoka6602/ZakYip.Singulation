@@ -113,8 +113,10 @@ Capsule-style segmented control:
 ## Technical Implementation
 
 ### Files Modified
-1. `SingulationHomePage.xaml` - Main XAML layout with both portrait and landscape layouts
+1. `SingulationHomePage.xaml` - Main XAML layout with both portrait and landscape layouts consolidated in a single file
 2. `SingulationHomePage.xaml.cs` - Code-behind with orientation detection
+
+Note: Both portrait and landscape layouts are implemented in the same XAML file using named Grid/ScrollView elements (`PortraitLayout` and `LandscapeLayout`) with visibility toggling. This approach keeps related layouts together and simplifies maintenance.
 
 ### Code-Behind Logic
 ```csharp
@@ -148,9 +150,12 @@ The existing `SingulationHomeViewModel.cs` already provides all necessary:
 - Motor selection and state management
 
 ## Dependencies
-- .NET MAUI 8.0
-- Prism.Maui 9.0
-- FontAwesome icons (already included)
+All dependencies are pre-existing in the project:
+- .NET MAUI 8.0 (cross-platform UI framework)
+- Prism.Maui 9.0 (MVVM framework, already configured)
+- FontAwesome icons (already included in Resources/Fonts)
+
+No new dependencies are required for this implementation.
 
 ## Testing Notes
 - The layout automatically switches when device orientation changes
