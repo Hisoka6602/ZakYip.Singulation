@@ -9,6 +9,11 @@
 
     <TabBar>
         <ShellContent
+            Title="🏠 分件助手"
+            ContentTemplate="{DataTemplate views:SingulationHomePage}"
+            Route="SingulationHomePage" />
+
+        <ShellContent
             Title="📦 模块网格"
             ContentTemplate="{DataTemplate views:ModuleGridPage}"
             Route="ModuleGridPage" />
