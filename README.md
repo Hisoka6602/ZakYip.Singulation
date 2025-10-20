@@ -1,6 +1,63 @@
 # ZakYip.Singulation 项目总览
 
-## 本次更新（2025-10-22）
+## 本次更新（2025-10-20）
+
+### 更新内容
+- **钉钉集成模块**：新增 ZakYip.AfterSales.Courier 项目，提供钉钉企业API集成功能
+  - 实现 `qyapi_get_member` 方法，支持获取组织成员列表（可无部门获取）
+  - 创建 `DingTalkService` 服务类，封装钉钉 API 调用逻辑
+  - 实现自动分页获取所有成员的功能
+  - 提供完整的测试器 `DingTalkTester`，包含多个测试场景
+- **代码组织优化**：每个 DTO 和类现在都有独立的文件
+  - 拆分 `AxisPatchRequestDto.cs` 为三个独立文件（AxisPatchRequestDto、LimitsPatch、MechanicsPatch）
+  - 拆分 `ControllerApiService.cs` 为三个独立文件（ControllerApiService、ControllerOptions、ControllerTemplate）
+  - 拆分 `ValueConverters.cs` 为三个独立文件（BoolToTextConverter、BoolToColorConverter、StringToBoolConverter）
+
+### 新增项目结构
+```
+ZakYip.AfterSales.Courier/
+├── Models/
+│   ├── DingTalkRequestDto.cs      # 钉钉请求基础 DTO
+│   ├── GetMemberRequestDto.cs     # 获取成员列表请求 DTO
+│   ├── DingTalkMemberDto.cs       # 钉钉成员信息 DTO
+│   └── GetMemberResponseDto.cs    # 获取成员列表响应 DTO
+├── Services/
+│   └── DingTalkService.cs         # 钉钉 API 服务（包含 qyapi_get_member）
+├── DingTalkTester.cs              # 钉钉功能测试器
+└── TestResult.cs                  # 测试结果 DTO
+```
+
+### 钉钉集成功能特性
+1. **无部门获取成员**：即使企业没有部门结构，也能获取所有成员列表
+2. **自动分页**：提供 `GetAllMembersAsync` 方法自动处理分页逻辑
+3. **完整测试套件**：包含测试无部门获取、指定部门获取、自动分页等场景
+4. **安全设计**：测试器中包含令牌屏蔽功能，保护敏感信息
+
+### 使用示例
+```csharp
+// 创建服务实例
+var httpClient = new HttpClient();
+var dingTalkService = new DingTalkService(httpClient);
+
+// 获取成员列表（无部门）
+var request = new GetMemberRequestDto
+{
+    AccessToken = "your_access_token",
+    DeptId = null,  // 不指定部门
+    Offset = 0,
+    Size = 100
+};
+var response = await dingTalkService.GetMemberListAsync(request);
+
+// 或者使用自动分页获取所有成员
+var allMembers = await dingTalkService.GetAllMembersAsync("your_access_token");
+
+// 使用测试器进行测试
+var tester = new DingTalkTester(dingTalkService);
+await tester.RunAllTestsAsync("your_access_token");
+```
+
+## 之前的更新（2025-10-22）
 
 ### 更新内容
 - **顶部工具区焕新**：重新设计主页面的控制面板，采用图标+说明的卡片式布局，按钮样式与官方设计稿一致，并保留自动刷新与全局使能开关。
@@ -179,6 +236,7 @@ ZakYip.Singulation.MauiApp/
 - **Transport** - 传输管线与事件泵
 - **Host** - ASP.NET Core 宿主（REST + SignalR）
 - **MauiApp** - .NET MAUI 跨平台客户端
+- **AfterSales.Courier** - 售后快递模块（钉钉集成）
 - **Tests** - 单元测试
 - **ConsoleDemo** - 控制台演示
 
@@ -209,11 +267,17 @@ ZakYip.Singulation.MauiApp/
    - 用户体验增强（错误提示优化、服务缓存、网络诊断、下拉刷新）
    - Android 后台管理（禁止后台运行）
    - 构建和发布成功（APK/AAB）
+10. **售后快递模块（AfterSales.Courier）**：✅
+   - 钉钉企业 API 集成
+   - qyapi_get_member 方法实现（支持无部门获取）
+   - 自动分页获取所有成员
+   - 完整的测试器和测试场景
+   - 所有 DTO 独立文件组织
 
 ### 📊 代码统计
-- 总项目数：9 个
-- 总源文件数：209 个（.cs, .xaml, .csproj）
-- 代码行数：约 15,000+ 行
+- 总项目数：10 个
+- 总源文件数：220+ 个（.cs, .xaml, .csproj）
+- 代码行数：约 15,500+ 行
 
 ### ⚙️ 技术栈
 - **.NET 8.0** - 运行时框架
