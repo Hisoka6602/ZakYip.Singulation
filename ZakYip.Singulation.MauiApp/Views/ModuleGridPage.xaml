@@ -32,8 +32,10 @@
                                TextColor="White"
                                VerticalOptions="Center" />
                         <Button Grid.Column="1"
-                                Text="🔄 刷新"
                                 Command="{Binding RefreshModulesCommand}"
+                                Style="{StaticResource IconButton}"
+                                ImageSource="{StaticResource Icon.Refresh.24}"
+                                Text="刷新"
                                 BackgroundColor="White"
                                 TextColor="#2196F3"
                                 CornerRadius="8"
@@ -89,8 +91,10 @@
                                            VerticalOptions="Center" 
                                            Spacing="10"
                                            Padding="20">
-                            <Label Text="📦"
+                            <Label Text="{Binding GridGlyph}"
+                                   FontFamily="FontAwesomeSolid"
                                    FontSize="48"
+                                   TextColor="LightGray"
                                    HorizontalOptions="Center" />
                             <Label Text="暂无模块数据"
                                    FontSize="16"

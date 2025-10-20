@@ -3,6 +3,7 @@ using Prism.Mvvm;
 using Prism.Navigation;
 using ZakYip.Singulation.MauiApp.Services;
 using ZakYip.Singulation.MauiApp.Helpers;
+using ZakYip.Singulation.MauiApp.Icons;
 
 namespace ZakYip.Singulation.MauiApp.ViewModels;
 
@@ -63,6 +64,16 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
     public DelegateCommand EnableCommand { get; }
     public DelegateCommand DisableCommand { get; }
     public DelegateCommand SetSpeedCommand { get; }
+    
+    // 图标 Glyphs（用于绑定）
+    public string RefreshGlyph => AppIcon.Refresh.ToGlyph();
+    public string PlayGlyph => AppIcon.Play.ToGlyph();
+    public string StopGlyph => AppIcon.Stop.ToGlyph();
+    public string SpeedGlyph => AppIcon.Speed.ToGlyph();
+    public string InfoGlyph => AppIcon.Info.ToGlyph();
+    public string ErrorGlyph => AppIcon.Error.ToGlyph();
+    public string ControllerGlyph => AppIcon.Controller.ToGlyph();
+    public string SettingsGlyph => AppIcon.Settings.ToGlyph();
     
     public ControllerDetailsViewModel(ApiClient apiClient, SignalRClientFactory signalRFactory)
     {

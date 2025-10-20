@@ -3,6 +3,7 @@ using Prism.Mvvm;
 using System.Collections.ObjectModel;
 using ZakYip.Singulation.MauiApp.Services;
 using ZakYip.Singulation.MauiApp.Helpers;
+using ZakYip.Singulation.MauiApp.Icons;
 
 namespace ZakYip.Singulation.MauiApp.ViewModels;
 
@@ -69,6 +70,10 @@ public class ModuleGridViewModel : BindableBase
     public int RunningCount => Modules.Count(m => m.Status == ModuleStatus.Running);
     public int IdleCount => Modules.Count(m => m.Status == ModuleStatus.Idle);
     public int ErrorCount => Modules.Count(m => m.Status == ModuleStatus.Error);
+
+    // 图标 Glyphs（用于绑定）
+    public string RefreshGlyph => AppIcon.Refresh.ToGlyph();
+    public string GridGlyph => AppIcon.Grid.ToGlyph();
 
     public DelegateCommand RefreshModulesCommand { get; }
     public DelegateCommand ModuleSelectedCommand { get; }
