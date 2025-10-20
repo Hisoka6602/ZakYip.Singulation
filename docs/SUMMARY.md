@@ -84,12 +84,14 @@ Simple page constructor with ViewModel injection.
 
 ## Motor Data
 The page initializes with 20 motors (M01-M20) with the following RPM values:
-```
-M01: 1000   M02: 2000   M03: 2000   M04: 1600   M05: 2000
-M06: 2500   M07: 3000   M08: 2000   M09: 2000   M10: 3000
-M11: 1600   M12: 1800   M13: 1000   M14: 1800   M15: 1000
-M16: 1000   M17: 1000   M18: 1800   M19: 1800   M20: 1200
-```
+
+| Motor | RPM | Motor | RPM | Motor | RPM | Motor | RPM |
+|-------|-----|-------|-----|-------|-----|-------|-----|
+| M01   | 1000 | M06  | 2500 | M11  | 1600 | M16  | 1000 |
+| M02   | 2000 | M07  | 3000 | M12  | 1800 | M17  | 1000 |
+| M03   | 2000 | M08  | 2000 | M13  | 1000 | M18  | 1800 |
+| M04   | 1600 | M09  | 2000 | M14  | 1800 | M19  | 1800 |
+| M05   | 2000 | M10  | 3000 | M15  | 1000 | M20  | 1200 |
 
 ## Motor States
 Each motor can be in one of four states:
@@ -178,6 +180,13 @@ To complete the implementation:
 
 1. **Install MAUI Workload**:
    ```bash
+   # For Android
+   dotnet workload install maui-android
+   
+   # For iOS (requires macOS)
+   dotnet workload install maui-ios
+   
+   # For all platforms
    dotnet workload install maui
    ```
 
@@ -188,9 +197,11 @@ To complete the implementation:
 
 3. **Run on Device/Simulator**:
    ```bash
-   dotnet build -t:Run -f net8.0-android
-   # or
-   dotnet build -t:Run -f net8.0-ios
+   # For Android
+   dotnet build -f net8.0-android -t:Run
+   
+   # For iOS (requires macOS)
+   dotnet build -f net8.0-ios -t:Run
    ```
 
 4. **Test All Features**:
