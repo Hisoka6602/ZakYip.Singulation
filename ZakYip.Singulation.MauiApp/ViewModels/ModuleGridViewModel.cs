@@ -15,6 +15,7 @@ public class ModuleGridViewModel : BindableBase
     private readonly SignalRClientFactory _signalRFactory;
     private readonly NotificationService _notificationService;
     private readonly SafeExecutor.CircuitBreaker _apiCircuitBreaker;
+    private readonly ModuleCacheManager _cacheManager;
 
     private ObservableCollection<SingulationModule> _modules = new();
     public ObservableCollection<SingulationModule> Modules
@@ -80,6 +81,7 @@ public class ModuleGridViewModel : BindableBase
         _signalRFactory = signalRFactory;
         _notificationService = NotificationService.Instance;
         _apiCircuitBreaker = new SafeExecutor.CircuitBreaker(failureThreshold: 3, resetTimeoutSeconds: 60);
+        _cacheManager = ModuleCacheManager.Instance;
 
         RefreshModulesCommand = new DelegateCommand(async () => await RefreshModulesAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
@@ -154,6 +156,23 @@ public class ModuleGridViewModel : BindableBase
 
         try
         {
+            // 首先检查缓存
+            var cacheKey = "axis_controllers";
+            var cachedData = _cacheManager.Get<List<AxisInfo>>(cacheKey);
+            
+            if (cachedData != null)
+            {
+                // 使用缓存数据立即更新UI，提升响应速度
+                await MainThread.InvokeOnMainThreadAsync(() =>
+                {
+                    foreach (var axis in cachedData)
+                    {
+                        UpdateModuleFromAxis(axis);
+                    }
+                    UpdateStatistics();
+                });
+            }
+
             // 使用SafeExecutor保护API调用
             var response = await SafeExecutor.ExecuteAsync(
                 async () => await _apiClient.GetControllersAsync(),
@@ -165,6 +184,9 @@ public class ModuleGridViewModel : BindableBase
 
             if (response.Success && response.Data != null)
             {
+                // 更新缓存
+                _cacheManager.Set(cacheKey, response.Data, TimeSpan.FromMinutes(2));
+                
                 await MainThread.InvokeOnMainThreadAsync(() =>
                 {
                     // 更新模块状态和速度
