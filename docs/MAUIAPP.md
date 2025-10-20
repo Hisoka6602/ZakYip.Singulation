@@ -6,14 +6,33 @@ ZakYip.Singulation.MauiApp 是一个跨平台移动应用，用于远程控制�
 
 ## 功能特性
 
-### 1. UDP 服务自动发现（新增）
+### 1. 横竖屏自适应布局（✨ 新增）
+- **响应式设计**: 所有页面自动适配设备方向变化
+  - 主页面（MainPage）：控制器列表和操作区域自动调整
+  - 设置页面（SettingsPage）：服务发现列表响应式布局
+  - 详情页面（ControllerDetailsPage）：信息卡片和按钮自适应排列
+- **智能尺寸优化**: 根据设备类型自动调整控件大小
+  - 手机：紧凑布局，优化单手操作
+  - 平板：适中尺寸，平衡显示效果
+  - 桌面：宽松布局，最大化可读性
+- **内容居中对齐**: 横屏模式下内容自动居中显示（最大宽度 800px）
+- **无缝切换体验**: 设备旋转时布局平滑过渡，保持状态
+- **跨平台支持**: Android 和 Windows 平台完全支持方向切换
+
+#### 技术实现
+- **Android**: MainActivity 配置 `ConfigChanges.Orientation | ConfigChanges.ScreenSize`
+- **布局策略**: 使用 Grid 响应式布局 + `OnIdiom` 设备适配
+- **尺寸控制**: `MaximumWidthRequest` 限制最大宽度，`HorizontalOptions.Center` 居中对齐
+- **CollectionView**: 动态调整高度，根据设备类型显示不同数量的项目
+
+### 2. UDP 服务自动发现
 - **自动发现服务**: 通过 UDP 广播自动发现同一网络中的 Singulation 服务
 - **无需手动配置**: 连接到同一 WiFi/网络后即可自动发现服务
 - **实时服务列表**: 显示所有发现的服务及其状态
 - **一键连接**: 点击发现的服务即可自动配置并连接
 - **服务超时检测**: 自动检测和移除失联的服务（10 秒超时）
 
-### 2. MVVM 架构
+### 3. MVVM 架构
 - **ViewModels**: 使用 Prism.Mvvm 实现响应式数据绑定
   - `MainViewModel`: 主控制台页面
   - `SettingsViewModel`: 设置页面（支持 UDP 服务发现）
@@ -31,7 +50,7 @@ ZakYip.Singulation.MauiApp 是一个跨平台移动应用，用于远程控制�
   - `UdpDiscoveryClient`: UDP 服务发现客户端
   - `SignalRClientFactory`: SignalR 实时连接工厂
 
-### 3. 完整的 API 集成（已扩展）
+### 4. 完整的 API 集成（已扩展）
 应用通过 HTTP REST API 与 ZakYip.Singulation.Host 服务通信，支持以下功能：
 
 #### 控制器管理
@@ -82,7 +101,7 @@ ZakYip.Singulation.MauiApp 是一个跨平台移动应用，用于远程控制�
 - **实时事件推送**: 接收系统状态变化通知
 - **自动重连**: 断线后自动尝试重连
 
-### 4. 扁平化 UI 设计（全新）
+### 5. 扁平化 UI 设计（全新）
 
 #### 主控制台页面 (MainPage)
 - **标题**: 🎯 Singulation 控制台
@@ -130,7 +149,7 @@ ZakYip.Singulation.MauiApp 是一个跨平台移动应用，用于远程控制�
   - 平台信息
   - 项目名称
 
-### 5. 数据持久化
+### 6. 数据持久化
 - 使用 `Preferences` API 保存用户设置
 - 支持的设置项:
   - `ApiBaseUrl`: API 基础地址
