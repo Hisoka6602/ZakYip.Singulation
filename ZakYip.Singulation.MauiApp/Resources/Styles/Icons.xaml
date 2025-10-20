@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- 中文注释：常用图标集中管理，Glyph 使用 Unicode -->
+    
+    <!-- 通用操作图标 (24px) -->
+    <FontImageSource x:Key="Icon.Add.24" FontFamily="FontAwesomeSolid" Glyph="&#xf067;" Size="24" />
+    <FontImageSource x:Key="Icon.Refresh.24" FontFamily="FontAwesomeSolid" Glyph="&#xf021;" Size="24" />
+    <FontImageSource x:Key="Icon.Settings.24" FontFamily="FontAwesomeSolid" Glyph="&#xf013;" Size="24" />
+    <FontImageSource x:Key="Icon.Home.24" FontFamily="FontAwesomeSolid" Glyph="&#xf015;" Size="24" />
+    
+    <!-- 播放控制图标 (24px) -->
+    <FontImageSource x:Key="Icon.Play.24" FontFamily="FontAwesomeSolid" Glyph="&#xf04b;" Size="24" />
+    <FontImageSource x:Key="Icon.Stop.24" FontFamily="FontAwesomeSolid" Glyph="&#xf04d;" Size="24" />
+    <FontImageSource x:Key="Icon.Pause.24" FontFamily="FontAwesomeSolid" Glyph="&#xf04c;" Size="24" />
+    
+    <!-- 状态图标 (24px) -->
+    <FontImageSource x:Key="Icon.Info.24" FontFamily="FontAwesomeSolid" Glyph="&#xf05a;" Size="24" Color="#2196F3" />
+    <FontImageSource x:Key="Icon.Warning.24" FontFamily="FontAwesomeSolid" Glyph="&#xf071;" Size="24" Color="#FF9800" />
+    <FontImageSource x:Key="Icon.Error.24" FontFamily="FontAwesomeSolid" Glyph="&#xf057;" Size="24" Color="#F44336" />
+    <FontImageSource x:Key="Icon.Success.24" FontFamily="FontAwesomeSolid" Glyph="&#xf058;" Size="24" Color="#4CAF50" />
+    
+    <!-- 连接图标 (24px) -->
+    <FontImageSource x:Key="Icon.Link.24" FontFamily="FontAwesomeSolid" Glyph="&#xf0c1;" Size="24" />
+    <FontImageSource x:Key="Icon.Unlink.24" FontFamily="FontAwesomeSolid" Glyph="&#xf127;" Size="24" />
+    
+    <!-- 功能图标 (24px) -->
+    <FontImageSource x:Key="Icon.Speed.24" FontFamily="FontAwesomeSolid" Glyph="&#xf0e7;" Size="24" />
+    <FontImageSource x:Key="Icon.Controller.24" FontFamily="FontAwesomeSolid" Glyph="&#xf2db;" Size="24" />
+    <FontImageSource x:Key="Icon.Axis.24" FontFamily="FontAwesomeSolid" Glyph="&#xf1de;" Size="24" />
+    <FontImageSource x:Key="Icon.Grid.24" FontFamily="FontAwesomeSolid" Glyph="&#xf00a;" Size="24" />
+    <FontImageSource x:Key="Icon.List.24" FontFamily="FontAwesomeSolid" Glyph="&#xf03a;" Size="24" />
+    <FontImageSource x:Key="Icon.Send.24" FontFamily="FontAwesomeSolid" Glyph="&#xf1d8;" Size="24" />
+    <FontImageSource x:Key="Icon.Safety.24" FontFamily="FontAwesomeSolid" Glyph="&#xf132;" Size="24" />
+    
+    <!-- 大图标 (32px) -->
+    <FontImageSource x:Key="Icon.Home.32" FontFamily="FontAwesomeSolid" Glyph="&#xf015;" Size="32" />
+    <FontImageSource x:Key="Icon.Speed.32" FontFamily="FontAwesomeSolid" Glyph="&#xf0e7;" Size="32" />
+    
+    <!-- 图标按钮样式 -->
+    <Style x:Key="IconButton" TargetType="Button">
+        <Setter Property="ContentLayout" Value="Left,8" />
+        <Setter Property="Padding" Value="12,8" />
+    </Style>
+    
+    <!-- 图标标签样式 -->
+    <Style x:Key="IconLabel" TargetType="Label">
+        <Setter Property="FontFamily" Value="FontAwesomeSolid" />
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="VerticalOptions" Value="Center" />
+        <Setter Property="HorizontalOptions" Value="Center" />
+    </Style>
+    
+    <!-- 小图标标签样式 -->
+    <Style x:Key="IconLabelSmall" TargetType="Label" BasedOn="{StaticResource IconLabel}">
+        <Setter Property="FontSize" Value="16" />
+    </Style>
+
+</ResourceDictionary>

@@ -4,6 +4,7 @@ using Prism.Navigation;
 using System.Collections.ObjectModel;
 using ZakYip.Singulation.MauiApp.Services;
 using ZakYip.Singulation.MauiApp.Helpers;
+using ZakYip.Singulation.MauiApp.Icons;
 
 namespace ZakYip.Singulation.MauiApp.ViewModels;
 
@@ -101,6 +102,18 @@ public class MainViewModel : BindableBase
     public DelegateCommand DisableAllAxesCommand { get; }
     public DelegateCommand SetAllAxesSpeedCommand { get; }
     public DelegateCommand<AxisInfo> ViewDetailsCommand { get; }
+
+    // 图标 Glyphs（用于绑定）
+    public string HomeGlyph => AppIcon.Home.ToGlyph();
+    public string RefreshGlyph => AppIcon.Refresh.ToGlyph();
+    public string SettingsGlyph => AppIcon.Settings.ToGlyph();
+    public string PlayGlyph => AppIcon.Play.ToGlyph();
+    public string StopGlyph => AppIcon.Stop.ToGlyph();
+    public string SendGlyph => AppIcon.Send.ToGlyph();
+    public string SpeedGlyph => AppIcon.Speed.ToGlyph();
+    public string LinkGlyph => AppIcon.Link.ToGlyph();
+    public string SafetyGlyph => AppIcon.Safety.ToGlyph();
+    public string ControllerGlyph => AppIcon.Controller.ToGlyph();
 
     public MainViewModel(ApiClient apiClient, SignalRClientFactory signalRFactory, INavigationService navigationService)
     {
