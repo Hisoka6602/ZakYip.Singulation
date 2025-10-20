@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
+             xmlns:services="clr-namespace:ZakYip.Singulation.MauiApp.Services"
+             xmlns:controls="clr-namespace:ZakYip.Singulation.MauiApp.Controls"
+             x:Class="ZakYip.Singulation.MauiApp.Views.ModuleGridPage"
+             x:DataType="viewmodels:ModuleGridViewModel"
+             Title="单件分离模块">
+
+    <Grid>
+        <ScrollView>
+            <Grid Padding="10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- 标题栏 -->
+                <Frame Grid.Row="0" 
+                       Padding="15" 
+                       Margin="0,0,0,10"
+                       BackgroundColor="#2196F3"
+                       CornerRadius="8"
+                       HasShadow="True">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Label Grid.Column="0"
+                               Text="单件分离模块网格"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               TextColor="White"
+                               VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Text="🔄 刷新"
+                                Command="{Binding RefreshModulesCommand}"
+                                BackgroundColor="White"
+                                TextColor="#2196F3"
+                                CornerRadius="8"
+                                Padding="15,8" />
+                    </Grid>
+                </Frame>
+
+                <!-- 统计信息 -->
+                <Frame Grid.Row="1" 
+                       Padding="15" 
+                       Margin="0,0,0,10"
+                       BackgroundColor="#F5F5F5"
+                       CornerRadius="8">
+                    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="总数" FontSize="12" TextColor="Gray" HorizontalTextAlignment="Center" />
+                            <Label Text="{Binding TotalCount}" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="运行中" FontSize="12" TextColor="Green" HorizontalTextAlignment="Center" />
+                            <Label Text="{Binding RunningCount}" FontSize="18" FontAttributes="Bold" TextColor="Green" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" Spacing="4">
+                            <Label Text="空闲" FontSize="12" TextColor="Gray" HorizontalTextAlignment="Center" />
+                            <Label Text="{Binding IdleCount}" FontSize="18" FontAttributes="Bold" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="3" Spacing="4">
+                            <Label Text="错误" FontSize="12" TextColor="Red" HorizontalTextAlignment="Center" />
+                            <Label Text="{Binding ErrorCount}" FontSize="18" FontAttributes="Bold" TextColor="Red" HorizontalTextAlignment="Center" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Frame>
+
+                <!-- 模块网格 - 使用CollectionView实现虚拟化 -->
+                <CollectionView Grid.Row="2"
+                                ItemsSource="{Binding Modules}"
+                                SelectionMode="Single"
+                                SelectedItem="{Binding SelectedModule}"
+                                SelectionChangedCommand="{Binding ModuleSelectedCommand}">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical"
+                                         Span="{Binding GridColumns}"
+                                         HorizontalItemSpacing="2"
+                                         VerticalItemSpacing="2" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="services:SingulationModule">
+                            <controls:GridModuleView />
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                    <CollectionView.EmptyView>
+                        <VerticalStackLayout HorizontalOptions="Center" 
+                                           VerticalOptions="Center" 
+                                           Spacing="10"
+                                           Padding="20">
+                            <Label Text="📦"
+                                   FontSize="48"
+                                   HorizontalOptions="Center" />
+                            <Label Text="暂无模块数据"
+                                   FontSize="16"
+                                   TextColor="Gray"
+                                   HorizontalOptions="Center" />
+                            <Label Text="点击刷新按钮加载模块"
+                                   FontSize="14"
+                                   TextColor="Gray"
+                                   HorizontalOptions="Center" />
+                        </VerticalStackLayout>
+                    </CollectionView.EmptyView>
+                </CollectionView>
+            </Grid>
+        </ScrollView>
+
+        <!-- 加载指示器 -->
+        <ActivityIndicator IsRunning="{Binding IsLoading}"
+                          IsVisible="{Binding IsLoading}"
+                          Color="#2196F3"
+                          WidthRequest="50"
+                          HeightRequest="50"
+                          HorizontalOptions="Center"
+                          VerticalOptions="Center" />
+        
+        <!-- 通知覆盖层 -->
+        <controls:NotificationOverlay 
+            VerticalOptions="Start"
+            HorizontalOptions="Fill"
+            Margin="0,10,0,0"
+            ZIndex="1000" />
+    </Grid>
+</ContentPage>

@@ -70,6 +70,7 @@ namespace ZakYip.Singulation.MauiApp {
 
             // 注册 Pages 和 ViewModels (Prism 会自动关联)
             containerRegistry.RegisterForNavigation<MainPage, MainViewModel>();
+            containerRegistry.RegisterForNavigation<ModuleGridPage, ModuleGridViewModel>();
             containerRegistry.RegisterForNavigation<SettingsPage, SettingsViewModel>();
             containerRegistry.RegisterForNavigation<ControllerDetailsPage, ControllerDetailsViewModel>();
         }

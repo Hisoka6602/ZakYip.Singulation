@@ -113,52 +113,54 @@ public class ControllerDetailsViewModel : BindableBase, INavigationAware
     
     private async Task RefreshAsync()
     {
-        try
-        {
-            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
-            
-            IsLoading = true;
-            StatusMessage = "刷新中...";
-            
-            // 获取最新的轴信息
-            var response = await _apiClient.GetControllersAsync();
-            if (response.Success && response.Data != null)
+        await SafeExecutor.ExecuteAsync(
+            async () =>
             {
-                var axis = response.Data.FirstOrDefault(a => a.AxisId == AxisInfo.AxisId);
-                if (axis != null)
+                HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+                
+                IsLoading = true;
+                StatusMessage = "刷新中...";
+                
+                // 获取最新的轴信息
+                var response = await _apiClient.GetControllersAsync();
+                if (response.Success && response.Data != null)
                 {
-                    AxisInfo = axis;
-                    RaisePropertyChanged(nameof(HasError));
-                    RaisePropertyChanged(nameof(EnabledText));
-                    RaisePropertyChanged(nameof(TargetSpeedText));
-                    RaisePropertyChanged(nameof(FeedbackSpeedText));
-                    RaisePropertyChanged(nameof(CurrentSpeedText));
-                    
-                    StatusMessage = "刷新成功";
-                    _notificationService.ShowSuccess("刷新成功");
+                    var axis = response.Data.FirstOrDefault(a => a.AxisId == AxisInfo.AxisId);
+                    if (axis != null)
+                    {
+                        AxisInfo = axis;
+                        RaisePropertyChanged(nameof(HasError));
+                        RaisePropertyChanged(nameof(EnabledText));
+                        RaisePropertyChanged(nameof(TargetSpeedText));
+                        RaisePropertyChanged(nameof(FeedbackSpeedText));
+                        RaisePropertyChanged(nameof(CurrentSpeedText));
+                        
+                        StatusMessage = "刷新成功";
+                        _notificationService.ShowSuccess("刷新成功");
+                    }
+                    else
+                    {
+                        StatusMessage = "未找到该轴";
+                        _notificationService.ShowError("未找到该轴");
+                    }
                 }
                 else
                 {
-                    StatusMessage = "未找到该轴";
-                    _notificationService.ShowError("未找到该轴");
+                    StatusMessage = $"刷新失败: {response.Message}";
+                    _notificationService.ShowError($"刷新失败: {response.Message}");
                 }
-            }
-            else
+            },
+            ex =>
             {
-                StatusMessage = $"刷新失败: {response.Message}";
-                _notificationService.ShowError($"刷新失败: {response.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
-            StatusMessage = friendlyMessage;
-            _notificationService.ShowError(friendlyMessage);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+                var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+                StatusMessage = friendlyMessage;
+                _notificationService.ShowError(friendlyMessage);
+            },
+            "RefreshAxisDetails",
+            timeout: 10000
+        );
+        
+        IsLoading = false;
     }
     
     private async Task EnableAsync()

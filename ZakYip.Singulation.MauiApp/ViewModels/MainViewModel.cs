@@ -292,40 +292,42 @@ public class MainViewModel : BindableBase
     /// </summary>
     private async Task RefreshControllersAsync()
     {
-        try
-        {
-            // Haptic feedback
-            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
-
-            IsLoading = true;
-            StatusMessage = "Refreshing controllers...";
-
-            var response = await _apiClient.GetControllersAsync();
-            if (response.Success && response.Data != null)
+        await SafeExecutor.ExecuteAsync(
+            async () =>
             {
-                Controllers.Clear();
-                foreach (var controller in response.Data)
+                // Haptic feedback
+                HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
+                IsLoading = true;
+                StatusMessage = "Refreshing controllers...";
+
+                var response = await _apiClient.GetControllersAsync();
+                if (response.Success && response.Data != null)
                 {
-                    Controllers.Add(controller);
+                    Controllers.Clear();
+                    foreach (var controller in response.Data)
+                    {
+                        Controllers.Add(controller);
+                    }
+                    StatusMessage = $"Loaded {Controllers.Count} controllers";
+                    _notificationService.ShowSuccess($"已加载 {Controllers.Count} 个控制器");
                 }
-                StatusMessage = $"Loaded {Controllers.Count} controllers";
-                _notificationService.ShowSuccess($"已加载 {Controllers.Count} 个控制器");
-            }
-            else
+                else
+                {
+                    StatusMessage = $"Error: {response.Message}";
+                    _notificationService.ShowError($"加载失败: {response.Message}");
+                }
+            },
+            ex =>
             {
-                StatusMessage = $"Error: {response.Message}";
-                _notificationService.ShowError($"加载失败: {response.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Exception: {ex.Message}";
-            _notificationService.ShowError($"异常: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+                StatusMessage = $"Exception: {ex.Message}";
+                _notificationService.ShowError($"异常: {ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message)}");
+            },
+            "RefreshControllers",
+            timeout: 15000
+        );
+
+        IsLoading = false;
     }
 
     /// <summary>
@@ -333,52 +335,54 @@ public class MainViewModel : BindableBase
     /// </summary>
     private async Task SendSafetyCommandAsync()
     {
-        try
-        {
-            // Haptic feedback
-            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
-
-            IsLoading = true;
-            StatusMessage = "Sending safety command...";
-
-            // 将字符串命令类型转换为枚举值
-            int commandValue = SafetyCommandType switch
+        await SafeExecutor.ExecuteAsync(
+            async () =>
             {
-                "Start" => 1,
-                "Stop" => 2,
-                "Reset" => 3,
-                _ => 0
-            };
+                // Haptic feedback
+                HapticFeedback.Default.Perform(HapticFeedbackType.Click);
 
-            var request = new SafetyCommandRequest
-            {
-                Command = commandValue,
-                Reason = SafetyReason
-            };
+                IsLoading = true;
+                StatusMessage = "Sending safety command...";
 
-            var response = await _apiClient.SendSafetyCommandAsync(request);
-            if (response.Success)
+                // 将字符串命令类型转换为枚举值
+                int commandValue = SafetyCommandType switch
+                {
+                    "Start" => 1,
+                    "Stop" => 2,
+                    "Reset" => 3,
+                    _ => 0
+                };
+
+                var request = new SafetyCommandRequest
+                {
+                    Command = commandValue,
+                    Reason = SafetyReason
+                };
+
+                var response = await _apiClient.SendSafetyCommandAsync(request);
+                if (response.Success)
+                {
+                    StatusMessage = "Safety command sent successfully";
+                    SafetyReason = string.Empty;
+                    _notificationService.ShowSuccess($"安全命令 {SafetyCommandType} 发送成功");
+                }
+                else
+                {
+                    StatusMessage = $"Error: {response.Message}";
+                    _notificationService.ShowError($"发送失败: {response.Message}");
+                }
+            },
+            ex =>
             {
-                StatusMessage = "Safety command sent successfully";
-                SafetyReason = string.Empty;
-                _notificationService.ShowSuccess($"安全命令 {SafetyCommandType} 发送成功");
-            }
-            else
-            {
-                StatusMessage = $"Error: {response.Message}";
-                _notificationService.ShowError($"发送失败: {response.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
-            StatusMessage = friendlyMessage;
-            _notificationService.ShowError(friendlyMessage);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+                var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+                StatusMessage = friendlyMessage;
+                _notificationService.ShowError(friendlyMessage);
+            },
+            "SendSafetyCommand",
+            timeout: 10000
+        );
+
+        IsLoading = false;
     }
 
     /// <summary>
@@ -386,36 +390,38 @@ public class MainViewModel : BindableBase
     /// </summary>
     private async Task ConnectSignalRAsync()
     {
-        try
-        {
-            // Haptic feedback
-            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
-
-            IsLoading = true;
-            StatusMessage = "Connecting to SignalR...";
-
-            await _signalRFactory.GetOrCreateHubConnectionAsync();
-            if (_signalRFactory.IsConnected)
+        await SafeExecutor.ExecuteAsync(
+            async () =>
             {
-                StatusMessage = "SignalR connected";
-                _notificationService.ShowSuccess("SignalR 连接成功");
-            }
-            else
+                // Haptic feedback
+                HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
+                IsLoading = true;
+                StatusMessage = "Connecting to SignalR...";
+
+                await _signalRFactory.GetOrCreateHubConnectionAsync();
+                if (_signalRFactory.IsConnected)
+                {
+                    StatusMessage = "SignalR connected";
+                    _notificationService.ShowSuccess("SignalR 连接成功");
+                }
+                else
+                {
+                    StatusMessage = "SignalR connection failed";
+                    _notificationService.ShowError("SignalR 连接失败");
+                }
+            },
+            ex =>
             {
-                StatusMessage = "SignalR connection failed";
-                _notificationService.ShowError("SignalR 连接失败");
-            }
-        }
-        catch (Exception ex)
-        {
-            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
-            StatusMessage = friendlyMessage;
-            _notificationService.ShowError(friendlyMessage);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+                var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+                StatusMessage = friendlyMessage;
+                _notificationService.ShowError(friendlyMessage);
+            },
+            "ConnectSignalR",
+            timeout: 15000
+        );
+
+        IsLoading = false;
     }
 
     /// <summary>
@@ -423,36 +429,38 @@ public class MainViewModel : BindableBase
     /// </summary>
     private async Task EnableAllAxesAsync()
     {
-        try
-        {
-            // Haptic feedback
-            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
-
-            IsLoading = true;
-            StatusMessage = "Enabling all axes...";
-
-            var response = await _apiClient.EnableAxesAsync();
-            if (response.Success)
+        await SafeExecutor.ExecuteAsync(
+            async () =>
             {
-                StatusMessage = "All axes enabled successfully";
-                _notificationService.ShowSuccess("所有轴已成功使能");
-            }
-            else
+                // Haptic feedback
+                HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
+                IsLoading = true;
+                StatusMessage = "Enabling all axes...";
+
+                var response = await _apiClient.EnableAxesAsync();
+                if (response.Success)
+                {
+                    StatusMessage = "All axes enabled successfully";
+                    _notificationService.ShowSuccess("所有轴已成功使能");
+                }
+                else
+                {
+                    StatusMessage = $"Error: {response.Message}";
+                    _notificationService.ShowError($"使能失败: {response.Message}");
+                }
+            },
+            ex =>
             {
-                StatusMessage = $"Error: {response.Message}";
-                _notificationService.ShowError($"使能失败: {response.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
-            StatusMessage = friendlyMessage;
-            _notificationService.ShowError(friendlyMessage);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+                var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+                StatusMessage = friendlyMessage;
+                _notificationService.ShowError(friendlyMessage);
+            },
+            "EnableAllAxes",
+            timeout: 10000
+        );
+
+        IsLoading = false;
     }
 
     /// <summary>
@@ -460,36 +468,38 @@ public class MainViewModel : BindableBase
     /// </summary>
     private async Task DisableAllAxesAsync()
     {
-        try
-        {
-            // Haptic feedback
-            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
-
-            IsLoading = true;
-            StatusMessage = "Disabling all axes...";
-
-            var response = await _apiClient.DisableAxesAsync();
-            if (response.Success)
+        await SafeExecutor.ExecuteAsync(
+            async () =>
             {
-                StatusMessage = "All axes disabled successfully";
-                _notificationService.ShowSuccess("所有轴已成功禁用");
-            }
-            else
+                // Haptic feedback
+                HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
+                IsLoading = true;
+                StatusMessage = "Disabling all axes...";
+
+                var response = await _apiClient.DisableAxesAsync();
+                if (response.Success)
+                {
+                    StatusMessage = "All axes disabled successfully";
+                    _notificationService.ShowSuccess("所有轴已成功禁用");
+                }
+                else
+                {
+                    StatusMessage = $"Error: {response.Message}";
+                    _notificationService.ShowError($"禁用失败: {response.Message}");
+                }
+            },
+            ex =>
             {
-                StatusMessage = $"Error: {response.Message}";
-                _notificationService.ShowError($"禁用失败: {response.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
-            StatusMessage = friendlyMessage;
-            _notificationService.ShowError(friendlyMessage);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+                var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+                StatusMessage = friendlyMessage;
+                _notificationService.ShowError(friendlyMessage);
+            },
+            "DisableAllAxes",
+            timeout: 10000
+        );
+
+        IsLoading = false;
     }
 
     /// <summary>
@@ -497,35 +507,37 @@ public class MainViewModel : BindableBase
     /// </summary>
     private async Task SetAllAxesSpeedAsync()
     {
-        try
-        {
-            // Haptic feedback
-            HapticFeedback.Default.Perform(HapticFeedbackType.Click);
-
-            IsLoading = true;
-            StatusMessage = $"Setting speed to {TargetSpeed} mm/s...";
-
-            var response = await _apiClient.SetAxesSpeedAsync(TargetSpeed);
-            if (response.Success)
+        await SafeExecutor.ExecuteAsync(
+            async () =>
             {
-                StatusMessage = $"Speed set to {TargetSpeed} mm/s successfully";
-                _notificationService.ShowSuccess($"速度已设置为 {TargetSpeed} mm/s");
-            }
-            else
+                // Haptic feedback
+                HapticFeedback.Default.Perform(HapticFeedbackType.Click);
+
+                IsLoading = true;
+                StatusMessage = $"Setting speed to {TargetSpeed} mm/s...";
+
+                var response = await _apiClient.SetAxesSpeedAsync(TargetSpeed);
+                if (response.Success)
+                {
+                    StatusMessage = $"Speed set to {TargetSpeed} mm/s successfully";
+                    _notificationService.ShowSuccess($"速度已设置为 {TargetSpeed} mm/s");
+                }
+                else
+                {
+                    StatusMessage = $"Error: {response.Message}";
+                    _notificationService.ShowError($"设置失败: {response.Message}");
+                }
+            },
+            ex =>
             {
-                StatusMessage = $"Error: {response.Message}";
-                _notificationService.ShowError($"设置失败: {response.Message}");
-            }
-        }
-        catch (Exception ex)
-        {
-            var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
-            StatusMessage = friendlyMessage;
-            _notificationService.ShowError(friendlyMessage);
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+                var friendlyMessage = ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message);
+                StatusMessage = friendlyMessage;
+                _notificationService.ShowError(friendlyMessage);
+            },
+            "SetAllAxesSpeed",
+            timeout: 10000
+        );
+
+        IsLoading = false;
     }
 }

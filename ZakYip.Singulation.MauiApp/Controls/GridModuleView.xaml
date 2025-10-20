@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Frame xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:services="clr-namespace:ZakYip.Singulation.MauiApp.Services"
+       x:Class="ZakYip.Singulation.MauiApp.Controls.GridModuleView"
+       x:DataType="services:SingulationModule"
+       Padding="8"
+       Margin="2"
+       BorderColor="Gray"
+       CornerRadius="8"
+       HasShadow="False"
+       BackgroundColor="{Binding StatusColor}">
+    
+    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+        <!-- 模块名称 -->
+        <Label Grid.Row="0"
+               Text="{Binding DisplayName}"
+               FontSize="14"
+               FontAttributes="Bold"
+               HorizontalTextAlignment="Center" />
+        
+        <!-- 速度显示 -->
+        <Label Grid.Row="1"
+               Text="{Binding SpeedText}"
+               FontSize="12"
+               TextColor="{Binding SpeedColor}"
+               FontAttributes="Bold"
+               HorizontalTextAlignment="Center" />
+        
+        <!-- 状态显示 -->
+        <Label Grid.Row="2"
+               Text="{Binding StatusText}"
+               FontSize="10"
+               TextColor="#666"
+               HorizontalTextAlignment="Center" />
+    </Grid>
+</Frame>
