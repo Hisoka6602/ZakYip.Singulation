@@ -22,9 +22,17 @@ ZakYip.Singulation.MauiApp 是一个跨平台移动应用，用于远程控制�
 #### 技术实现
 - **Android**: MainActivity 完整配置处理方向变化
   ```csharp
-  ConfigChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | 
-                  ConfigChanges.UiMode | ConfigChanges.ScreenLayout | 
-                  ConfigChanges.SmallestScreenSize | ConfigChanges.Density
+  [Activity(
+      Theme = "@style/Maui.SplashTheme",
+      MainLauncher = true,
+      ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | 
+          ConfigChanges.UiMode | ConfigChanges.ScreenLayout | 
+          ConfigChanges.SmallestScreenSize | ConfigChanges.Density
+  )]
+  public class MainActivity : MauiAppCompatActivity
+  {
+      // ...
+  }
   ```
 - **布局策略**: 使用 Grid 响应式布局 + `OnIdiom` 设备适配
 - **尺寸控制**: `MaximumWidthRequest` 限制最大宽度（800px），`HorizontalOptions.Center` 居中对齐
