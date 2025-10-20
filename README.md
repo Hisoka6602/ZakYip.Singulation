@@ -25,7 +25,7 @@
   - 预定义常用图标的 FontImageSource
   - 图标样式统一，易于维护
 
-详细使用说明见问题描述中的图标字体使用指南。
+详细使用说明：[图标字体使用指南](docs/ICON_FONT_GUIDE.md)
 
 ## 之前的更新（2025-10-20）
 
@@ -540,6 +540,7 @@
 | **架构设计** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构和设计文档 |
 | **API 文档** | [docs/API.md](docs/API.md) | REST API 接口文档和使用示例 |
 | **MAUI 应用** | [docs/MAUIAPP.md](docs/MAUIAPP.md) | MAUI 客户端功能和使用说明 |
+| **图标字体指南** | [docs/ICON_FONT_GUIDE.md](docs/ICON_FONT_GUIDE.md) | MAUI 图标字体系统使用指南 |
 | **性能优化** | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | 性能优化建议和最佳实践 |
 | **开发指南** | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | 开发者快速入门和代码规范 |
 
