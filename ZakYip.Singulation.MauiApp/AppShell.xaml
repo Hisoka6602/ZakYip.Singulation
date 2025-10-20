@@ -9,6 +9,11 @@
 
     <TabBar>
         <ShellContent
+            Title="📦 模块网格"
+            ContentTemplate="{DataTemplate views:ModuleGridPage}"
+            Route="ModuleGridPage" />
+            
+        <ShellContent
             Title="● 控制台"
             ContentTemplate="{DataTemplate local:MainPage}"
             Route="MainPage" />
