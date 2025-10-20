@@ -93,7 +93,8 @@
                                         IsToggled="{Binding AreAllAxesEnabled}"
                                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                                         OnColor="#22C55E"
-                                        ThumbColor="White" />
+                                        ThumbColor="White"
+                                        SemanticProperties.Description="Toggle to enable or disable all axes" />
                                 </Grid>
                             </Border>
 
