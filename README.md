@@ -1,6 +1,6 @@
 # ZakYip.Singulation 项目总览
 
-## 本次更新（2025-10-20）
+## 本次更新（2025-10-23）
 
 ### 更新内容
 - **钉钉集成模块**：新增 ZakYip.AfterSales.Courier 项目，提供钉钉企业API集成功能
@@ -29,7 +29,7 @@ ZakYip.AfterSales.Courier/
 
 ### 钉钉集成功能特性
 1. **无部门获取成员**：即使企业没有部门结构，也能获取所有成员列表
-2. **自动分页**：提供 `GetAllMembersAsync` 方法自动处理分页逻辑
+2. **自动分页**：提供 `GetAllMembersAsync` 方法自动处理分页逻辑，每次最多获取100个成员（钉钉API限制）
 3. **完整测试套件**：包含测试无部门获取、指定部门获取、自动分页等场景
 4. **安全设计**：测试器中包含令牌屏蔽功能，保护敏感信息
 
@@ -45,7 +45,7 @@ var request = new GetMemberRequestDto
     AccessToken = "your_access_token",
     DeptId = null,  // 不指定部门
     Offset = 0,
-    Size = 100
+    Size = 100      // 每页大小，最大100（钉钉API限制）
 };
 var response = await dingTalkService.GetMemberListAsync(request);
 
