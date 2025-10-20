@@ -69,7 +69,8 @@
                                         IsToggled="{Binding IsAutoRefreshEnabled}"
                                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                                         OnColor="#2563EB"
-                                        ThumbColor="White" />
+                                        ThumbColor="White"
+                                        SemanticProperties.Description="Toggle auto-refresh for controllers" />
                                 </Grid>
                             </Border>
 
