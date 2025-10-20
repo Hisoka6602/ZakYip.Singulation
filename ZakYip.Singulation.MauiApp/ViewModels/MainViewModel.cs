@@ -13,6 +13,26 @@ namespace ZakYip.Singulation.MauiApp.ViewModels;
 /// </summary>
 public class MainViewModel : BindableBase
 {
+    private static readonly (string AxisId, double Speed, bool Enabled, int Status)[] DefaultAxisSeeds = new[]
+    {
+        ("M01", 1000d, true, 3),
+        ("M02", 2000d, true, 3),
+        ("M03", 2000d, true, 3),
+        ("M04", 1600d, true, 2),
+        ("M05", 2000d, true, 3),
+        ("M06", 3000d, true, 3),
+        ("M07", 2000d, true, 3),
+        ("M08", 2000d, true, 3),
+        ("M09", 2000d, true, 3),
+        ("M10", 1000d, false, 2),
+        ("M11", 2000d, true, 3),
+        ("M12", 1000d, true, 2),
+        ("M13", 1600d, true, 3),
+        ("M14", 1800d, true, 3),
+        ("M15", 1000d, true, 2),
+        ("M16", 1200d, true, 3)
+    };
+
     private readonly ApiClient _apiClient;
     private readonly SignalRClientFactory _signalRFactory;
     private readonly NotificationService _notificationService;
@@ -194,6 +214,8 @@ public class MainViewModel : BindableBase
         ViewDetailsCommand = new DelegateCommand<AxisInfo>(async (axis) => await ViewDetailsAsync(axis));
         ToggleSafetyPanelCommand = new DelegateCommand(() => IsSafetyPanelVisible = !IsSafetyPanelVisible);
         ToggleSpeedPanelCommand = new DelegateCommand(() => IsSpeedPanelVisible = !IsSpeedPanelVisible);
+
+        EnsureDefaultControllers(forceReset: true);
 
         // 订阅SignalR事件
         SubscribeToSignalREvents();
@@ -412,18 +434,33 @@ public class MainViewModel : BindableBase
                 var response = await _apiClient.GetControllersAsync();
                 if (response.Success && response.Data != null)
                 {
-                    Controllers.Clear();
-                    foreach (var controller in response.Data)
+                    var controllers = response.Data.ToList();
+                    if (controllers.Any())
                     {
-                        Controllers.Add(controller);
+                        Controllers.Clear();
+                        foreach (var controller in controllers)
+                        {
+                            Controllers.Add(controller);
+                        }
+
+                        StatusMessage = $"Loaded {Controllers.Count} controllers";
+                        _notificationService.ShowSuccess($"已加载 {Controllers.Count} 个控制器");
                     }
-                    StatusMessage = $"Loaded {Controllers.Count} controllers";
-                    _notificationService.ShowSuccess($"已加载 {Controllers.Count} 个控制器");
+                    else
+                    {
+                        EnsureDefaultControllers(forceReset: true);
+                        StatusMessage = "未获取到轴数据，已加载默认布局";
+                        _notificationService.ShowWarning("未收到轴数据，展示默认布局");
+                    }
                 }
                 else
                 {
                     StatusMessage = $"Error: {response.Message}";
                     _notificationService.ShowError($"加载失败: {response.Message}");
+                    if (Controllers.Count == 0)
+                    {
+                        EnsureDefaultControllers(forceReset: true);
+                    }
                 }
             },
             ex =>
@@ -436,6 +473,37 @@ public class MainViewModel : BindableBase
         );
 
         IsLoading = false;
+    }
+
+    private void EnsureDefaultControllers(bool forceReset = false)
+    {
+        if (forceReset)
+        {
+            Controllers.Clear();
+        }
+
+        if (!forceReset && Controllers.Count > 0)
+        {
+            return;
+        }
+
+        if (Controllers.Count > 0)
+        {
+            return;
+        }
+
+        foreach (var axis in DefaultAxisSeeds)
+        {
+            var info = new AxisInfo
+            {
+                AxisId = axis.AxisId,
+                CurrentSpeed = axis.Speed,
+                Enabled = axis.Enabled,
+                Status = axis.Status
+            };
+
+            Controllers.Add(info);
+        }
     }
 
     /// <summary>
