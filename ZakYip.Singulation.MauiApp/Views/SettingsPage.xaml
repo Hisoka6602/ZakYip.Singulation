@@ -12,9 +12,17 @@
     <Grid>
         <!-- Main content -->
         <ScrollView>
+        <!-- Responsive layout that adapts to orientation -->
+        <Grid Padding="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            
         <VerticalStackLayout
-            Padding="20"
-            Spacing="15">
+            Grid.Column="0"
+            Spacing="15"
+            HorizontalOptions="Center"
+            MaximumWidthRequest="800">
 
             <!-- 标题 -->
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
@@ -96,7 +104,8 @@
                         ItemsSource="{Binding DiscoveredServices}"
                         SelectionMode="Single"
                         SelectedItem="{Binding SelectedService}"
-                        HeightRequest="200"
+                        MinimumHeightRequest="150"
+                        HeightRequest="{OnIdiom Phone=200, Tablet=280, Desktop=350}"
                         Margin="0,10,0,0">
                         <CollectionView.EmptyView>
                             <VerticalStackLayout HorizontalOptions="Center" Spacing="10" Margin="10">
@@ -190,7 +199,8 @@
                     <CollectionView
                         ItemsSource="{Binding CachedServices}"
                         SelectionMode="None"
-                        HeightRequest="150">
+                        MinimumHeightRequest="120"
+                        HeightRequest="{OnIdiom Phone=150, Tablet=200, Desktop=250}">
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="helpers:CachedServiceInfo">
                                 <Frame
@@ -266,6 +276,7 @@
             </Frame>
 
         </VerticalStackLayout>
+        </Grid>
     </ScrollView>
     
     <!-- Notification overlay -->

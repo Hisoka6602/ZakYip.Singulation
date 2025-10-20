@@ -7,7 +7,17 @@
              Title="控制器详情">
     
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="15">
+        <!-- Responsive layout that adapts to orientation -->
+        <Grid Padding="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            
+        <VerticalStackLayout 
+            Grid.Column="0"
+            Spacing="15"
+            HorizontalOptions="Center"
+            MaximumWidthRequest="800">
             
             <!-- 页面标题 -->
             <Label Text="🎯 控制器详细信息"
@@ -108,21 +118,24 @@
                                 BackgroundColor="Green"
                                 TextColor="White"
                                 Command="{Binding EnableCommand}"
-                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"/>
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                HeightRequest="{OnIdiom Phone=44, Tablet=50, Desktop=56}"/>
                         
                         <Button Grid.Row="0" Grid.Column="1"
                                 Text="❌ 禁用"
                                 BackgroundColor="Red"
                                 TextColor="White"
                                 Command="{Binding DisableCommand}"
-                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"/>
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                HeightRequest="{OnIdiom Phone=44, Tablet=50, Desktop=56}"/>
                         
                         <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
                                 Text="🔄 刷新"
                                 BackgroundColor="Blue"
                                 TextColor="White"
                                 Command="{Binding RefreshCommand}"
-                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"/>
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                HeightRequest="{OnIdiom Phone=44, Tablet=50, Desktop=56}"/>
                     </Grid>
                 </VerticalStackLayout>
             </Frame>
@@ -167,5 +180,6 @@
             </Frame>
             
         </VerticalStackLayout>
+        </Grid>
     </ScrollView>
 </ContentPage>
