@@ -1,13 +1,12 @@
 using ZakYip.Singulation.MauiApp.ViewModels;
 
-namespace ZakYip.Singulation.MauiApp.Views
+namespace ZakYip.Singulation.MauiApp.Views;
+
+public partial class SettingsPage : ContentPage
 {
-    public partial class SettingsPage : ContentPage
+    public SettingsPage(SettingsViewModel viewModel)
     {
-        public SettingsPage(SettingsViewModel viewModel)
-        {
-            InitializeComponent();
-            BindingContext = viewModel;
-        }
+        InitializeComponent();
+        BindingContext = viewModel;
     }
 }
