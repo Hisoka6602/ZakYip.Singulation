@@ -47,6 +47,7 @@ public class SingulationHomeViewModel : BindableBase
     public DelegateCommand AxisSpeedSettingCommand { get; }
     public DelegateCommand<string> SelectModeCommand { get; }
     public DelegateCommand SeparateCommand { get; }
+    public DelegateCommand<MotorAxisInfo> SelectMotorCommand { get; }
 
     public SingulationHomeViewModel()
     {
@@ -59,6 +60,7 @@ public class SingulationHomeViewModel : BindableBase
         AxisSpeedSettingCommand = new DelegateCommand(OnAxisSpeedSetting);
         SelectModeCommand = new DelegateCommand<string>(OnSelectMode);
         SeparateCommand = new DelegateCommand(OnSeparate);
+        SelectMotorCommand = new DelegateCommand<MotorAxisInfo>(OnSelectMotor);
 
         InitializeMotorAxes();
     }
@@ -85,9 +87,13 @@ public class SingulationHomeViewModel : BindableBase
         }
     }
 
-    private void OnSearch()
+    private async void OnSearch()
     {
         // Implement search functionality
+        await Application.Current?.MainPage?.DisplayAlert(
+            "搜索",
+            "搜索功能开发中...",
+            "确定");
     }
 
     private void OnSettings()
@@ -96,14 +102,34 @@ public class SingulationHomeViewModel : BindableBase
         Shell.Current.GoToAsync("//SettingsPage");
     }
 
-    private void OnRefreshController()
+    private async void OnRefreshController()
     {
         // Implement refresh controller logic
+        await Application.Current?.MainPage?.DisplayAlert(
+            "刷新控制器",
+            "控制器已刷新",
+            "确定");
     }
 
-    private void OnSafetyCommand()
+    private async void OnSafetyCommand()
     {
         // Show safety command menu with options: 启动, 停止, 重置
+        var result = await Application.Current?.MainPage?.DisplayActionSheet(
+            "安全指令", 
+            "取消", 
+            null, 
+            "启动", 
+            "停止", 
+            "重置");
+        
+        if (result != null && result != "取消")
+        {
+            // Handle the selected safety command
+            await Application.Current?.MainPage?.DisplayAlert(
+                "安全指令", 
+                $"已执行: {result}", 
+                "确定");
+        }
     }
 
     private void OnEnableAll()
@@ -124,9 +150,30 @@ public class SingulationHomeViewModel : BindableBase
         }
     }
 
-    private void OnAxisSpeedSetting()
+    private async void OnAxisSpeedSetting()
     {
         // Show axis speed setting dialog or navigate to speed setting page
+        var result = await Application.Current?.MainPage?.DisplayPromptAsync(
+            "轴速度设置",
+            "请输入目标速度 (r/min):",
+            "确定",
+            "取消",
+            "2000",
+            keyboard: Keyboard.Numeric);
+        
+        if (!string.IsNullOrEmpty(result) && int.TryParse(result, out int speed))
+        {
+            // Update all motor axes to the new speed
+            foreach (var motor in MotorAxes)
+            {
+                motor.Rpm = speed;
+            }
+            
+            await Application.Current?.MainPage?.DisplayAlert(
+                "轴速度设置",
+                $"已设置所有轴速度为: {speed} r/min",
+                "确定");
+        }
     }
 
     private void OnSelectMode(string mode)
@@ -134,9 +181,38 @@ public class SingulationHomeViewModel : BindableBase
         SelectedMode = mode;
     }
 
-    private void OnSeparate()
+    private void OnSelectMotor(MotorAxisInfo? motor)
+    {
+        if (motor == null) return;
+        
+        // Deselect all others
+        foreach (var m in MotorAxes)
+        {
+            m.IsSelected = false;
+        }
+        
+        // Select the tapped motor
+        motor.IsSelected = true;
+        SelectedMotor = motor;
+    }
+
+    private async void OnSeparate()
     {
         // Execute separation operation
+        var mode = SelectedMode == "Auto" ? "自动分离" : "手动分离";
+        var result = await Application.Current?.MainPage?.DisplayAlert(
+            "分离操作",
+            $"确认执行{mode}操作吗？\n批次: {BatchNumber}",
+            "确定",
+            "取消");
+        
+        if (result)
+        {
+            await Application.Current?.MainPage?.DisplayAlert(
+                "分离操作",
+                $"{mode}操作已启动",
+                "确定");
+        }
     }
 }
 

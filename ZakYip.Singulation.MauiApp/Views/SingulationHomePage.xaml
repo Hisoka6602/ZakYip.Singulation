@@ -223,6 +223,11 @@
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="viewmodels:MotorAxisInfo">
                         <Frame Style="{StaticResource CardFrame}" Padding="12">
+                            <Frame.GestureRecognizers>
+                                <TapGestureRecognizer 
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SingulationHomeViewModel}}, Path=SelectMotorCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </Frame.GestureRecognizers>
                             <Frame.Triggers>
                                 <!-- Selected State -->
                                 <DataTrigger TargetType="Frame" 
