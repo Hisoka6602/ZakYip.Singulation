@@ -1,17 +1,17 @@
-﻿<?xml version = "1.0" encoding = "UTF-8" ?>
-<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:local="clr-namespace:ZakYip.Singulation.MauiApp"
-             xmlns:converters="clr-namespace:ZakYip.Singulation.MauiApp.Converters"
-             x:Class="ZakYip.Singulation.MauiApp.App">
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<Application
+    x:Class="ZakYip.Singulation.MauiApp.App"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:converters="clr-namespace:ZakYip.Singulation.MauiApp.Converters">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
                 <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            
-            <!-- 转换器 -->
+
+            <!--  转换器  -->
             <converters:InvertedBoolConverter x:Key="InvertedBoolConverter" />
             <converters:BoolToTextConverter x:Key="BoolToTextConverter" />
             <converters:BoolToColorConverter x:Key="BoolToColorConverter" />
