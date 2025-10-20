@@ -1,46 +1,45 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
-             xmlns:services="clr-namespace:ZakYip.Singulation.MauiApp.Services"
-             xmlns:controls="clr-namespace:ZakYip.Singulation.MauiApp.Controls"
-             x:Class="ZakYip.Singulation.MauiApp.MainPage"
-             x:DataType="viewmodels:MainViewModel"
-             Title="分件助手"
-             BackgroundColor="#F4F6FA">
+<ContentPage
+    x:Class="ZakYip.Singulation.MauiApp.MainPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ZakYip.Singulation.MauiApp.Controls"
+    xmlns:services="clr-namespace:ZakYip.Singulation.MauiApp.Services"
+    xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
+    Title="分件助手"
+    x:DataType="viewmodels:MainViewModel"
+    BackgroundColor="#F4F6FA">
 
     <Grid>
         <RefreshView
-            IsRefreshing="{Binding IsLoading}"
             Command="{Binding RefreshControllersCommand}"
+            IsRefreshing="{Binding IsLoading}"
             RefreshColor="#2563EB">
             <ScrollView>
-                <VerticalStackLayout
-                    Padding="24,32"
-                    Spacing="24">
+                <VerticalStackLayout Padding="24,32" Spacing="24">
 
                     <VerticalStackLayout Spacing="6">
                         <Label
-                            Text="分件助手"
-                            FontSize="28"
                             FontAttributes="Bold"
-                            TextColor="#1A1F36"
-                            SemanticProperties.HeadingLevel="Level1" />
+                            FontSize="28"
+                            SemanticProperties.HeadingLevel="Level1"
+                            Text="分件助手"
+                            TextColor="#1A1F36" />
                         <Label
-                            Text="{Binding MachineSerialDisplay}"
                             FontSize="14"
+                            Text="{Binding MachineSerialDisplay}"
                             TextColor="#64748B" />
                         <Label
-                            Text="{Binding StatusMessage}"
                             FontSize="12"
+                            Text="{Binding StatusMessage}"
                             TextColor="#94A3B8" />
                     </VerticalStackLayout>
 
                     <Frame
                         Padding="20"
                         BackgroundColor="White"
-                        CornerRadius="20"
                         BorderColor="#E2E8F0"
+                        CornerRadius="20"
                         HasShadow="False">
                         <Grid ColumnSpacing="16">
                             <Grid.ColumnDefinitions>
@@ -52,105 +51,105 @@
 
                             <Border
                                 Grid.Column="0"
+                                Padding="12"
                                 BackgroundColor="#F8FAFF"
                                 Stroke="#E2E8F0"
-                                StrokeThickness="1"
-                                Padding="12">
+                                StrokeThickness="1">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="12" />
                                 </Border.StrokeShape>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                     <Label
-                                        Text="刷新控制器"
                                         FontSize="14"
+                                        Text="刷新控制器"
                                         TextColor="#1A1F36"
                                         VerticalOptions="Center" />
                                     <Switch
-                                        IsToggled="{Binding IsAutoRefreshEnabled}"
                                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                        IsToggled="{Binding IsAutoRefreshEnabled}"
                                         OnColor="#2563EB"
-                                        ThumbColor="White"
-                                        SemanticProperties.Description="Toggle auto-refresh for controllers" />
+                                        SemanticProperties.Description="Toggle auto-refresh for controllers"
+                                        ThumbColor="White" />
                                 </Grid>
                             </Border>
 
                             <Border
                                 Grid.Column="1"
+                                Padding="12"
                                 BackgroundColor="#F8FAFF"
                                 Stroke="#E2E8F0"
-                                StrokeThickness="1"
-                                Padding="12">
+                                StrokeThickness="1">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="12" />
                                 </Border.StrokeShape>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                     <Label
-                                        Text="全都使能"
                                         FontSize="14"
+                                        Text="全都使能"
                                         TextColor="#1A1F36"
                                         VerticalOptions="Center" />
                                     <Switch
-                                        IsToggled="{Binding AreAllAxesEnabled}"
                                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                        IsToggled="{Binding AreAllAxesEnabled}"
                                         OnColor="#22C55E"
-                                        ThumbColor="White"
-                                        SemanticProperties.Description="Toggle to enable or disable all axes" />
+                                        SemanticProperties.Description="Toggle to enable or disable all axes"
+                                        ThumbColor="White" />
                                 </Grid>
                             </Border>
 
                             <Border
                                 Grid.Column="2"
+                                Padding="0"
                                 BackgroundColor="#EFF6FF"
                                 Stroke="#BFDBFE"
-                                StrokeThickness="1"
-                                Padding="0">
+                                StrokeThickness="1">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="12" />
                                 </Border.StrokeShape>
                                 <Button
-                                    Text="安全指令"
-                                    Command="{Binding ToggleSafetyPanelCommand}"
+                                    Margin="0"
+                                    Padding="0"
                                     BackgroundColor="#2563EB"
-                                    TextColor="White"
+                                    Command="{Binding ToggleSafetyPanelCommand}"
                                     CornerRadius="12"
                                     FontAttributes="Bold"
                                     HeightRequest="48"
-                                    Margin="0"
-                                    Padding="0"
                                     HorizontalOptions="Fill"
+                                    Text="安全指令"
+                                    TextColor="White"
                                     VerticalOptions="Center" />
                             </Border>
 
                             <Border
                                 Grid.Column="3"
+                                Padding="0"
                                 BackgroundColor="#F1F5F9"
                                 Stroke="#CBD5F5"
-                                StrokeThickness="1"
-                                Padding="0">
+                                StrokeThickness="1">
                                 <Border.StrokeShape>
                                     <RoundRectangle CornerRadius="12" />
                                 </Border.StrokeShape>
                                 <Button
-                                    Text="输速设定"
-                                    Command="{Binding ToggleSpeedPanelCommand}"
+                                    Margin="0"
+                                    Padding="0"
                                     BackgroundColor="#E2E8F0"
-                                    TextColor="#1E293B"
+                                    Command="{Binding ToggleSpeedPanelCommand}"
                                     CornerRadius="12"
                                     FontAttributes="Bold"
                                     HeightRequest="48"
-                                    Margin="0"
-                                    Padding="0"
                                     HorizontalOptions="Fill"
+                                    Text="输速设定"
+                                    TextColor="#1E293B"
                                     VerticalOptions="Center" />
                             </Border>
                         </Grid>
                     </Frame>
 
                     <Border
-                        IsVisible="{Binding IsSafetyPanelVisible}"
-                        BackgroundColor="White"
-                        Stroke="#E2E8F0"
                         Padding="20"
+                        BackgroundColor="White"
+                        IsVisible="{Binding IsSafetyPanelVisible}"
+                        Stroke="#E2E8F0"
                         StrokeThickness="1">
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="18" />
@@ -158,28 +157,28 @@
                         <VerticalStackLayout Spacing="12">
                             <HorizontalStackLayout Spacing="8">
                                 <Label
-                                    Text="安全命令"
-                                    FontSize="18"
                                     FontAttributes="Bold"
+                                    FontSize="18"
+                                    Text="安全命令"
                                     TextColor="#1A1F36" />
                                 <Label
-                                    Text="（选择命令类型与原因）"
                                     FontSize="12"
+                                    Text="（选择命令类型与原因）"
                                     TextColor="#94A3B8" />
                             </HorizontalStackLayout>
 
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                 <Label
                                     Grid.Column="0"
-                                    Text="命令类型"
                                     FontSize="14"
-                                    VerticalOptions="Center"
-                                    TextColor="#1A1F36" />
+                                    Text="命令类型"
+                                    TextColor="#1A1F36"
+                                    VerticalOptions="Center" />
                                 <Picker
-                                    Grid.Column="1"
                                     Title="选择命令类型"
-                                    SelectedItem="{Binding SafetyCommandType}"
-                                    BackgroundColor="#F8FAFF">
+                                    Grid.Column="1"
+                                    BackgroundColor="#F8FAFF"
+                                    SelectedItem="{Binding SafetyCommandType}">
                                     <Picker.ItemsSource>
                                         <x:Array Type="{x:Type x:String}">
                                             <x:String>Start</x:String>
@@ -193,34 +192,34 @@
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                 <Label
                                     Grid.Column="0"
-                                    Text="命令原因"
                                     FontSize="14"
-                                    VerticalOptions="Center"
-                                    TextColor="#1A1F36" />
+                                    Text="命令原因"
+                                    TextColor="#1A1F36"
+                                    VerticalOptions="Center" />
                                 <Entry
                                     Grid.Column="1"
+                                    BackgroundColor="#F8FAFF"
                                     Placeholder="输入命令原因（可选）"
-                                    Text="{Binding SafetyReason}"
-                                    BackgroundColor="#F8FAFF" />
+                                    Text="{Binding SafetyReason}" />
                             </Grid>
 
                             <Button
-                                Text="发送安全命令"
-                                Command="{Binding SendSafetyCommandCommand}"
-                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                                 BackgroundColor="#2563EB"
-                                TextColor="White"
+                                Command="{Binding SendSafetyCommandCommand}"
                                 CornerRadius="12"
                                 FontAttributes="Bold"
-                                HeightRequest="48" />
+                                HeightRequest="48"
+                                IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                Text="发送安全命令"
+                                TextColor="White" />
                         </VerticalStackLayout>
                     </Border>
 
                     <Border
-                        IsVisible="{Binding IsSpeedPanelVisible}"
-                        BackgroundColor="White"
-                        Stroke="#E2E8F0"
                         Padding="20"
+                        BackgroundColor="White"
+                        IsVisible="{Binding IsSpeedPanelVisible}"
+                        Stroke="#E2E8F0"
                         StrokeThickness="1">
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="18" />
@@ -228,91 +227,91 @@
                         <VerticalStackLayout Spacing="12">
                             <HorizontalStackLayout Spacing="8">
                                 <Label
-                                    Text="速度设定"
-                                    FontSize="18"
                                     FontAttributes="Bold"
+                                    FontSize="18"
+                                    Text="速度设定"
                                     TextColor="#1A1F36" />
                                 <Label
-                                    Text="（设置所有轴目标速度）"
                                     FontSize="12"
+                                    Text="（设置所有轴目标速度）"
                                     TextColor="#94A3B8" />
                             </HorizontalStackLayout>
 
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                                 <Entry
                                     Grid.Column="0"
-                                    Text="{Binding TargetSpeed}"
-                                    Placeholder="100"
+                                    BackgroundColor="#F8FAFF"
                                     Keyboard="Numeric"
-                                    BackgroundColor="#F8FAFF" />
+                                    Placeholder="100"
+                                    Text="{Binding TargetSpeed}" />
                                 <Button
                                     Grid.Column="1"
-                                    Text="应用"
-                                    Command="{Binding SetAllAxesSpeedCommand}"
-                                    IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
                                     BackgroundColor="#22C55E"
-                                    TextColor="White"
+                                    Command="{Binding SetAllAxesSpeedCommand}"
                                     CornerRadius="12"
                                     FontAttributes="Bold"
                                     HeightRequest="48"
+                                    IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                    Text="应用"
+                                    TextColor="White"
                                     WidthRequest="100" />
                             </Grid>
                         </VerticalStackLayout>
                     </Border>
 
                     <CollectionView
+                        HeightRequest="{OnIdiom Phone=520,
+                                                Tablet=600,
+                                                Desktop=680}"
                         ItemsSource="{Binding Controllers}"
-                        SelectionMode="None"
-                        HeightRequest="{OnIdiom Phone=520, Tablet=600, Desktop=680}">
+                        SelectionMode="None">
                         <CollectionView.ItemsLayout>
                             <GridItemsLayout
+                                HorizontalItemSpacing="16"
                                 Orientation="Vertical"
                                 Span="3"
-                                HorizontalItemSpacing="16"
                                 VerticalItemSpacing="16" />
                         </CollectionView.ItemsLayout>
 
                         <CollectionView.EmptyView>
                             <VerticalStackLayout
                                 Padding="40"
-                                Spacing="12"
-                                HorizontalOptions="Center">
+                                HorizontalOptions="Center"
+                                Spacing="12">
                                 <Label
-                                    Text="暂无轴数据"
-                                    FontSize="18"
                                     FontAttributes="Bold"
+                                    FontSize="18"
+                                    Text="暂无轴数据"
                                     TextColor="#94A3B8" />
                                 <Label
-                                    Text="点击上方刷新按钮或启用自动刷新"
                                     FontSize="14"
-                                    TextColor="#A0AEC0"
-                                    HorizontalTextAlignment="Center" />
+                                    HorizontalTextAlignment="Center"
+                                    Text="点击上方刷新按钮或启用自动刷新"
+                                    TextColor="#A0AEC0" />
                             </VerticalStackLayout>
                         </CollectionView.EmptyView>
 
                         <CollectionView.ItemTemplate>
                             <DataTemplate x:DataType="services:AxisInfo">
                                 <Border
-                                    Stroke="#E2E8F0"
-                                    StrokeThickness="1"
+                                    Padding="18"
                                     BackgroundColor="White"
-                                    Padding="18">
+                                    Stroke="#E2E8F0"
+                                    StrokeThickness="1">
                                     <Border.StrokeShape>
                                         <RoundRectangle CornerRadius="18" />
                                     </Border.StrokeShape>
                                     <Border.GestureRecognizers>
-                                        <TapGestureRecognizer
-                                            Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainViewModel}}, Path=ViewDetailsCommand}"
-                                            CommandParameter="{Binding .}" />
+                                        <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainViewModel}}, Path=ViewDetailsCommand}" CommandParameter="{Binding .}" />
                                     </Border.GestureRecognizers>
 
                                     <VerticalStackLayout Spacing="16">
                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                                             <Label
                                                 Grid.Column="0"
-                                                Text="{Binding AxisId}"
-                                                FontSize="18"
                                                 FontAttributes="Bold"
+                                                FontSize="18"
+                                                Text="{Binding AxisId}"
                                                 TextColor="#1A1F36" />
                                             <Frame
                                                 Grid.Column="1"
@@ -321,26 +320,26 @@
                                                 CornerRadius="12"
                                                 HorizontalOptions="End">
                                                 <Label
-                                                    Text="{Binding StatusText}"
                                                     FontSize="12"
+                                                    Text="{Binding StatusText}"
                                                     TextColor="#3730A3" />
                                             </Frame>
                                         </Grid>
 
                                         <VerticalStackLayout Spacing="4">
                                             <Label
-                                                Text="{Binding CurrentRpm, StringFormat='{0:F0} r/min'}"
-                                                FontSize="28"
                                                 FontAttributes="Bold"
+                                                FontSize="28"
+                                                Text="{Binding CurrentSpeed, StringFormat='{0:F0} r/min'}"
                                                 TextColor="#2563EB" />
                                             <Label
+                                                FontSize="12"
+                                                IsVisible="{Binding TargetLinearMmps, Converter={StaticResource StringToBoolConverter}}"
                                                 Text="{Binding TargetLinearMmps, StringFormat='目标: {0:F1} mm/s'}"
-                                                FontSize="12"
-                                                TextColor="#64748B"
-                                                IsVisible="{Binding TargetLinearMmps, Converter={StaticResource StringToBoolConverter}}" />
+                                                TextColor="#64748B" />
                                             <Label
-                                                Text="{Binding Enabled, Converter={StaticResource BoolToTextConverter}, ConverterParameter='已使能:未使能'}"
                                                 FontSize="12"
+                                                Text="{Binding Enabled, Converter={StaticResource BoolToTextConverter}, ConverterParameter='已使能:未使能'}"
                                                 TextColor="#1A1F36" />
                                         </VerticalStackLayout>
                                     </VerticalStackLayout>
@@ -352,24 +351,24 @@
                     <Frame
                         Padding="16"
                         BackgroundColor="White"
-                        CornerRadius="18"
                         BorderColor="#E2E8F0"
+                        CornerRadius="18"
                         HasShadow="False">
                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                             <Label
-                                Text="SignalR 状态"
-                                FontSize="14"
                                 FontAttributes="Bold"
+                                FontSize="14"
+                                Text="SignalR 状态"
                                 TextColor="#1A1F36" />
                             <Label
                                 Grid.Column="1"
-                                Text="{Binding SignalRStatus}"
                                 FontSize="14"
+                                Text="{Binding SignalRStatus}"
                                 TextColor="#2563EB" />
                             <Label
                                 Grid.Column="2"
-                                Text="{Binding SignalRLatencyText}"
                                 FontSize="12"
+                                Text="{Binding SignalRLatencyText}"
                                 TextColor="#94A3B8" />
                         </Grid>
                     </Frame>
@@ -378,9 +377,9 @@
         </RefreshView>
 
         <controls:NotificationOverlay
-            VerticalOptions="Start"
-            HorizontalOptions="Fill"
             Margin="0,10,0,0"
+            HorizontalOptions="Fill"
+            VerticalOptions="Start"
             ZIndex="1000" />
     </Grid>
 </ContentPage>
