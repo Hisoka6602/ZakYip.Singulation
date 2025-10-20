@@ -18,8 +18,7 @@
         <!-- Responsive layout that adapts to orientation -->
         <Grid Padding="20">
             <Grid.ColumnDefinitions>
-                <!-- Portrait: single column takes full width -->
-                <!-- Landscape: can add second column if width > 800 -->
+                <!-- Single column takes full width -->
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             
