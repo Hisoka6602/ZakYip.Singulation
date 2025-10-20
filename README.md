@@ -2,6 +2,33 @@
 
 ## 本次更新（2025-10-20）
 
+### MauiApp 图标字体基础设施 ✨ 新增
+- **图标字体系统**：实现统一的图标管理和使用方案
+  - 使用 Font Awesome Solid 字体 (FontAwesome6FreeSolid.otf)
+  - 创建 `Icons/AppIcon.cs` 枚举，集中管理所有图标码位
+  - 创建 `Icons/AppIconExtensions.cs` 扩展方法，支持缓存的 Glyph 转换
+  - 创建 `Icons/IconFont.cs` 字体别名常量
+  - 创建 `Resources/Styles/Icons.xaml` 资源字典，定义可复用的图标资源
+  - 在 `App.xaml` 中合并 Icons.xaml，全局可用
+- **主页面速度显示增强**：
+  - 每个轴卡片右侧突出显示实时速度 (mm/s)
+  - 速度数据通过 SignalR 实时更新
+  - 使用图标字体替换原有的 Emoji 表情
+  - 统一的视觉风格和专业外观
+- **MVVM 友好**：
+  - ViewModel 暴露图标 Glyph 属性，支持数据绑定
+  - 两种使用方式：直接使用资源 (StaticResource) 或绑定 Glyph
+  - 图标枚举支持 IntelliSense，避免魔法值
+- **图标使用规范**：
+  - 所有图标通过 `AppIcon` 枚举管理
+  - 支持不同尺寸 (16px, 24px, 32px)
+  - 预定义常用图标的 FontImageSource
+  - 图标样式统一，易于维护
+
+详细使用说明：[图标字体使用指南](docs/ICON_FONT_GUIDE.md)
+
+## 之前的更新（2025-10-20）
+
 ### MauiApp 性能优化和新功能 ✨ 新增
 - **单件分离模块网格页面**：新增专门的模块网格视图
   - 默认 4x6 布局显示 24 个模块
@@ -513,6 +540,7 @@
 | **架构设计** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构和设计文档 |
 | **API 文档** | [docs/API.md](docs/API.md) | REST API 接口文档和使用示例 |
 | **MAUI 应用** | [docs/MAUIAPP.md](docs/MAUIAPP.md) | MAUI 客户端功能和使用说明 |
+| **图标字体指南** | [docs/ICON_FONT_GUIDE.md](docs/ICON_FONT_GUIDE.md) | MAUI 图标字体系统使用指南 |
 | **性能优化** | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | 性能优化建议和最佳实践 |
 | **开发指南** | [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) | 开发者快速入门和代码规范 |
 

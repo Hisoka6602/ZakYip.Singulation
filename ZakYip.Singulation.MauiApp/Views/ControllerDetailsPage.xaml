@@ -20,11 +20,17 @@
             MaximumWidthRequest="800">
             
             <!-- 页面标题 -->
-            <Label Text="🎯 控制器详细信息"
-                   FontSize="24"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center"
-                   Margin="0,0,0,20"/>
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="10" Margin="0,0,0,20">
+                <Label Text="{Binding ControllerGlyph}"
+                       FontFamily="FontAwesomeSolid"
+                       FontSize="24"
+                       TextColor="#2196F3"
+                       VerticalOptions="Center" />
+                <Label Text="控制器详细信息"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
             
             <!-- 加载指示器 -->
             <ActivityIndicator IsRunning="{Binding IsLoading}"
@@ -38,9 +44,17 @@
                    CornerRadius="10"
                    HasShadow="True">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="📊 基本信息"
-                           FontSize="18"
-                           FontAttributes="Bold"/>
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="{Binding InfoGlyph}"
+                               FontFamily="FontAwesomeSolid"
+                               FontSize="18"
+                               TextColor="#2196F3"
+                               VerticalOptions="Center" />
+                        <Label Text="基本信息"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     
                     <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                         <Label Grid.Row="0" Grid.Column="0" Text="轴 ID:" FontAttributes="Bold"/>
@@ -64,9 +78,17 @@
                    CornerRadius="10"
                    HasShadow="True">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="⚡ 速度信息"
-                           FontSize="18"
-                           FontAttributes="Bold"/>
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="{Binding SpeedGlyph}"
+                               FontFamily="FontAwesomeSolid"
+                               FontSize="18"
+                               TextColor="#4CAF50"
+                               VerticalOptions="Center" />
+                        <Label Text="速度信息"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     
                     <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                         <Label Grid.Row="0" Grid.Column="0" Text="目标速度:" FontAttributes="Bold"/>
@@ -88,9 +110,17 @@
                    HasShadow="True"
                    IsVisible="{Binding HasError}">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="❌ 错误信息"
-                           FontSize="18"
-                           FontAttributes="Bold"/>
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="{Binding ErrorGlyph}"
+                               FontFamily="FontAwesomeSolid"
+                               FontSize="18"
+                               TextColor="#F44336"
+                               VerticalOptions="Center" />
+                        <Label Text="错误信息"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     
                     <Grid ColumnDefinitions="120,*" RowDefinitions="Auto,Auto" RowSpacing="8">
                         <Label Grid.Row="0" Grid.Column="0" Text="错误码:" FontAttributes="Bold"/>
@@ -108,13 +138,23 @@
                    CornerRadius="10"
                    HasShadow="True">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="🔧 操作"
-                           FontSize="18"
-                           FontAttributes="Bold"/>
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="{Binding SettingsGlyph}"
+                               FontFamily="FontAwesomeSolid"
+                               FontSize="18"
+                               TextColor="#FF9800"
+                               VerticalOptions="Center" />
+                        <Label Text="操作"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="10">
                         <Button Grid.Row="0" Grid.Column="0"
-                                Text="✅ 使能"
+                                Style="{StaticResource IconButton}"
+                                ImageSource="{StaticResource Icon.Success.24}"
+                                Text="使能"
                                 BackgroundColor="Green"
                                 TextColor="White"
                                 Command="{Binding EnableCommand}"
@@ -122,7 +162,9 @@
                                 HeightRequest="{OnIdiom Phone=44, Tablet=50, Desktop=56}"/>
                         
                         <Button Grid.Row="0" Grid.Column="1"
-                                Text="❌ 禁用"
+                                Style="{StaticResource IconButton}"
+                                ImageSource="{StaticResource Icon.Error.24}"
+                                Text="禁用"
                                 BackgroundColor="Red"
                                 TextColor="White"
                                 Command="{Binding DisableCommand}"
@@ -130,7 +172,9 @@
                                 HeightRequest="{OnIdiom Phone=44, Tablet=50, Desktop=56}"/>
                         
                         <Button Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                                Text="🔄 刷新"
+                                Style="{StaticResource IconButton}"
+                                ImageSource="{StaticResource Icon.Refresh.24}"
+                                Text="刷新"
                                 BackgroundColor="Blue"
                                 TextColor="White"
                                 Command="{Binding RefreshCommand}"
@@ -146,9 +190,17 @@
                    CornerRadius="10"
                    HasShadow="True">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="🚀 速度设置"
-                           FontSize="18"
-                           FontAttributes="Bold"/>
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="{Binding SpeedGlyph}"
+                               FontFamily="FontAwesomeSolid"
+                               FontSize="18"
+                               TextColor="#00BCD4"
+                               VerticalOptions="Center" />
+                        <Label Text="速度设置"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     
                     <HorizontalStackLayout Spacing="10">
                         <Entry Text="{Binding NewSpeed}"
@@ -156,7 +208,9 @@
                                Keyboard="Numeric"
                                HorizontalOptions="FillAndExpand"/>
                         
-                        <Button Text="⚡ 设置"
+                        <Button Style="{StaticResource IconButton}"
+                                ImageSource="{StaticResource Icon.Speed.24}"
+                                Text="设置"
                                 BackgroundColor="DarkBlue"
                                 TextColor="White"
                                 Command="{Binding SetSpeedCommand}"
@@ -171,9 +225,17 @@
                    CornerRadius="10"
                    HasShadow="True">
                 <VerticalStackLayout Spacing="5">
-                    <Label Text="📢 状态消息"
-                           FontSize="16"
-                           FontAttributes="Bold"/>
+                    <HorizontalStackLayout Spacing="8">
+                        <Label Text="{Binding InfoGlyph}"
+                               FontFamily="FontAwesomeSolid"
+                               FontSize="16"
+                               TextColor="#666"
+                               VerticalOptions="Center" />
+                        <Label Text="状态消息"
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center" />
+                    </HorizontalStackLayout>
                     <Label Text="{Binding StatusMessage}"
                            LineBreakMode="WordWrap"/>
                 </VerticalStackLayout>

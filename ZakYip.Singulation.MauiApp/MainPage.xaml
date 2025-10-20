@@ -31,7 +31,7 @@
             <!-- 标题 -->
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
                 <Label
-                    Text="&#xf015;"
+                    Text="{Binding HomeGlyph}"
                     FontFamily="FontAwesomeSolid"
                     FontSize="32"
                     TextColor="#2196F3"
@@ -64,7 +64,7 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="&#xf233;"
+                            Text="{Binding ControllerGlyph}"
                             FontFamily="FontAwesomeSolid"
                             FontSize="24"
                             TextColor="#666"
@@ -79,7 +79,9 @@
                     <Button
                         Command="{Binding RefreshControllersCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
-                        Text="🔄 刷新控制器"
+                        Style="{StaticResource IconButton}"
+                        ImageSource="{StaticResource Icon.Refresh.24}"
+                        Text="刷新控制器"
                         BackgroundColor="#4CAF50"
                         TextColor="White"
                         HorizontalOptions="Fill"
@@ -94,7 +96,7 @@
                         <CollectionView.EmptyView>
                             <VerticalStackLayout HorizontalOptions="Center" Spacing="10" Margin="20">
                                 <Label
-                                    Text="&#xf233;"
+                                    Text="{Binding ControllerGlyph}"
                                     FontFamily="FontAwesomeSolid"
                                     FontSize="48"
                                     TextColor="LightGray"
@@ -119,20 +121,43 @@
                                             Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:MainViewModel}}, Path=ViewDetailsCommand}"
                                             CommandParameter="{Binding .}" />
                                     </Frame.GestureRecognizers>
-                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="5" ColumnSpacing="10">
-                                        <Label Grid.Row="0" Grid.Column="0" Text="&#xf085;" FontFamily="FontAwesomeSolid" FontSize="16" TextColor="#666" />
+                                    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto" RowSpacing="5" ColumnSpacing="10">
+                                        <!-- 轴名称 -->
+                                        <Image Grid.Row="0" Grid.Column="0" Source="{StaticResource Icon.Axis.24}" WidthRequest="16" HeightRequest="16" />
                                         <Label Grid.Row="0" Grid.Column="1" Text="{Binding Name}" FontAttributes="Bold" FontSize="16" />
                                         
-                                        <Label Grid.Row="1" Grid.Column="0" Text="&#xf2db;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" />
+                                        <!-- 实时速度显示（突出显示） -->
+                                        <Frame Grid.Row="0" Grid.Column="2" Grid.RowSpan="2" Padding="10,5" BackgroundColor="#E3F2FD" BorderColor="#2196F3" CornerRadius="5" VerticalOptions="Center">
+                                            <VerticalStackLayout Spacing="2">
+                                                <HorizontalStackLayout Spacing="5" HorizontalOptions="Center">
+                                                    <Image Source="{StaticResource Icon.Speed.24}" WidthRequest="14" HeightRequest="14" />
+                                                    <Label Text="速度" FontSize="10" TextColor="#666" />
+                                                </HorizontalStackLayout>
+                                                <Label Text="{Binding CurrentSpeed, StringFormat='{0:F1} mm/s'}" 
+                                                       FontSize="16" 
+                                                       FontAttributes="Bold" 
+                                                       TextColor="#2196F3" 
+                                                       HorizontalOptions="Center" />
+                                            </VerticalStackLayout>
+                                        </Frame>
+                                        
+                                        <!-- 轴 ID -->
+                                        <Image Grid.Row="1" Grid.Column="0" Source="{StaticResource Icon.Info.24}" WidthRequest="14" HeightRequest="14" />
                                         <Label Grid.Row="1" Grid.Column="1" Text="{Binding AxisId, StringFormat='轴 ID: {0}'}" FontSize="14" />
                                         
-                                        <Label Grid.Row="2" Grid.Column="0" Text="&#xf05a;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" />
-                                        <Label Grid.Row="2" Grid.Column="1" Text="{Binding StatusText, StringFormat='状态: {0}'}" FontSize="14" />
+                                        <!-- 状态 -->
+                                        <Image Grid.Row="2" Grid.Column="0" Source="{StaticResource Icon.Circle}" WidthRequest="14" HeightRequest="14" />
+                                        <Label Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding StatusText, StringFormat='状态: {0}'}" FontSize="14" />
                                         
-                                        <Label Grid.Row="3" Grid.Column="0" Text="&#xf624;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" />
-                                        <Label Grid.Row="3" Grid.Column="1" Text="{Binding Enabled, StringFormat='已使能: {0}'}" FontSize="14" />
+                                        <!-- 使能状态 -->
+                                        <Image Grid.Row="3" Grid.Column="0" Source="{StaticResource Icon.Success.24}" WidthRequest="14" HeightRequest="14" />
+                                        <Label Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Enabled, StringFormat='已使能: {0}'}" FontSize="14" />
                                         
-                                        <Label Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Text="👉 点击查看详情" FontSize="12" TextColor="#2196F3" HorizontalOptions="End" />
+                                        <!-- 提示 -->
+                                        <HorizontalStackLayout Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" HorizontalOptions="End" Spacing="3">
+                                            <Image Source="{StaticResource Icon.ArrowRight.24}" WidthRequest="14" HeightRequest="14" VerticalOptions="Center" />
+                                            <Label Text="点击查看详情" FontSize="12" TextColor="#2196F3" VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
                                     </Grid>
                                 </Frame>
                             </DataTemplate>
@@ -146,7 +171,7 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="&#xf071;"
+                            Text="{Binding SafetyGlyph}"
                             FontFamily="FontAwesomeSolid"
                             FontSize="24"
                             TextColor="#F57C00"
@@ -181,7 +206,9 @@
                     <Button
                         Command="{Binding SendSafetyCommandCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
-                        Text="📤 发送安全命令"
+                        Style="{StaticResource IconButton}"
+                        ImageSource="{StaticResource Icon.Send.24}"
+                        Text="发送安全命令"
                         BackgroundColor="#FF9800"
                         TextColor="White"
                         HorizontalOptions="Fill"
@@ -195,7 +222,7 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="&#xf085;"
+                            Text="{Binding SpeedGlyph}"
                             FontFamily="FontAwesomeSolid"
                             FontSize="24"
                             TextColor="#4CAF50"
@@ -212,7 +239,9 @@
                             Grid.Column="0"
                             Command="{Binding EnableAllAxesCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
-                            Text="✅ 全部使能"
+                            Style="{StaticResource IconButton}"
+                            ImageSource="{StaticResource Icon.Success.24}"
+                            Text="全部使能"
                             BackgroundColor="#4CAF50"
                             TextColor="White"
                             FontSize="14"
@@ -222,7 +251,9 @@
                             Grid.Column="1"
                             Command="{Binding DisableAllAxesCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
-                            Text="❌ 全部禁用"
+                            Style="{StaticResource IconButton}"
+                            ImageSource="{StaticResource Icon.Error.24}"
+                            Text="全部禁用"
                             BackgroundColor="#F44336"
                             TextColor="White"
                             FontSize="14"
@@ -230,7 +261,7 @@
                     </Grid>
 
                     <HorizontalStackLayout Spacing="5" Margin="0,10,0,0">
-                        <Label Text="&#xf624;" FontFamily="FontAwesomeSolid" FontSize="14" TextColor="#666" VerticalOptions="Center" />
+                        <Image Source="{StaticResource Icon.Speed.24}" WidthRequest="14" HeightRequest="14" />
                         <Label Text="目标速度 (mm/s)" FontSize="14" VerticalOptions="Center" />
                     </HorizontalStackLayout>
                     <HorizontalStackLayout Spacing="10">
@@ -243,7 +274,9 @@
                         <Button
                             Command="{Binding SetAllAxesSpeedCommand}"
                             IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
-                            Text="⚡ 设置速度"
+                            Style="{StaticResource IconButton}"
+                            ImageSource="{StaticResource Icon.Speed.24}"
+                            Text="设置速度"
                             BackgroundColor="#2196F3"
                             TextColor="White"
                             FontSize="14"
@@ -257,7 +290,7 @@
                 <VerticalStackLayout Spacing="10">
                     <HorizontalStackLayout Spacing="8">
                         <Label
-                            Text="&#xf0c1;"
+                            Text="{Binding LinkGlyph}"
                             FontFamily="FontAwesomeSolid"
                             FontSize="24"
                             TextColor="#9C27B0"
@@ -298,7 +331,9 @@
                     <Button
                         Command="{Binding ConnectSignalRCommand}"
                         IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
-                        Text="🔗 连接 SignalR"
+                        Style="{StaticResource IconButton}"
+                        ImageSource="{StaticResource Icon.Link.24}"
+                        Text="连接 SignalR"
                         BackgroundColor="#9C27B0"
                         TextColor="White"
                         HorizontalOptions="Fill"
