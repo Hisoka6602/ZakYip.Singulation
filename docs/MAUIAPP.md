@@ -20,9 +20,14 @@ ZakYip.Singulation.MauiApp 是一个跨平台移动应用，用于远程控制�
 - **跨平台支持**: Android 和 Windows 平台完全支持方向切换
 
 #### 技术实现
-- **Android**: MainActivity 配置 `ConfigChanges.Orientation | ConfigChanges.ScreenSize`
+- **Android**: MainActivity 完整配置处理方向变化
+  ```csharp
+  ConfigChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | 
+                  ConfigChanges.UiMode | ConfigChanges.ScreenLayout | 
+                  ConfigChanges.SmallestScreenSize | ConfigChanges.Density
+  ```
 - **布局策略**: 使用 Grid 响应式布局 + `OnIdiom` 设备适配
-- **尺寸控制**: `MaximumWidthRequest` 限制最大宽度，`HorizontalOptions.Center` 居中对齐
+- **尺寸控制**: `MaximumWidthRequest` 限制最大宽度（800px），`HorizontalOptions.Center` 居中对齐
 - **CollectionView**: 动态调整高度，根据设备类型显示不同数量的项目
 
 ### 2. UDP 服务自动发现
