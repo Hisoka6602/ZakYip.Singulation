@@ -4,7 +4,7 @@ namespace ZakYip.Singulation.MauiApp.Views;
 
 public partial class SingulationHomePage : ContentPage
 {
-    private bool _isLandscape;
+    private bool _isLandscape = false;
 
     public SingulationHomePage(SingulationHomeViewModel viewModel)
     {
