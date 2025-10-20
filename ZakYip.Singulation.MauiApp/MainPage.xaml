@@ -328,7 +328,7 @@
 
                                         <VerticalStackLayout Spacing="4">
                                             <Label
-                                                Text="{Binding CurrentSpeed, StringFormat='{0:F0} r/min'}"
+                                                Text="{Binding CurrentRpm, StringFormat='{0:F0} r/min'}"
                                                 FontSize="28"
                                                 FontAttributes="Bold"
                                                 TextColor="#2563EB" />
