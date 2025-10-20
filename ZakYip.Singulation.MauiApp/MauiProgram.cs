@@ -73,6 +73,7 @@ namespace ZakYip.Singulation.MauiApp {
             containerRegistry.RegisterForNavigation<ModuleGridPage, ModuleGridViewModel>();
             containerRegistry.RegisterForNavigation<SettingsPage, SettingsViewModel>();
             containerRegistry.RegisterForNavigation<ControllerDetailsPage, ControllerDetailsViewModel>();
+            containerRegistry.RegisterForNavigation<SingulationHomePage, SingulationHomeViewModel>();
         }
     }
 }
