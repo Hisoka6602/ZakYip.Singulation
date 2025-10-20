@@ -15,9 +15,18 @@
             Command="{Binding RefreshControllersCommand}"
             RefreshColor="#2196F3">
         <ScrollView>
+        <!-- Responsive layout that adapts to orientation -->
+        <Grid Padding="20">
+            <Grid.ColumnDefinitions>
+                <!-- Single column takes full width -->
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            
         <VerticalStackLayout
-            Padding="20"
-            Spacing="15">
+            Grid.Column="0"
+            Spacing="15"
+            HorizontalOptions="Center"
+            MaximumWidthRequest="800">
 
             <!-- 标题 -->
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="10">
@@ -80,7 +89,8 @@
                     <CollectionView 
                         ItemsSource="{Binding Controllers}"
                         SelectionMode="None"
-                        HeightRequest="250">
+                        MinimumHeightRequest="200"
+                        HeightRequest="{OnIdiom Phone=250, Tablet=350, Desktop=400}">
                         <CollectionView.EmptyView>
                             <VerticalStackLayout HorizontalOptions="Center" Spacing="10" Margin="20">
                                 <Label
@@ -298,6 +308,7 @@
             </Frame>
 
         </VerticalStackLayout>
+        </Grid>
     </ScrollView>
     </RefreshView>
     
