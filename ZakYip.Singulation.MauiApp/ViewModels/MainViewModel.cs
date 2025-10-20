@@ -95,6 +95,61 @@ public class MainViewModel : BindableBase
         set => SetProperty(ref _targetSpeed, value);
     }
 
+    private bool _isAutoRefreshEnabled;
+    public bool IsAutoRefreshEnabled
+    {
+        get => _isAutoRefreshEnabled;
+        set
+        {
+            if (SetProperty(ref _isAutoRefreshEnabled, value))
+            {
+                OnAutoRefreshToggled(value);
+            }
+        }
+    }
+
+    private bool _areAllAxesEnabled;
+    public bool AreAllAxesEnabled
+    {
+        get => _areAllAxesEnabled;
+        set
+        {
+            if (SetProperty(ref _areAllAxesEnabled, value))
+            {
+                OnGlobalEnableToggled(value);
+            }
+        }
+    }
+
+    private string _machineSerial = "DJ1957AAKO025";
+    public string MachineSerial
+    {
+        get => _machineSerial;
+        set
+        {
+            if (SetProperty(ref _machineSerial, value))
+            {
+                RaisePropertyChanged(nameof(MachineSerialDisplay));
+            }
+        }
+    }
+
+    public string MachineSerialDisplay => $"自泵: {MachineSerial}";
+
+    private bool _isSafetyPanelVisible;
+    public bool IsSafetyPanelVisible
+    {
+        get => _isSafetyPanelVisible;
+        set => SetProperty(ref _isSafetyPanelVisible, value);
+    }
+
+    private bool _isSpeedPanelVisible;
+    public bool IsSpeedPanelVisible
+    {
+        get => _isSpeedPanelVisible;
+        set => SetProperty(ref _isSpeedPanelVisible, value);
+    }
+
     public DelegateCommand RefreshControllersCommand { get; }
     public DelegateCommand SendSafetyCommandCommand { get; }
     public DelegateCommand ConnectSignalRCommand { get; }
@@ -102,6 +157,8 @@ public class MainViewModel : BindableBase
     public DelegateCommand DisableAllAxesCommand { get; }
     public DelegateCommand SetAllAxesSpeedCommand { get; }
     public DelegateCommand<AxisInfo> ViewDetailsCommand { get; }
+    public DelegateCommand ToggleSafetyPanelCommand { get; }
+    public DelegateCommand ToggleSpeedPanelCommand { get; }
 
     // 图标 Glyphs（用于绑定）
     public string HomeGlyph => AppIcon.Home.ToGlyph();
@@ -135,12 +192,50 @@ public class MainViewModel : BindableBase
         SetAllAxesSpeedCommand = new DelegateCommand(async () => await SetAllAxesSpeedAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
         ViewDetailsCommand = new DelegateCommand<AxisInfo>(async (axis) => await ViewDetailsAsync(axis));
+        ToggleSafetyPanelCommand = new DelegateCommand(() => IsSafetyPanelVisible = !IsSafetyPanelVisible);
+        ToggleSpeedPanelCommand = new DelegateCommand(() => IsSpeedPanelVisible = !IsSpeedPanelVisible);
 
         // 订阅SignalR事件
         SubscribeToSignalREvents();
-        
+
         // 自动连接SignalR
         _ = Task.Run(async () => await AutoConnectSignalRAsync());
+    }
+
+    private void OnAutoRefreshToggled(bool isEnabled)
+    {
+        if (!isEnabled)
+        {
+            return;
+        }
+
+        if (RefreshControllersCommand.CanExecute())
+        {
+            RefreshControllersCommand.Execute();
+        }
+    }
+
+    private void OnGlobalEnableToggled(bool isEnabled)
+    {
+        if (IsLoading)
+        {
+            return;
+        }
+
+        if (isEnabled)
+        {
+            if (EnableAllAxesCommand.CanExecute())
+            {
+                EnableAllAxesCommand.Execute();
+            }
+        }
+        else
+        {
+            if (DisableAllAxesCommand.CanExecute())
+            {
+                DisableAllAxesCommand.Execute();
+            }
+        }
     }
 
     /// <summary>
