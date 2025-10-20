@@ -1,7 +1,9 @@
 using Prism.Commands;
 using Prism.Mvvm;
 using Prism.Navigation;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using ZakYip.Singulation.MauiApp.Services;
 using ZakYip.Singulation.MauiApp.Helpers;
 using ZakYip.Singulation.MauiApp.Icons;
@@ -13,6 +15,14 @@ namespace ZakYip.Singulation.MauiApp.ViewModels;
 /// </summary>
 public class MainViewModel : BindableBase
 {
+    private static readonly int[] DefaultAxisRpms =
+    {
+        1000, 2000, 2000, 1600, 2000,
+        2500, 3000, 2000, 2000, 3000,
+        1600, 1800, 1000, 1800, 1000,
+        1000, 1000, 1800, 1800, 1200
+    };
+
     private readonly ApiClient _apiClient;
     private readonly SignalRClientFactory _signalRFactory;
     private readonly NotificationService _notificationService;
@@ -101,8 +111,14 @@ public class MainViewModel : BindableBase
         get => _isAutoRefreshEnabled;
         set
         {
+            if (IsLoading)
+            {
+                return;
+            }
+
             if (SetProperty(ref _isAutoRefreshEnabled, value))
             {
+                RaisePropertyChanged(nameof(AutoRefreshStatusText));
                 OnAutoRefreshToggled(value);
             }
         }
@@ -114,8 +130,14 @@ public class MainViewModel : BindableBase
         get => _areAllAxesEnabled;
         set
         {
+            if (IsLoading)
+            {
+                return;
+            }
+
             if (SetProperty(ref _areAllAxesEnabled, value))
             {
+                RaisePropertyChanged(nameof(AllAxesStatusText));
                 OnGlobalEnableToggled(value);
             }
         }
@@ -150,6 +172,17 @@ public class MainViewModel : BindableBase
         set => SetProperty(ref _isSpeedPanelVisible, value);
     }
 
+    private bool _hasLiveAxisData;
+    public bool HasLiveAxisData
+    {
+        get => _hasLiveAxisData;
+        set => SetProperty(ref _hasLiveAxisData, value);
+    }
+
+    public string AutoRefreshStatusText => IsAutoRefreshEnabled ? "自动刷新开启" : "手动刷新";
+
+    public string AllAxesStatusText => AreAllAxesEnabled ? "全部已使能" : "全部未使能";
+
     public DelegateCommand RefreshControllersCommand { get; }
     public DelegateCommand SendSafetyCommandCommand { get; }
     public DelegateCommand ConnectSignalRCommand { get; }
@@ -159,6 +192,8 @@ public class MainViewModel : BindableBase
     public DelegateCommand<AxisInfo> ViewDetailsCommand { get; }
     public DelegateCommand ToggleSafetyPanelCommand { get; }
     public DelegateCommand ToggleSpeedPanelCommand { get; }
+    public DelegateCommand ToggleAutoRefreshCommand { get; }
+    public DelegateCommand ToggleAllAxesCommand { get; }
 
     // 图标 Glyphs（用于绑定）
     public string HomeGlyph => AppIcon.Home.ToGlyph();
@@ -194,12 +229,100 @@ public class MainViewModel : BindableBase
         ViewDetailsCommand = new DelegateCommand<AxisInfo>(async (axis) => await ViewDetailsAsync(axis));
         ToggleSafetyPanelCommand = new DelegateCommand(() => IsSafetyPanelVisible = !IsSafetyPanelVisible);
         ToggleSpeedPanelCommand = new DelegateCommand(() => IsSpeedPanelVisible = !IsSpeedPanelVisible);
+        ToggleAutoRefreshCommand = new DelegateCommand(() => IsAutoRefreshEnabled = !IsAutoRefreshEnabled);
+        ToggleAllAxesCommand = new DelegateCommand(() => AreAllAxesEnabled = !AreAllAxesEnabled);
 
         // 订阅SignalR事件
         SubscribeToSignalREvents();
 
+        InitializeDefaultControllers();
+
         // 自动连接SignalR
         _ = Task.Run(async () => await AutoConnectSignalRAsync());
+    }
+
+    private void InitializeDefaultControllers(bool updateStatusMessage = true)
+    {
+        Controllers.Clear();
+
+        for (var index = 0; index < DefaultAxisRpms.Length; index++)
+        {
+            var rpm = DefaultAxisRpms[index];
+            var axisId = $"M{index + 1:D2}";
+
+            Controllers.Add(new AxisInfo
+            {
+                AxisId = axisId,
+                Status = 2,
+                Enabled = true,
+                TargetLinearMmps = rpm,
+                FeedbackLinearMmps = rpm,
+                CurrentSpeed = rpm,
+                CurrentRpm = rpm,
+                IsPlaceholder = true
+            });
+        }
+
+        HasLiveAxisData = false;
+        if (updateStatusMessage)
+        {
+            StatusMessage = "使用默认轴布局";
+        }
+    }
+
+    private static double ResolveRpm(AxisInfo controller)
+    {
+        if (controller.CurrentRpm > 0)
+        {
+            return controller.CurrentRpm;
+        }
+
+        if (controller.FeedbackLinearMmps.HasValue && controller.FeedbackLinearMmps.Value > 0)
+        {
+            return controller.FeedbackLinearMmps.Value;
+        }
+
+        if (controller.TargetLinearMmps.HasValue && controller.TargetLinearMmps.Value > 0)
+        {
+            return controller.TargetLinearMmps.Value;
+        }
+
+        if (controller.CurrentSpeed > 0)
+        {
+            return controller.CurrentSpeed;
+        }
+
+        return 0;
+    }
+
+    private void ApplyControllers(IEnumerable<AxisInfo> controllers)
+    {
+        Controllers.Clear();
+
+        foreach (var controller in controllers)
+        {
+            if (controller == null)
+            {
+                continue;
+            }
+
+            controller.CurrentRpm = ResolveRpm(controller);
+
+            if (controller.CurrentSpeed <= 0 && controller.CurrentRpm > 0)
+            {
+                controller.CurrentSpeed = controller.CurrentRpm;
+            }
+
+            controller.IsPlaceholder = false;
+            Controllers.Add(controller);
+        }
+
+        HasLiveAxisData = Controllers.Count > 0;
+
+        if (!HasLiveAxisData)
+        {
+            InitializeDefaultControllers(false);
+        }
     }
 
     private void OnAutoRefreshToggled(bool isEnabled)
@@ -412,24 +535,42 @@ public class MainViewModel : BindableBase
                 var response = await _apiClient.GetControllersAsync();
                 if (response.Success && response.Data != null)
                 {
-                    Controllers.Clear();
-                    foreach (var controller in response.Data)
+                    ApplyControllers(response.Data);
+                    StatusMessage = HasLiveAxisData
+                        ? $"已加载 {Controllers.Count} 个控制器"
+                        : "未获取到实时轴数据，已加载默认布局";
+
+                    if (HasLiveAxisData)
                     {
-                        Controllers.Add(controller);
+                        _notificationService.ShowSuccess($"已加载 {Controllers.Count} 个控制器");
                     }
-                    StatusMessage = $"Loaded {Controllers.Count} controllers";
-                    _notificationService.ShowSuccess($"已加载 {Controllers.Count} 个控制器");
+                    else
+                    {
+                        _notificationService.ShowWarning("未获取到实时轴数据，展示默认布局");
+                    }
                 }
                 else
                 {
-                    StatusMessage = $"Error: {response.Message}";
-                    _notificationService.ShowError($"加载失败: {response.Message}");
+                    InitializeDefaultControllers(false);
+                    StatusMessage = response.Success
+                        ? "未返回实时轴数据，已展示默认布局"
+                        : $"Error: {response.Message}";
+
+                    if (!response.Success)
+                    {
+                        _notificationService.ShowError($"加载失败: {response.Message}");
+                    }
+                    else
+                    {
+                        _notificationService.ShowWarning("未返回轴数据，展示默认布局");
+                    }
                 }
             },
             ex =>
             {
                 StatusMessage = $"Exception: {ex.Message}";
                 _notificationService.ShowError($"异常: {ErrorMessageHelper.GetFriendlyErrorMessage(ex.Message)}");
+                InitializeDefaultControllers(false);
             },
             "RefreshControllers",
             timeout: 15000

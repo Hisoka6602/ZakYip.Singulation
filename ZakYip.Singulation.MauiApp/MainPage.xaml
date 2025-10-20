@@ -42,107 +42,201 @@
                         CornerRadius="20"
                         BorderColor="#E2E8F0"
                         HasShadow="False">
-                        <Grid ColumnSpacing="16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
+                        <Grid RowSpacing="16">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
 
-                            <Border
-                                Grid.Column="0"
-                                BackgroundColor="#F8FAFF"
-                                Stroke="#E2E8F0"
-                                StrokeThickness="1"
-                                Padding="12">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                    <Label
-                                        Text="刷新控制器"
-                                        FontSize="14"
-                                        TextColor="#1A1F36"
-                                        VerticalOptions="Center" />
-                                    <Switch
-                                        IsToggled="{Binding IsAutoRefreshEnabled}"
-                                        IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
-                                        OnColor="#2563EB"
-                                        ThumbColor="White"
-                                        SemanticProperties.Description="Toggle auto-refresh for controllers" />
-                                </Grid>
-                            </Border>
+                            <Grid
+                                ColumnSpacing="12"
+                                ColumnDefinitions="*,*,*,*">
+                                <Border
+                                    Grid.Column="0"
+                                    Padding="16"
+                                    BackgroundColor="#F8FAFF"
+                                    Stroke="#E2E8F0"
+                                    StrokeThickness="1">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16" />
+                                    </Border.StrokeShape>
+                                    <Border.Triggers>
+                                        <DataTrigger
+                                            TargetType="Border"
+                                            Binding="{Binding IsAutoRefreshEnabled}"
+                                            Value="True">
+                                            <Setter Property="BackgroundColor" Value="#E0F2FE" />
+                                            <Setter Property="Stroke" Value="#60A5FA" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ToggleAutoRefreshCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                                        <Frame
+                                            Grid.Column="0"
+                                            BackgroundColor="#DBEAFE"
+                                            Padding="8"
+                                            CornerRadius="12"
+                                            HasShadow="False">
+                                            <Label
+                                                Text="↻"
+                                                FontSize="20"
+                                                TextColor="#2563EB"
+                                                HorizontalTextAlignment="Center"
+                                                VerticalTextAlignment="Center" />
+                                        </Frame>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                            <Label
+                                                Text="刷新控制器"
+                                                FontAttributes="Bold"
+                                                FontSize="14"
+                                                TextColor="#1A1F36" />
+                                            <Label
+                                                Text="{Binding AutoRefreshStatusText}"
+                                                FontSize="12"
+                                                TextColor="#64748B" />
+                                        </VerticalStackLayout>
+                                        <Switch
+                                            Grid.Column="2"
+                                            IsToggled="{Binding IsAutoRefreshEnabled}"
+                                            IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                            OnColor="#2563EB"
+                                            ThumbColor="White" />
+                                    </Grid>
+                                </Border>
 
-                            <Border
-                                Grid.Column="1"
-                                BackgroundColor="#F8FAFF"
-                                Stroke="#E2E8F0"
-                                StrokeThickness="1"
-                                Padding="12">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                    <Label
-                                        Text="全都使能"
-                                        FontSize="14"
-                                        TextColor="#1A1F36"
-                                        VerticalOptions="Center" />
-                                    <Switch
-                                        IsToggled="{Binding AreAllAxesEnabled}"
-                                        IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
-                                        OnColor="#22C55E"
-                                        ThumbColor="White"
-                                        SemanticProperties.Description="Toggle to enable or disable all axes" />
-                                </Grid>
-                            </Border>
-
-                            <Border
-                                Grid.Column="2"
-                                BackgroundColor="#EFF6FF"
-                                Stroke="#BFDBFE"
-                                StrokeThickness="1"
-                                Padding="0">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
-                                <Button
-                                    Text="安全指令"
-                                    Command="{Binding ToggleSafetyPanelCommand}"
+                                <Border
+                                    Grid.Column="1"
+                                    Padding="16"
                                     BackgroundColor="#2563EB"
-                                    TextColor="White"
-                                    CornerRadius="12"
-                                    FontAttributes="Bold"
-                                    HeightRequest="48"
-                                    Margin="0"
-                                    Padding="0"
-                                    HorizontalOptions="Fill"
-                                    VerticalOptions="Center" />
-                            </Border>
+                                    Stroke="#2563EB"
+                                    StrokeThickness="1">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16" />
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ToggleSafetyPanelCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                                        <Frame
+                                            Grid.Column="0"
+                                            BackgroundColor="#1D4ED8"
+                                            Padding="8"
+                                            CornerRadius="12"
+                                            HasShadow="False">
+                                            <Label
+                                                Text="🛡️"
+                                                FontSize="20"
+                                                HorizontalTextAlignment="Center"
+                                                VerticalTextAlignment="Center" />
+                                        </Frame>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                            <Label
+                                                Text="安全指令"
+                                                FontAttributes="Bold"
+                                                FontSize="14"
+                                                TextColor="White" />
+                                            <Label
+                                                Text="打开安全命令面板"
+                                                FontSize="12"
+                                                TextColor="#DBEAFE" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
 
-                            <Border
-                                Grid.Column="3"
-                                BackgroundColor="#F1F5F9"
-                                Stroke="#CBD5F5"
-                                StrokeThickness="1"
-                                Padding="0">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
-                                <Button
-                                    Text="输速设定"
-                                    Command="{Binding ToggleSpeedPanelCommand}"
-                                    BackgroundColor="#E2E8F0"
-                                    TextColor="#1E293B"
-                                    CornerRadius="12"
-                                    FontAttributes="Bold"
-                                    HeightRequest="48"
-                                    Margin="0"
-                                    Padding="0"
-                                    HorizontalOptions="Fill"
-                                    VerticalOptions="Center" />
-                            </Border>
+                                <Border
+                                    Grid.Column="2"
+                                    Padding="16"
+                                    BackgroundColor="#F8FAFF"
+                                    Stroke="#E2E8F0"
+                                    StrokeThickness="1">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16" />
+                                    </Border.StrokeShape>
+                                    <Border.Triggers>
+                                        <DataTrigger
+                                            TargetType="Border"
+                                            Binding="{Binding AreAllAxesEnabled}"
+                                            Value="True">
+                                            <Setter Property="BackgroundColor" Value="#DCFCE7" />
+                                            <Setter Property="Stroke" Value="#34D399" />
+                                        </DataTrigger>
+                                    </Border.Triggers>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ToggleAllAxesCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalOptions="Center">
+                                        <Frame
+                                            Grid.Column="0"
+                                            BackgroundColor="#D1FAE5"
+                                            Padding="8"
+                                            CornerRadius="12"
+                                            HasShadow="False">
+                                            <Label
+                                                Text="⚙️"
+                                                FontSize="20"
+                                                HorizontalTextAlignment="Center"
+                                                VerticalTextAlignment="Center" />
+                                        </Frame>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                            <Label
+                                                Text="全部使能"
+                                                FontAttributes="Bold"
+                                                FontSize="14"
+                                                TextColor="#1A1F36" />
+                                            <Label
+                                                Text="{Binding AllAxesStatusText}"
+                                                FontSize="12"
+                                                TextColor="#64748B" />
+                                        </VerticalStackLayout>
+                                        <Switch
+                                            Grid.Column="2"
+                                            IsToggled="{Binding AreAllAxesEnabled}"
+                                            IsEnabled="{Binding IsLoading, Converter={StaticResource InvertedBoolConverter}}"
+                                            OnColor="#22C55E"
+                                            ThumbColor="White" />
+                                    </Grid>
+                                </Border>
+
+                                <Border
+                                    Grid.Column="3"
+                                    Padding="16"
+                                    BackgroundColor="#F1F5F9"
+                                    Stroke="#CBD5F5"
+                                    StrokeThickness="1">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="16" />
+                                    </Border.StrokeShape>
+                                    <Border.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ToggleSpeedPanelCommand}" />
+                                    </Border.GestureRecognizers>
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12" VerticalOptions="Center">
+                                        <Frame
+                                            Grid.Column="0"
+                                            BackgroundColor="#E2E8F0"
+                                            Padding="8"
+                                            CornerRadius="12"
+                                            HasShadow="False">
+                                            <Label
+                                                Text="⏱️"
+                                                FontSize="20"
+                                                HorizontalTextAlignment="Center"
+                                                VerticalTextAlignment="Center" />
+                                        </Frame>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                            <Label
+                                                Text="输速设定"
+                                                FontAttributes="Bold"
+                                                FontSize="14"
+                                                TextColor="#1E293B" />
+                                            <Label
+                                                Text="批量设置轴速度"
+                                                FontSize="12"
+                                                TextColor="#64748B" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </Border>
+                            </Grid>
                         </Grid>
                     </Frame>
 

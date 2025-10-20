@@ -217,6 +217,12 @@ public class AxisInfo
     
     // 实时速度（从SignalR更新）
     public double CurrentSpeed { get; set; }
+
+    // 以 r/min 表示的速度（用于 UI 展示）
+    public double CurrentRpm { get; set; }
+
+    // 标识数据是否来源于实时接口（默认布局会标记为占位）
+    public bool IsPlaceholder { get; set; }
     
     // 便捷显示属性
     public string Id => AxisId;
