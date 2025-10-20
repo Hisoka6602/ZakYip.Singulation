@@ -154,14 +154,10 @@
                                         <Label Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Enabled, StringFormat='已使能: {0}'}" FontSize="14" />
                                         
                                         <!-- 提示 -->
-                                        <Label Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" FontSize="12" TextColor="#2196F3" HorizontalOptions="End">
-                                            <Label.FormattedText>
-                                                <FormattedString>
-                                                    <Span Text="👉 " />
-                                                    <Span Text="点击查看详情" />
-                                                </FormattedString>
-                                            </Label.FormattedText>
-                                        </Label>
+                                        <HorizontalStackLayout Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="3" HorizontalOptions="End" Spacing="3">
+                                            <Image Source="{StaticResource Icon.ArrowRight.24}" WidthRequest="14" HeightRequest="14" VerticalOptions="Center" />
+                                            <Label Text="点击查看详情" FontSize="12" TextColor="#2196F3" VerticalOptions="Center" />
+                                        </HorizontalStackLayout>
                                     </Grid>
                                 </Frame>
                             </DataTemplate>
