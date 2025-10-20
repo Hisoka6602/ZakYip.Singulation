@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
-             xmlns:controls="clr-namespace:ZakYip.Singulation.MauiApp.Controls"
-             x:Class="ZakYip.Singulation.MauiApp.Views.SingulationHomePage"
-             x:DataType="viewmodels:SingulationHomeViewModel"
-             Title="分件助手"
-             BackgroundColor="#F6F7FB">
+<ContentPage
+    x:Class="ZakYip.Singulation.MauiApp.Views.SingulationHomePage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:ZakYip.Singulation.MauiApp.Controls"
+    xmlns:viewmodels="clr-namespace:ZakYip.Singulation.MauiApp.ViewModels"
+    Title="分件助手"
+    x:DataType="viewmodels:SingulationHomeViewModel"
+    BackgroundColor="#F6F7FB">
 
     <ContentPage.Resources>
         <ResourceDictionary>
-            <!-- Theme Colors -->
+            <!--  Theme Colors  -->
             <Color x:Key="PrimaryColor">#3B82F6</Color>
             <Color x:Key="DangerColor">#EF4444</Color>
             <Color x:Key="SuccessColor">#10B981</Color>
@@ -19,33 +20,35 @@
             <Color x:Key="TextColor">#0F172A</Color>
             <Color x:Key="TextSecondaryColor">#64748B</Color>
             <Color x:Key="CardBackground">#FFFFFF</Color>
-            
-            <!-- Button Styles -->
+
+            <!--  Button Styles  -->
             <Style x:Key="ToolbarButton" TargetType="Button">
-                <Setter Property="CornerRadius" value="20"/>
-                <Setter Property="Padding" value="15,12"/>
-                <Setter Property="FontSize" value="14"/>
-                <Setter Property="FontAttributes" value="Bold"/>
-                <Setter Property="HeightRequest" value="56"/>
+                <Setter Property="CornerRadius" Value="20" />
+                <Setter Property="Padding" Value="15,12" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="FontAttributes" Value="Bold" />
+                <Setter Property="HeightRequest" Value="56" />
                 <Setter Property="Shadow">
-                    <Shadow Brush="Black"
-                            Offset="0,2"
-                            Radius="8"
-                            Opacity="0.08"/>
+                    <Shadow
+                        Brush="Black"
+                        Opacity="0.08"
+                        Radius="8"
+                        Offset="0,2" />
                 </Setter>
             </Style>
-            
+
             <Style x:Key="CardFrame" TargetType="Frame">
-                <Setter Property="BackgroundColor" value="{StaticResource CardBackground}"/>
-                <Setter Property="CornerRadius" value="24"/>
-                <Setter Property="Padding" value="16"/>
-                <Setter Property="HasShadow" value="False"/>
-                <Setter Property="BorderColor" value="Transparent"/>
+                <Setter Value="{StaticResource CardBackground}" Property="BackgroundColor" />
+                <Setter Value="24" Property="CornerRadius" />
+                <Setter Value="16" Property="Padding" />
+                <Setter Value="False" Property="HasShadow" />
+                <Setter Value="Transparent" Property="BorderColor" />
                 <Setter Property="Shadow">
-                    <Shadow Brush="Black"
-                            Offset="0,2"
-                            Radius="12"
-                            Opacity="0.06"/>
+                    <Shadow
+                        Brush="Black"
+                        Opacity="0.06"
+                        Radius="12"
+                        Offset="0,2" />
                 </Setter>
             </Style>
         </ResourceDictionary>
@@ -54,293 +57,331 @@
     <ScrollView>
         <Grid Padding="16" RowSpacing="16">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- Header -->
-                <RowDefinition Height="Auto"/> <!-- Toolbar Row 1 -->
-                <RowDefinition Height="Auto"/> <!-- Toolbar Row 2 -->
-                <RowDefinition Height="Auto"/> <!-- Batch -->
-                <RowDefinition Height="Auto"/> <!-- Mode Switcher -->
-                <RowDefinition Height="Auto"/> <!-- Motor Grid -->
-                <RowDefinition Height="Auto"/> <!-- Main Button -->
+                <RowDefinition Height="Auto" />
+                <!--  Header  -->
+                <RowDefinition Height="Auto" />
+                <!--  Toolbar Row 1  -->
+                <RowDefinition Height="Auto" />
+                <!--  Toolbar Row 2  -->
+                <RowDefinition Height="Auto" />
+                <!--  Batch  -->
+                <RowDefinition Height="Auto" />
+                <!--  Mode Switcher  -->
+                <RowDefinition Height="Auto" />
+                <!--  Motor Grid  -->
+                <RowDefinition Height="Auto" />
+                <!--  Main Button  -->
             </Grid.RowDefinitions>
 
-            <!-- Header -->
+            <!--  Header  -->
             <Frame Grid.Row="0" Style="{StaticResource CardFrame}">
                 <Grid ColumnDefinitions="*,Auto,Auto">
-                    <Label Grid.Column="0"
-                           Text="分件助手"
-                           FontSize="28"
-                           FontAttributes="Bold"
-                           TextColor="{StaticResource TextColor}"
-                           VerticalOptions="Center"/>
-                    <Button Grid.Column="1"
-                            Text="&#xF002;"
-                            FontFamily="FontAwesomeSolid"
-                            FontSize="20"
-                            WidthRequest="44"
-                            HeightRequest="44"
-                            CornerRadius="22"
-                            BackgroundColor="#F6F7FB"
-                            TextColor="{StaticResource TextColor}"
-                            Command="{Binding SearchCommand}"/>
-                    <Button Grid.Column="2"
-                            Text="&#xF013;"
-                            FontFamily="FontAwesomeSolid"
-                            FontSize="20"
-                            WidthRequest="44"
-                            HeightRequest="44"
-                            CornerRadius="22"
-                            BackgroundColor="#F6F7FB"
-                            TextColor="{StaticResource TextColor}"
-                            Margin="8,0,0,0"
-                            Command="{Binding SettingsCommand}"/>
+                    <Label
+                        Grid.Column="0"
+                        FontAttributes="Bold"
+                        FontSize="28"
+                        Text="分件助手"
+                        TextColor="{StaticResource TextColor}"
+                        VerticalOptions="Center" />
+                    <Button
+                        Grid.Column="1"
+                        BackgroundColor="#F6F7FB"
+                        Command="{Binding SearchCommand}"
+                        CornerRadius="22"
+                        FontFamily="FontAwesomeSolid"
+                        FontSize="20"
+                        HeightRequest="44"
+                        Text="&#xF002;"
+                        TextColor="{StaticResource TextColor}"
+                        WidthRequest="44" />
+                    <Button
+                        Grid.Column="2"
+                        Margin="8,0,0,0"
+                        BackgroundColor="#F6F7FB"
+                        Command="{Binding SettingsCommand}"
+                        CornerRadius="22"
+                        FontFamily="FontAwesomeSolid"
+                        FontSize="20"
+                        HeightRequest="44"
+                        Text="&#xF013;"
+                        TextColor="{StaticResource TextColor}"
+                        WidthRequest="44" />
                 </Grid>
             </Frame>
 
-            <!-- Toolbar Row 1: 4 buttons -->
-            <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
-                <!-- Refresh Controller -->
-                <Button Grid.Column="0"
-                        Text="&#xF021;&#10;刷新控制器"
-                        FontFamily="FontAwesomeSolid"
-                        Style="{StaticResource ToolbarButton}"
-                        BackgroundColor="#F1F5F9"
-                        TextColor="{StaticResource TextSecondaryColor}"
-                        Command="{Binding RefreshControllerCommand}"/>
-
-                <!-- Safety Command -->
-                <Button Grid.Column="1"
-                        Text="&#xF3ED;&#10;安全指令"
-                        FontFamily="FontAwesomeSolid"
-                        Style="{StaticResource ToolbarButton}"
-                        BackgroundColor="{StaticResource PrimaryColor}"
-                        TextColor="White"
-                        Command="{Binding SafetyCommandCommand}"/>
-
-                <!-- Enable All -->
-                <Button Grid.Column="2"
-                        Text="&#xF205;&#10;全部使能"
-                        FontFamily="FontAwesomeSolid"
-                        Style="{StaticResource ToolbarButton}"
-                        BackgroundColor="{StaticResource SuccessColor}"
-                        TextColor="White"
-                        Command="{Binding EnableAllCommand}"/>
-
-                <!-- Disable All -->
-                <Button Grid.Column="3"
-                        Text="&#xF204;&#10;全部禁用"
-                        FontFamily="FontAwesomeSolid"
-                        Style="{StaticResource ToolbarButton}"
-                        BackgroundColor="{StaticResource DisabledColor}"
-                        TextColor="White"
-                        Command="{Binding DisableAllCommand}"/>
-            </Grid>
-
-            <!-- Toolbar Row 2: Axis Speed Setting -->
-            <Button Grid.Row="2"
-                    Text="&#xF625;  轴速度设置"
+            <!--  Toolbar Row 1: 4 buttons  -->
+            <Grid
+                Grid.Row="1"
+                ColumnDefinitions="*,*,*,*"
+                ColumnSpacing="8">
+                <!--  Refresh Controller  -->
+                <Button
+                    Grid.Column="0"
+                    BackgroundColor="#F1F5F9"
+                    Command="{Binding RefreshControllerCommand}"
                     FontFamily="FontAwesomeSolid"
                     Style="{StaticResource ToolbarButton}"
-                    BackgroundColor="{StaticResource PrimaryColor}"
-                    TextColor="White"
-                    Command="{Binding AxisSpeedSettingCommand}"/>
+                    Text="&#xF021;&#10;刷新控制器"
+                    TextColor="{StaticResource TextSecondaryColor}" />
 
-            <!-- Batch Information -->
-            <Frame Grid.Row="3" 
-                   BackgroundColor="#F1F5F9"
-                   CornerRadius="12"
-                   Padding="12"
-                   HasShadow="False"
-                   BorderColor="Transparent">
-                <Label Text="{Binding BatchNumber, StringFormat='批次：{0}'}"
-                       FontSize="14"
-                       TextColor="{StaticResource TextSecondaryColor}"/>
+                <!--  Safety Command  -->
+                <Button
+                    Grid.Column="1"
+                    BackgroundColor="{StaticResource PrimaryColor}"
+                    Command="{Binding SafetyCommandCommand}"
+                    FontFamily="FontAwesomeSolid"
+                    Style="{StaticResource ToolbarButton}"
+                    Text="&#xF3ED;&#10;安全指令"
+                    TextColor="White" />
+
+                <!--  Enable All  -->
+                <Button
+                    Grid.Column="2"
+                    BackgroundColor="{StaticResource SuccessColor}"
+                    Command="{Binding EnableAllCommand}"
+                    FontFamily="FontAwesomeSolid"
+                    Style="{StaticResource ToolbarButton}"
+                    Text="&#xF205;&#10;全部使能"
+                    TextColor="White" />
+
+                <!--  Disable All  -->
+                <Button
+                    Grid.Column="3"
+                    BackgroundColor="{StaticResource DisabledColor}"
+                    Command="{Binding DisableAllCommand}"
+                    FontFamily="FontAwesomeSolid"
+                    Style="{StaticResource ToolbarButton}"
+                    Text="&#xF204;&#10;全部禁用"
+                    TextColor="White" />
+            </Grid>
+
+            <!--  Toolbar Row 2: Axis Speed Setting  -->
+            <Button
+                Grid.Row="2"
+                BackgroundColor="{StaticResource PrimaryColor}"
+                Command="{Binding AxisSpeedSettingCommand}"
+                FontFamily="FontAwesomeSolid"
+                Style="{StaticResource ToolbarButton}"
+                Text="&#xF625;  轴速度设置"
+                TextColor="White" />
+
+            <!--  Batch Information  -->
+            <Frame
+                Grid.Row="3"
+                Padding="12"
+                BackgroundColor="#F1F5F9"
+                BorderColor="Transparent"
+                CornerRadius="12"
+                HasShadow="False">
+                <Label
+                    FontSize="14"
+                    Text="{Binding BatchNumber, StringFormat='批次：{0}'}"
+                    TextColor="{StaticResource TextSecondaryColor}" />
             </Frame>
 
-            <!-- Mode Switcher -->
-            <Frame Grid.Row="4" Style="{StaticResource CardFrame}" Padding="4">
+            <!--  Mode Switcher  -->
+            <Frame
+                Grid.Row="4"
+                Padding="4"
+                Style="{StaticResource CardFrame}">
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="4">
-                    <Button Grid.Column="0"
-                            Text="自动分离"
-                            FontSize="15"
-                            FontAttributes="Bold"
-                            HeightRequest="44"
-                            CornerRadius="20"
-                            Command="{Binding SelectModeCommand}"
-                            CommandParameter="Auto">
+                    <Button
+                        Grid.Column="0"
+                        Command="{Binding SelectModeCommand}"
+                        CommandParameter="Auto"
+                        CornerRadius="20"
+                        FontAttributes="Bold"
+                        FontSize="15"
+                        HeightRequest="44"
+                        Text="自动分离">
                         <Button.Triggers>
-                            <DataTrigger TargetType="Button" 
-                                       Binding="{Binding SelectedMode}" 
-                                       Value="Auto">
-                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryColor}"/>
-                                <Setter Property="TextColor" Value="White"/>
+                            <DataTrigger
+                                Binding="{Binding SelectedMode}"
+                                TargetType="Button"
+                                Value="Auto">
+                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryColor}" />
+                                <Setter Property="TextColor" Value="White" />
                             </DataTrigger>
-                            <DataTrigger TargetType="Button" 
-                                       Binding="{Binding SelectedMode}" 
-                                       Value="Manual">
-                                <Setter Property="BackgroundColor" Value="Transparent"/>
-                                <Setter Property="TextColor" Value="{StaticResource TextSecondaryColor}"/>
+                            <DataTrigger
+                                Binding="{Binding SelectedMode}"
+                                TargetType="Button"
+                                Value="Manual">
+                                <Setter Property="BackgroundColor" Value="Transparent" />
+                                <Setter Property="TextColor" Value="{StaticResource TextSecondaryColor}" />
                             </DataTrigger>
                         </Button.Triggers>
                     </Button>
-                    <Button Grid.Column="1"
-                            Text="手动分离"
-                            FontSize="15"
-                            FontAttributes="Bold"
-                            HeightRequest="44"
-                            CornerRadius="20"
-                            Command="{Binding SelectModeCommand}"
-                            CommandParameter="Manual">
+                    <Button
+                        Grid.Column="1"
+                        Command="{Binding SelectModeCommand}"
+                        CommandParameter="Manual"
+                        CornerRadius="20"
+                        FontAttributes="Bold"
+                        FontSize="15"
+                        HeightRequest="44"
+                        Text="手动分离">
                         <Button.Triggers>
-                            <DataTrigger TargetType="Button" 
-                                       Binding="{Binding SelectedMode}" 
-                                       Value="Manual">
-                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryColor}"/>
-                                <Setter Property="TextColor" Value="White"/>
+                            <DataTrigger
+                                Binding="{Binding SelectedMode}"
+                                TargetType="Button"
+                                Value="Manual">
+                                <Setter Property="BackgroundColor" Value="{StaticResource PrimaryColor}" />
+                                <Setter Property="TextColor" Value="White" />
                             </DataTrigger>
-                            <DataTrigger TargetType="Button" 
-                                       Binding="{Binding SelectedMode}" 
-                                       Value="Auto">
-                                <Setter Property="BackgroundColor" Value="Transparent"/>
-                                <Setter Property="TextColor" Value="{StaticResource TextSecondaryColor}"/>
+                            <DataTrigger
+                                Binding="{Binding SelectedMode}"
+                                TargetType="Button"
+                                Value="Auto">
+                                <Setter Property="BackgroundColor" Value="Transparent" />
+                                <Setter Property="TextColor" Value="{StaticResource TextSecondaryColor}" />
                             </DataTrigger>
                         </Button.Triggers>
                     </Button>
                 </Grid>
             </Frame>
 
-            <!-- Motor Axis Grid (3 columns, M01-M20) -->
-            <CollectionView Grid.Row="5"
-                           ItemsSource="{Binding MotorAxes}"
-                           SelectionMode="Single"
-                           SelectedItem="{Binding SelectedMotor}"
-                           HeightRequest="550">
+            <!--  Motor Axis Grid (3 columns, M01-M20)  -->
+            <CollectionView
+                Grid.Row="5"
+                HeightRequest="550"
+                ItemsSource="{Binding MotorAxes}"
+                SelectedItem="{Binding SelectedMotor}"
+                SelectionMode="Single">
                 <CollectionView.ItemsLayout>
-                    <GridItemsLayout Orientation="Vertical"
-                                   Span="3"
-                                   HorizontalItemSpacing="8"
-                                   VerticalItemSpacing="8"/>
+                    <GridItemsLayout
+                        HorizontalItemSpacing="8"
+                        Orientation="Vertical"
+                        Span="3"
+                        VerticalItemSpacing="8" />
                 </CollectionView.ItemsLayout>
                 <CollectionView.ItemTemplate>
                     <DataTemplate x:DataType="viewmodels:MotorAxisInfo">
-                        <Frame Style="{StaticResource CardFrame}" Padding="12">
+                        <Frame Padding="12" Style="{StaticResource CardFrame}">
                             <Frame.GestureRecognizers>
-                                <TapGestureRecognizer 
-                                    Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SingulationHomeViewModel}}, Path=SelectMotorCommand}"
-                                    CommandParameter="{Binding .}" />
+                                <TapGestureRecognizer Command="{Binding Source={RelativeSource AncestorType={x:Type viewmodels:SingulationHomeViewModel}}, Path=SelectMotorCommand}" CommandParameter="{Binding .}" />
                             </Frame.GestureRecognizers>
                             <Frame.Triggers>
-                                <!-- Selected State -->
-                                <DataTrigger TargetType="Frame" 
-                                           Binding="{Binding IsSelected}" 
-                                           Value="True">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource PrimaryColor}"/>
+                                <!--  Selected State  -->
+                                <DataTrigger
+                                    Binding="{Binding IsSelected}"
+                                    TargetType="Frame"
+                                    Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource PrimaryColor}" />
                                 </DataTrigger>
-                                <!-- Abnormal State -->
-                                <DataTrigger TargetType="Frame" 
-                                           Binding="{Binding IsAbnormal}" 
-                                           Value="True">
-                                    <Setter Property="BackgroundColor" Value="{StaticResource DangerColor}"/>
+                                <!--  Abnormal State  -->
+                                <DataTrigger
+                                    Binding="{Binding IsAbnormal}"
+                                    TargetType="Frame"
+                                    Value="True">
+                                    <Setter Property="BackgroundColor" Value="{StaticResource DangerColor}" />
                                 </DataTrigger>
-                                <!-- Disabled State -->
-                                <DataTrigger TargetType="Frame" 
-                                           Binding="{Binding IsDisabled}" 
-                                           Value="True">
-                                    <Setter Property="BackgroundColor" Value="Transparent"/>
-                                    <Setter Property="BorderColor" Value="#CBD5E1"/>
+                                <!--  Disabled State  -->
+                                <DataTrigger
+                                    Binding="{Binding IsDisabled}"
+                                    TargetType="Frame"
+                                    Value="True">
+                                    <Setter Property="BackgroundColor" Value="Transparent" />
+                                    <Setter Property="BorderColor" Value="#CBD5E1" />
                                 </DataTrigger>
                             </Frame.Triggers>
                             <VerticalStackLayout Spacing="8">
-                                <!-- Motor ID -->
-                                <Label Text="{Binding MotorId}"
-                                       FontSize="14"
-                                       FontAttributes="Bold"
-                                       HorizontalTextAlignment="Center">
+                                <!--  Motor ID  -->
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="14"
+                                    HorizontalTextAlignment="Center"
+                                    Text="{Binding MotorId}">
                                     <Label.Triggers>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsSelected}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsSelected}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="White"/>
+                                            <Setter Property="TextColor" Value="White" />
                                         </MultiTrigger>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsAbnormal}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsAbnormal}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="White"/>
+                                            <Setter Property="TextColor" Value="White" />
                                         </MultiTrigger>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsDisabled}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsDisabled}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="{StaticResource DisabledColor}"/>
+                                            <Setter Property="TextColor" Value="{StaticResource DisabledColor}" />
                                         </MultiTrigger>
-                                        <DataTrigger TargetType="Label" 
-                                                   Binding="{Binding IsNormal}" 
-                                                   Value="True">
-                                            <Setter Property="TextColor" Value="{StaticResource TextColor}"/>
+                                        <DataTrigger
+                                            Binding="{Binding IsNormal}"
+                                            TargetType="Label"
+                                            Value="True">
+                                            <Setter Property="TextColor" Value="{StaticResource TextColor}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
-                                
-                                <!-- RPM Value -->
-                                <Label Text="{Binding Rpm}"
-                                       FontSize="32"
-                                       FontAttributes="Bold"
-                                       HorizontalTextAlignment="Center">
+
+                                <!--  RPM Value  -->
+                                <Label
+                                    FontAttributes="Bold"
+                                    FontSize="32"
+                                    HorizontalTextAlignment="Center"
+                                    Text="{Binding Rpm}">
                                     <Label.Triggers>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsSelected}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsSelected}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="White"/>
+                                            <Setter Property="TextColor" Value="White" />
                                         </MultiTrigger>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsAbnormal}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsAbnormal}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="White"/>
+                                            <Setter Property="TextColor" Value="White" />
                                         </MultiTrigger>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsDisabled}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsDisabled}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="{StaticResource DisabledColor}"/>
+                                            <Setter Property="TextColor" Value="{StaticResource DisabledColor}" />
                                         </MultiTrigger>
-                                        <DataTrigger TargetType="Label" 
-                                                   Binding="{Binding IsNormal}" 
-                                                   Value="True">
-                                            <Setter Property="TextColor" Value="{StaticResource TextColor}"/>
+                                        <DataTrigger
+                                            Binding="{Binding IsNormal}"
+                                            TargetType="Label"
+                                            Value="True">
+                                            <Setter Property="TextColor" Value="{StaticResource TextColor}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
-                                
-                                <!-- Unit -->
-                                <Label Text="r/min"
-                                       FontSize="12"
-                                       HorizontalTextAlignment="Center">
+
+                                <!--  Unit  -->
+                                <Label
+                                    FontSize="12"
+                                    HorizontalTextAlignment="Center"
+                                    Text="r/min">
                                     <Label.Triggers>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsSelected}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsSelected}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="White"/>
+                                            <Setter Property="TextColor" Value="White" />
                                         </MultiTrigger>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsAbnormal}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsAbnormal}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="White"/>
+                                            <Setter Property="TextColor" Value="White" />
                                         </MultiTrigger>
                                         <MultiTrigger TargetType="Label">
                                             <MultiTrigger.Conditions>
-                                                <BindingCondition Binding="{Binding IsDisabled}" Value="True"/>
+                                                <BindingCondition Binding="{Binding IsDisabled}" Value="True" />
                                             </MultiTrigger.Conditions>
-                                            <Setter Property="TextColor" Value="{StaticResource DisabledColor}"/>
+                                            <Setter Property="TextColor" Value="{StaticResource DisabledColor}" />
                                         </MultiTrigger>
-                                        <DataTrigger TargetType="Label" 
-                                                   Binding="{Binding IsNormal}" 
-                                                   Value="True">
-                                            <Setter Property="TextColor" Value="{StaticResource TextSecondaryColor}"/>
+                                        <DataTrigger
+                                            Binding="{Binding IsNormal}"
+                                            TargetType="Label"
+                                            Value="True">
+                                            <Setter Property="TextColor" Value="{StaticResource TextSecondaryColor}" />
                                         </DataTrigger>
                                     </Label.Triggers>
                                 </Label>
@@ -350,22 +391,24 @@
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
-            <!-- Main Action Button -->
-            <Button Grid.Row="6"
-                    Text="分离"
-                    FontSize="20"
-                    FontAttributes="Bold"
-                    HeightRequest="60"
-                    CornerRadius="30"
-                    BackgroundColor="{StaticResource PrimaryColor}"
-                    TextColor="White"
-                    Margin="0,8,0,0"
-                    Command="{Binding SeparateCommand}">
+            <!--  Main Action Button  -->
+            <Button
+                Grid.Row="6"
+                Margin="0,8,0,0"
+                BackgroundColor="{StaticResource PrimaryColor}"
+                Command="{Binding SeparateCommand}"
+                CornerRadius="30"
+                FontAttributes="Bold"
+                FontSize="20"
+                HeightRequest="60"
+                Text="分离"
+                TextColor="White">
                 <Button.Shadow>
-                    <Shadow Brush="{StaticResource PrimaryColor}"
-                            Offset="0,4"
-                            Radius="16"
-                            Opacity="0.3"/>
+                    <Shadow
+                        Brush="{StaticResource PrimaryColor}"
+                        Opacity="0.3"
+                        Radius="16"
+                        Offset="0,4" />
                 </Button.Shadow>
             </Button>
         </Grid>
