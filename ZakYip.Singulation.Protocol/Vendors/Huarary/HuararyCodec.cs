@@ -146,7 +146,6 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         /// 其中速度值采用小端序 ushort 编码。
         /// </remarks>
         public int EncodeModeAndSpeed(IBufferWriter<byte> writer, byte mode, ushort maxMmps, ushort minMmps) {
-            // 固定长度11字节：2A 84 0B 00 [mode] [maxLE2] [minLE2] XOR 3B。
             var span = writer.GetSpan(11);
             span[0] = HuararyControl.Start;
             span[1] = HuararyControl.CtrlModeSpeed;
