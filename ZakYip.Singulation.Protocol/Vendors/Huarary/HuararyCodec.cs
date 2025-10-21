@@ -111,7 +111,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         /// 当前实现为骨架，细节字段解析可按需完整展开。
         /// </remarks>
         public bool TryDecodeStatus(ReadOnlySpan<byte> frame, out StatusSnapshot status) {
-            // 状态响应 Ctrl=0x5B；包含运行态、报警、相机 FPS/列表等。
+            
             status = new StatusSnapshot(false, 0, Array.Empty<(string, byte)>(), VisionAlarm.None);
             // 这里给出骨架，细字段按需要完整展开。
             return false;
