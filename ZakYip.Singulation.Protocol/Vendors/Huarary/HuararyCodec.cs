@@ -136,7 +136,6 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         /// 其中最后一个数据字节为 0x01（启动）或 0x00（停止）。
         /// </remarks>
         public int EncodeStartStop(IBufferWriter<byte> writer, bool start) {
-            // 固定长度10字节：2A 89 0A 00 00 00 00 [01/00] XOR 3B。
             return EncodeFixed10(writer, HuararyControl.CtrlStartStop, start ? (byte)0x01 : (byte)0x00);
         }
 
