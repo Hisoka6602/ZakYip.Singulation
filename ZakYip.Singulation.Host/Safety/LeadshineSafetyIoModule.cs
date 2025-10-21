@@ -64,7 +64,7 @@ namespace ZakYip.Singulation.Host.Safety {
                 try {
                     // 读取急停按键
                     if (_options.EmergencyStopBit >= 0) {
-                        bool currentState = ReadInputBit(_options.EmergencyStopBit);
+                        bool currentState = ReadInputBit(_options.EmergencyStopBit, _options.InvertEmergencyStopLogic ?? _options.InvertLogic);
                         if (currentState && !_lastEmergencyStopState) {
                             _logger.LogWarning("检测到急停按键按下");
                             EmergencyStop?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.EmergencyStop, "物理急停按键"));
@@ -74,7 +74,7 @@ namespace ZakYip.Singulation.Host.Safety {
 
                     // 读取停止按键
                     if (_options.StopBit >= 0) {
-                        bool currentState = ReadInputBit(_options.StopBit);
+                        bool currentState = ReadInputBit(_options.StopBit, _options.InvertStopLogic ?? _options.InvertLogic);
                         if (currentState && !_lastStopState) {
                             _logger.LogInformation("检测到停止按键按下");
                             StopRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StopButton, "物理停止按键"));
@@ -84,7 +84,7 @@ namespace ZakYip.Singulation.Host.Safety {
 
                     // 读取启动按键
                     if (_options.StartBit >= 0) {
-                        bool currentState = ReadInputBit(_options.StartBit);
+                        bool currentState = ReadInputBit(_options.StartBit, _options.InvertStartLogic ?? _options.InvertLogic);
                         if (currentState && !_lastStartState) {
                             _logger.LogInformation("检测到启动按键按下");
                             StartRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StartButton, "物理启动按键"));
@@ -94,7 +94,7 @@ namespace ZakYip.Singulation.Host.Safety {
 
                     // 读取复位按键
                     if (_options.ResetBit >= 0) {
-                        bool currentState = ReadInputBit(_options.ResetBit);
+                        bool currentState = ReadInputBit(_options.ResetBit, _options.InvertResetLogic ?? _options.InvertLogic);
                         if (currentState && !_lastResetState) {
                             _logger.LogInformation("检测到复位按键按下");
                             ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.ResetButton, "物理复位按键"));
@@ -116,7 +116,7 @@ namespace ZakYip.Singulation.Host.Safety {
             _logger.LogInformation("雷赛安全 IO 模块已停止");
         }
 
-        private bool ReadInputBit(int bitNo) {
+        private bool ReadInputBit(int bitNo, bool invertLogic) {
             try {
                 // 调用雷赛 API 读取输入位
                 // 返回值：0=低电平/未按下，1=高电平/按下，<0=错误
@@ -129,7 +129,7 @@ namespace ZakYip.Singulation.Host.Safety {
 
                 // 根据配置决定是否反转逻辑（常开/常闭）
                 bool state = result == 1;
-                return _options.InvertLogic ? !state : state;
+                return invertLogic ? !state : state;
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "读取输入位 {BitNo} 时发生异常", bitNo);
@@ -172,7 +172,19 @@ namespace ZakYip.Singulation.Host.Safety {
         /// <summary>轮询间隔（毫秒），默认 50ms。</summary>
         public int PollingIntervalMs { get; set; } = 50;
 
-        /// <summary>是否反转输入逻辑（用于常闭按键），默认 false。</summary>
+        /// <summary>是否反转输入逻辑（用于常闭按键），默认 false。此属性作为默认值，可被各按键独立配置覆盖。</summary>
         public bool InvertLogic { get; set; } = false;
+
+        /// <summary>急停按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
+        public bool? InvertEmergencyStopLogic { get; set; } = null;
+
+        /// <summary>停止按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
+        public bool? InvertStopLogic { get; set; } = null;
+
+        /// <summary>启动按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
+        public bool? InvertStartLogic { get; set; } = null;
+
+        /// <summary>复位按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
+        public bool? InvertResetLogic { get; set; } = null;
     }
 }
