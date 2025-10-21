@@ -59,7 +59,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
         /// </remarks>
         public bool TryDecodePositions(ReadOnlySpan<byte> frame, out IReadOnlyList<ParcelPose> poses) {
             poses = [];
-            return false; // 归位速度优先，位置/状态如需对接可扩展。
+            return false;
         }
 
         /// <inheritdoc />
