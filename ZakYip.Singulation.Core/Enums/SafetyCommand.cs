@@ -7,6 +7,7 @@ namespace ZakYip.Singulation.Core.Enums {
         None = 0,
         Start = 1,
         Stop = 2,
-        Reset = 3
+        Reset = 3,
+        EmergencyStop = 4
     }
 }
