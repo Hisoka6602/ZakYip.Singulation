@@ -199,7 +199,6 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         /// 其中速度采用小端序 ushort 编码。
         /// </remarks>
         public int EncodeSetParams(IBufferWriter<byte> writer, byte ejectCount, ushort ejectMmps, byte autoStartDelaySec) {
-            // 固定长度10字节：2A 83 0A 00 [count] [mmLE2] [delay] XOR 3B。
             var span = writer.GetSpan(10);
             span[0] = HuararyControl.Start;
             span[1] = HuararyControl.CtrlSetParams;
