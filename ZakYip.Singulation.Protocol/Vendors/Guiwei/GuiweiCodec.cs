@@ -86,7 +86,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
         /// 如需启动/停止控制，建议通过其他通道或扩展协议。
         /// </remarks>
         public int EncodeStartStop(IBufferWriter<byte> writer, bool start) {
-            // 归位的控制报文为简约格式，按文档约定写入；此处留空壳，按需完善。
+            
             return 0;
         }
 
