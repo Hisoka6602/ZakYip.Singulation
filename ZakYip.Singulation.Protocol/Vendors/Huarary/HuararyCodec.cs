@@ -231,7 +231,6 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         /// 响应帧控制码为 0x5C。
         /// </remarks>
         public int EncodeGetParams(IBufferWriter<byte> writer) {
-            // 固定长度10字节：2A 88 0A 00 00 00 00 00 XOR 3B（响应为 0x5C）。
             return EncodeFixed10(writer, HuararyControl.CtrlGetParams, 0x00);
         }
 
