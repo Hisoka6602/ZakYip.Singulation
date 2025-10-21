@@ -189,7 +189,6 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         /// 其中最后一个数据字节为 0x01（暂停）或 0x00（恢复）。
         /// </remarks>
         public int EncodePause(IBufferWriter<byte> writer, bool pause) {
-            // 固定长度10字节：2A 85 0A 00 00 00 00 [01/00] XOR 3B。
             return EncodeFixed10(writer, HuararyControl.CtrlPause, pause ? (byte)0x01 : (byte)0x00);
         }
 
