@@ -168,7 +168,6 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         /// 分离模式字节固定为 0x02，间距采用小端序 ushort 编码。
         /// </remarks>
         public int EncodeSpacing(IBufferWriter<byte> writer, ushort spacingMm) {
-            // 固定长度10字节，分离模式字节固定0x02：2A 86 0A 00 [mmLE2] 02 00 XOR 3B。
             var span = writer.GetSpan(10);
             span[0] = HuararyControl.Start;
             span[1] = HuararyControl.CtrlSpacing;
