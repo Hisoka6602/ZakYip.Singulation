@@ -3,6 +3,10 @@
 ## 本次更新（2025-10-21）
 
 ### ✅ 安全按键系统完整实现
+
+**快速开始**：[5 分钟配置指南](docs/SAFETY_QUICK_START.md) | [完整文档](docs/SAFETY_BUTTONS.md)
+
+#### 核心特性
 - **物理按键集成**：新增 `LeadshineSafetyIoModule`，通过雷赛控制器 IO 端口读取物理按键
   - 支持急停、启动、停止、复位四种物理按键
   - 采用边沿检测机制，避免重复触发
@@ -13,10 +17,27 @@
 - **灵活配置**：通过 appsettings.json 配置硬件按键或软件模拟模式
   - `LeadshineSafetyIo.Enabled = true` 启用物理按键
   - `LeadshineSafetyIo.Enabled = false` 使用回环测试模式
-- **完整文档**：新增安全按键系统使用指南 [docs/SAFETY_BUTTONS.md](docs/SAFETY_BUTTONS.md)
-  - 硬件接线要求和配置说明
-  - API 使用示例和安全逻辑流程
-  - 功能测试清单和故障排查指南
+
+#### 快速配置示例
+
+编辑 `appsettings.json`：
+```json
+{
+  "LeadshineSafetyIo": {
+    "Enabled": true,              // 启用物理按键
+    "EmergencyStopBit": 0,        // 急停按键 → IN0
+    "StopBit": 1,                 // 停止按键 → IN1
+    "StartBit": 2,                // 启动按键 → IN2
+    "ResetBit": 3,                // 复位按键 → IN3
+    "PollingIntervalMs": 50       // 轮询间隔 50ms
+  }
+}
+```
+
+#### 完整文档
+- [快速入门（5 分钟）](docs/SAFETY_QUICK_START.md) - 配置、测试、故障排查
+- [完整指南](docs/SAFETY_BUTTONS.md) - 架构设计、API 参考、最佳实践
+- [配置示例](ZakYip.Singulation.Host/appsettings.Safety.example.json) - 多种场景配置模板
 
 ## 之前的更新（2025-10-22）
 
@@ -633,7 +654,8 @@ ZakYip.Singulation.MauiApp/
 |------|------|------|
 | **架构设计** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构和设计文档 |
 | **API 文档** | [docs/API.md](docs/API.md) | REST API 接口文档和使用示例 |
-| **✨ 安全按键指南** | [docs/SAFETY_BUTTONS.md](docs/SAFETY_BUTTONS.md) | **物理按键集成、配置、测试和故障排查** |
+| **✨ 安全按键快速入门** | [docs/SAFETY_QUICK_START.md](docs/SAFETY_QUICK_START.md) | **5 分钟配置指南和快速参考** |
+| **✨ 安全按键完整指南** | [docs/SAFETY_BUTTONS.md](docs/SAFETY_BUTTONS.md) | **物理按键集成、配置、测试和故障排查** |
 | **MAUI 应用** | [docs/MAUIAPP.md](docs/MAUIAPP.md) | MAUI 客户端功能和使用说明 |
 | **图标字体指南** | [docs/ICON_FONT_GUIDE.md](docs/ICON_FONT_GUIDE.md) | MAUI 图标字体系统使用指南 |
 | **性能优化** | [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | 性能优化建议和最佳实践 |
