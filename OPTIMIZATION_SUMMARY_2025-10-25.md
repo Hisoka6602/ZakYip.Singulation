@@ -42,9 +42,9 @@
 - 为所有枚举值添加 `[Description]` 特性
 - 确保所有描述和注释使用中文
 
-**涉及文件**：12个枚举文件
+**涉及文件**：17个枚举文件（3个Protocol + 1个Transport + 1个Drivers + 11个Core + 4个Host内联枚举）
 
-**Protocol 层**：
+**Protocol 层（3个）**：
 ```csharp
 // ZakYip.Singulation.Protocol/Enums/
 - CodecResult.cs      // 编解码结果
@@ -52,20 +52,38 @@
 - UpstreamCtrl.cs     // 上游协议控制命令字
 ```
 
-**Core 层**：
+**Transport 层（1个）**：
+```csharp
+// ZakYip.Singulation.Transport/Enums/
+- TransportStatus.cs  // 传输状态
+```
+
+**Drivers 层（1个）**：
+```csharp
+// ZakYip.Singulation.Drivers/Enums/
+- DriverStatus.cs     // 驱动状态
+```
+
+**Core 层（11个）**：
 ```csharp
 // ZakYip.Singulation.Core/Enums/
+- AxisEventType.cs           // 轴事件类型
+- ControllerResetType.cs     // 控制器复位类型
 - SafetyCommand.cs           // 安全控制命令
+- PlannerStatus.cs           // 规划器状态
+- TransportRole.cs           // 传输角色
 - SafetyIsolationState.cs    // 安全隔离状态
 - SafetyTriggerKind.cs       // 安全触发来源
 - TransportEventType.cs      // 传输事件类型
+- TransportConnectionState.cs // 传输连接状态
 - LogKind.cs                 // 日志级别
 - VisionAlarm.cs             // 视觉报警标志
 ```
 
-**Host 层**：
+**Host 层（4个）**：
 ```csharp
 // ZakYip.Singulation.Host/
+- Runtime/PowerGuard.cs                 // 电源状态标志（Windows API）
 - Safety/SafetyOperationKind.cs         // 安全操作种类
 - Workers/CommissioningState.cs         // 调试流程状态
 - Workers/CommissioningCommandKind.cs   // 调试流程命令
@@ -250,8 +268,8 @@ dotnet run -c Release
    - 性能测试项目介绍
 
 2. **技术亮点总结**：
-   - 16个枚举完全规范化
-   - 10+个包更新
+   - 17个枚举完全规范化
+   - 11个NuGet包更新到最新版本
    - 多目标日志输出
    - BenchmarkDotNet集成
 
@@ -372,7 +390,7 @@ dotnet run -c Release
 ### 完成成果
 
 1. **代码质量提升**
-   - 16个枚举完全规范化
+   - 17个枚举完全规范化
    - 中文注释和描述完善
    - 符合行业最佳实践
 
