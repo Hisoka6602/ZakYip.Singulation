@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace ZakYip.Singulation.Core.Enums {
 
@@ -11,8 +8,8 @@ namespace ZakYip.Singulation.Core.Enums {
     /// </summary>
     [Flags]
     public enum VisionAlarm {
-
         /// <summary>无异常。</summary>
+        [Description("无异常")]
         None = 0
 
         // 后续可扩展：如 CameraTriggerFault=1<<0, DongleFault=1<<1 等
