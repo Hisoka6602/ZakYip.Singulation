@@ -4,8 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -16,17 +19,33 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
     public sealed class LiteDbUpstreamOptionsStore : IUpstreamOptionsStore {
         private const string CollName = "upstream_options";
         private const string Key = "upstream_options_singleton";
+        private const string ErrorMessage = "读取DB配置异常：UpstreamOptions";
 
         private readonly ILiteCollection<UpstreamOptionsDoc> _col;
+        private readonly ILogger<LiteDbUpstreamOptionsStore> _logger;
+        private readonly ISafetyIsolator _safetyIsolator;
         private readonly object _gate = new(); // 写入串行锁，避免并发竞态
 
-        public LiteDbUpstreamOptionsStore(ILiteDatabase db) {
+        public LiteDbUpstreamOptionsStore(
+            ILiteDatabase db,
+            ILogger<LiteDbUpstreamOptionsStore> logger,
+            ISafetyIsolator safetyIsolator) {
             _col = db.GetCollection<UpstreamOptionsDoc>(CollName);
             _col.EnsureIndex(x => x.Id, unique: true);
+            _logger = logger;
+            _safetyIsolator = safetyIsolator;
         }
 
-        public Task<UpstreamOptions> GetAsync(CancellationToken ct = default)
-            => Task.FromResult(_col.FindById(Key)?.ToDto() ?? ConfigDefaults.Upstream());
+        public Task<UpstreamOptions> GetAsync(CancellationToken ct = default) {
+            try {
+                return Task.FromResult(_col.FindById(Key)?.ToDto() ?? ConfigDefaults.Upstream());
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
+                return Task.FromResult(ConfigDefaults.Upstream());
+            }
+        }
 
         public Task SaveAsync(UpstreamOptions dto, CancellationToken ct = default) =>
             Task.Run(() => {
