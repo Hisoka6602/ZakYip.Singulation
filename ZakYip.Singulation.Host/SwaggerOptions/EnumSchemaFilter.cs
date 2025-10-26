@@ -39,10 +39,11 @@ namespace ZakYip.Singulation.Host.SwaggerOptions {
                 }
 
                 // 将描述添加到 schema 的 description 中
+                var descriptionText = sb.ToString();
                 if (!string.IsNullOrEmpty(schema.Description)) {
-                    schema.Description += "\n\n" + sb.ToString();
+                    schema.Description += "\n\n" + descriptionText;
                 } else {
-                    schema.Description = sb.ToString();
+                    schema.Description = descriptionText;
                 }
             }
         }
