@@ -53,5 +53,23 @@ namespace ZakYip.Singulation.Host.Dto {
         /// 若无错误，值为 null。
         /// </summary>
         public string? LastErrorMessage { get; init; }
+
+        /// <summary>
+        /// 最大线速度限制，单位为毫米每秒（mm/s）。
+        /// 若驱动未配置或不可用，则该值为 null。
+        /// </summary>
+        public double? MaxLinearMmps { get; init; }
+
+        /// <summary>
+        /// 最大线加速度限制，单位为毫米每平方秒（mm/s²）。
+        /// 若驱动未配置或不可用，则该值为 null。
+        /// </summary>
+        public double? MaxAccelMmps2 { get; init; }
+
+        /// <summary>
+        /// 最大线减速度限制，单位为毫米每平方秒（mm/s²）。
+        /// 若驱动未配置或不可用，则该值为 null。
+        /// </summary>
+        public double? MaxDecelMmps2 { get; init; }
     }
 }

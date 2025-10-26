@@ -116,6 +116,27 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public int LastErrorCode { get; private set; }
         public string? LastErrorMessage { get; private set; }
 
+        public decimal? MaxLinearMmps {
+            get {
+                if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return null;
+                return new AxisRpm(_opts.MaxRpm).ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            }
+        }
+
+        public decimal? MaxAccelMmps2 {
+            get {
+                if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return null;
+                return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxAccelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            }
+        }
+
+        public decimal? MaxDecelMmps2 {
+            get {
+                if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return null;
+                return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxDecelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            }
+        }
+
         [System.Obsolete("默认单位为 mm/s；建议改用 WriteSpeedAsync(mmPerSec)。此方法仅为兼容入口。")]
         public async ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default) {
             await ThrottleAsync(ct);

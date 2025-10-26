@@ -556,7 +556,10 @@ namespace ZakYip.Singulation.Host.Controllers {
                 TargetLinearMmps = d?.LastTargetMmps.HasValue == true ? (double?)d.LastTargetMmps.Value : null,
                 FeedbackLinearMmps = d?.LastFeedbackMmps.HasValue == true ? (double?)d.LastFeedbackMmps.Value : null,
                 LastErrorCode = d?.LastErrorCode,
-                LastErrorMessage = d?.LastErrorMessage
+                LastErrorMessage = d?.LastErrorMessage,
+                MaxLinearMmps = d?.MaxLinearMmps.HasValue == true ? (double?)d.MaxLinearMmps.Value : null,
+                MaxAccelMmps2 = d?.MaxAccelMmps2.HasValue == true ? (double?)d.MaxAccelMmps2.Value : null,
+                MaxDecelMmps2 = d?.MaxDecelMmps2.HasValue == true ? (double?)d.MaxDecelMmps2.Value : null
             };
         }
 
