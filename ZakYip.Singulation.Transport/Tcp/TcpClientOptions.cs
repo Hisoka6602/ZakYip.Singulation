@@ -6,8 +6,8 @@ using System.Collections.Generic;
 
 namespace ZakYip.Singulation.Transport.Tcp {
 
-    public sealed class TcpClientOptions {
-        public string Host { get; init; } = "127.0.0.1";
+    public sealed record class TcpClientOptions {
+        public required string Host { get; init; } = "127.0.0.1";
         public int Port { get; init; } = 5000;
 
         /// <summary>启用 Nagle 禁用（减少延迟）。</summary>

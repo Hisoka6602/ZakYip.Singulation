@@ -37,16 +37,15 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             var store = sp.GetRequiredService<IUpstreamOptionsStore>();
             var dto = await store.GetAsync(ct);
 
-            // 读取配置并合并（不存在则保留当前值）
-            dto.Host = sec["Host"] ?? dto.Host;
-            dto.SpeedPort = TryInt(sec["SpeedPort"], dto.SpeedPort);
-            dto.PositionPort = TryInt(sec["PositionPort"], dto.PositionPort);
-            dto.HeartbeatPort = TryInt(sec["HeartbeatPort"], dto.HeartbeatPort);
-            dto.ValidateCrc = TryBool(sec["ValidateCrc"], dto.ValidateCrc);
-
-            // 角色可选（Client/Server）。未配置则保持原值
-            if (Enum.TryParse<TransportRole>(sec["Role"], true, out var role))
-                dto.Role = role;
+            // 读取配置并合并（不存在则保留当前值）- 使用 with 表达式创建新对象
+            dto = dto with {
+                Host = sec["Host"] ?? dto.Host,
+                SpeedPort = TryInt(sec["SpeedPort"], dto.SpeedPort),
+                PositionPort = TryInt(sec["PositionPort"], dto.PositionPort),
+                HeartbeatPort = TryInt(sec["HeartbeatPort"], dto.HeartbeatPort),
+                ValidateCrc = TryBool(sec["ValidateCrc"], dto.ValidateCrc),
+                Role = Enum.TryParse<TransportRole>(sec["Role"], true, out var role) ? role : dto.Role
+            };
 
             await store.SaveAsync(dto, ct);
 

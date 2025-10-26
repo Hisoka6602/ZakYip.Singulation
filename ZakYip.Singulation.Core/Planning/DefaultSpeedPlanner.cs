@@ -163,8 +163,8 @@ namespace ZakYip.Singulation.Core.Planning {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private decimal MmpsToRpm(decimal vMmps, int axisIndex) {
-            var d_m = (decimal)_cfg.BeltDiameter[axisIndex]; // 皮带/滚筒直径（米）
-            var gr = (decimal)_cfg.GearRatio[axisIndex];    // 齿轮比（电机:滚筒）
+            var d_m = _cfg.BeltDiameter[axisIndex]; // 皮带/滚筒直径（米）
+            var gr = _cfg.GearRatio[axisIndex];    // 齿轮比（电机:滚筒）
             if (d_m <= 0 || gr <= 0) return 0m;
 
             var v_mps = vMmps / 1000m;
@@ -177,8 +177,8 @@ namespace ZakYip.Singulation.Core.Planning {
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private decimal ClampByHardwareSpeedLimitMmps(decimal vMmps, int axisIndex) {
-            var maxV = (decimal)_cfg.MaxBeltSpeed;
-            var minV = (decimal)Math.Max(0.0, _cfg.MinBeltSpeed);
+            var maxV = _cfg.MaxBeltSpeed;
+            var minV = Math.Max(0m, _cfg.MinBeltSpeed);
             if (maxV > 0 && vMmps > maxV) vMmps = maxV;
             if (vMmps < minV) vMmps = minV;
             return vMmps;

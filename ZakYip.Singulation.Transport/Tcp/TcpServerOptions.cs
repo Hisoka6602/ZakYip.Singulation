@@ -7,10 +7,10 @@ using System.Collections.Generic;
 
 namespace ZakYip.Singulation.Transport.Tcp {
 
-    public sealed class TcpServerOptions {
+    public sealed record class TcpServerOptions {
 
         /// <summary>监听地址；默认 0.0.0.0。</summary>
-        public IPAddress Address { get; init; } = IPAddress.Any;
+        public required IPAddress Address { get; init; } = IPAddress.Any;
 
         public int Port { get; init; } = 5000;
 

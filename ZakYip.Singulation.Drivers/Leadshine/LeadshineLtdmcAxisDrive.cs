@@ -688,7 +688,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             }
 
             FireEachNonBlocking(SpeedFeedback, this,
-                new AxisSpeedFeedbackEventArgs(Axis, rpmVal, speedMmps, pps, DateTime.Now));
+                new AxisSpeedFeedbackEventArgs {
+                    Axis = Axis,
+                    Rpm = rpmVal,
+                    SpeedMps = speedMmps,
+                    PulsesPerSec = pps,
+                    TimestampUtc = DateTime.UtcNow
+                });
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
