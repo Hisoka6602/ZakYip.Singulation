@@ -26,14 +26,10 @@ namespace ZakYip.Singulation.Host.Controllers {
         public SafetyIoController(
             ILogger<SafetyIoController> logger,
             ILeadshineSafetyIoOptionsStore store,
-            IServiceProvider serviceProvider) {
+            LeadshineSafetyIoModule? safetyModule = null) {
             _logger = logger;
             _store = store;
-            
-            // 尝试获取安全模块（可能不存在，如果使用的是 LoopbackSafetyIoModule）
-            if (serviceProvider.GetService(typeof(LeadshineSafetyIoModule)) is LeadshineSafetyIoModule module) {
-                _safetyModule = module;
-            }
+            _safetyModule = safetyModule;
         }
 
         /// <summary>
