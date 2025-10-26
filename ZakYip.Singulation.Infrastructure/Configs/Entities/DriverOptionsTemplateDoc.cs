@@ -20,7 +20,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
         public ushort Port { get; init; } = 2;
 
         /// <summary>齿轮比（电机轴:负载轴）。</summary>
-        public decimal GearRatio { get; init; } = 1m;
+        public decimal GearRatio { get; init; } = 0.4m;
 
         /// <summary>丝杠螺距 (mm/转)。</summary>
         public decimal ScrewPitchMm { get; init; }
@@ -29,7 +29,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
         public decimal PulleyDiameterMm { get; init; }
 
         /// <summary>辊筒/节径直径 (mm)。</summary>
-        public decimal PulleyPitchDiameterMm { get; init; }
+        public decimal PulleyPitchDiameterMm { get; init; } = 79m;
 
         /// <summary>最大转速 (rpm)。</summary>
         public decimal MaxRpm { get; init; } = 1813m;
