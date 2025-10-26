@@ -10,7 +10,7 @@ using csLTDMC;
 namespace ZakYip.Singulation.Host.Services {
 
     /// <summary>
-    /// IO 状态查询服务，提供读取雷赛控制器所有 IO 端口状态的功能。
+    /// IO 状态查询服务，提供读取和写入雷赛控制器 IO 端口状态的功能。
     /// </summary>
     public sealed class IoStatusService {
         private readonly ILogger<IoStatusService> _logger;
@@ -171,6 +171,53 @@ namespace ZakYip.Singulation.Host.Services {
                     IsValid = false,
                     ErrorMessage = $"异常：{ex.Message}"
                 };
+            }
+        }
+
+        /// <summary>
+        /// 写入输出 IO 端口电平状态。
+        /// </summary>
+        /// <param name="bitNo">输出 IO 端口编号</param>
+        /// <param name="state">要设置的电平状态（High 或 Low）</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>写入结果</returns>
+        public async Task<(bool Success, string Message)> WriteOutputBitAsync(
+            int bitNo,
+            IoState state,
+            CancellationToken ct = default) {
+
+            await InitializeAsync(ct);
+
+            try {
+                // 将 IoState 枚举转换为 API 需要的值
+                // IoState.High = 1, IoState.Low = 0
+                ushort onOff = (ushort)state;
+
+                _logger.LogInformation(
+                    "准备写入输出 IO 位 {BitNo}，状态：{State} ({OnOff})",
+                    bitNo, state, onOff);
+
+                // 调用雷赛 API 写入输出位
+                // 参数：卡号、位号、状态（0=低电平，1=高电平）
+                // 返回值：0=成功，<0=错误
+                short result = LTDMC.dmc_write_outbit(_cardNo, (ushort)bitNo, onOff);
+
+                if (result < 0) {
+                    var errorMsg = $"写入输出 IO 位 {bitNo} 失败，错误码：{result}";
+                    _logger.LogError(errorMsg);
+                    return (false, errorMsg);
+                }
+
+                _logger.LogInformation(
+                    "成功写入输出 IO 位 {BitNo}，状态：{State}",
+                    bitNo, state);
+
+                return (true, "写入成功");
+            }
+            catch (Exception ex) {
+                var errorMsg = $"写入输出 IO 位 {bitNo} 时发生异常：{ex.Message}";
+                _logger.LogError(ex, errorMsg);
+                return (false, errorMsg);
             }
         }
     }
