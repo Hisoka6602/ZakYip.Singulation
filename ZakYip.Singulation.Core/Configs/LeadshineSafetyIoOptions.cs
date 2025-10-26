@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ZakYip.Singulation.Core.Configs {
 
     /// <summary>
@@ -8,18 +10,23 @@ namespace ZakYip.Singulation.Core.Configs {
         public bool Enabled { get; set; } = false;
 
         /// <summary>急停按键输入位编号，-1 表示禁用。</summary>
+        [Range(-1, 1000, ErrorMessage = "输入位编号必须在 -1 到 1000 之间")]
         public int EmergencyStopBit { get; set; } = -1;
 
         /// <summary>停止按键输入位编号，-1 表示禁用。</summary>
+        [Range(-1, 1000, ErrorMessage = "输入位编号必须在 -1 到 1000 之间")]
         public int StopBit { get; set; } = -1;
 
         /// <summary>启动按键输入位编号，-1 表示禁用。</summary>
+        [Range(-1, 1000, ErrorMessage = "输入位编号必须在 -1 到 1000 之间")]
         public int StartBit { get; set; } = -1;
 
         /// <summary>复位按键输入位编号，-1 表示禁用。</summary>
+        [Range(-1, 1000, ErrorMessage = "输入位编号必须在 -1 到 1000 之间")]
         public int ResetBit { get; set; } = -1;
 
         /// <summary>轮询间隔（毫秒），默认 50ms。</summary>
+        [Range(10, 10000, ErrorMessage = "轮询间隔必须在 10 到 10000 毫秒之间")]
         public int PollingIntervalMs { get; set; } = 50;
 
         /// <summary>是否反转输入逻辑（用于常闭按键），默认 false。此属性作为默认值，可被各按键独立配置覆盖。</summary>

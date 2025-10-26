@@ -11,6 +11,7 @@ using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Abstractions;
 using System.ComponentModel.DataAnnotations;
 using ZakYip.Singulation.Transport.Abstractions;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -50,6 +51,11 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <returns>上游配置对象</returns>
         /// <response code="200">获取配置成功</response>
         [HttpGet("configs")]
+        [SwaggerOperation(
+            Summary = "获取上游 TCP 配置",
+            Description = "获取所有上游 TCP 连接的配置信息，包含连接地址、端口、超时设置等配置参数。")]
+        [ProducesResponseType(typeof(ApiResponse<UpstreamOptions>), 200)]
+        [Produces("application/json")]
         public async Task<ApiResponse<UpstreamOptions>> GetAllAsync(CancellationToken ct) {
             var optionsDto = await _store.GetAsync(ct);
             return ApiResponse<UpstreamOptions>.Success(optionsDto);
@@ -67,6 +73,12 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <returns>操作结果</returns>
         /// <response code="200">配置已保存</response>
         [HttpPut("configs")]
+        [SwaggerOperation(
+            Summary = "更新上游 TCP 配置",
+            Description = "保存或更新上游 TCP 连接的配置信息。配置更新后会持久化保存。")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
         public async Task<ApiResponse<string>> UpsertAsync([FromBody] UpstreamOptions dto, CancellationToken ct) {
             await _store.SaveAsync(dto, ct);
             return ApiResponse<string>.Success("配置已保存");
@@ -83,6 +95,11 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <returns>连接状态列表</returns>
         /// <response code="200">获取连接状态成功</response>
         [HttpGet("connections")]
+        [SwaggerOperation(
+            Summary = "获取上游 TCP 连接状态",
+            Description = "获取所有上游 TCP 连接的实时状态信息，返回每个连接的 IP、端口、连接状态、实现类型等信息。")]
+        [ProducesResponseType(typeof(ApiResponse<UpstreamConnectionsDto>), 200)]
+        [Produces("application/json")]
         public Task<ApiResponse<UpstreamConnectionsDto>> GetConnectionsAsync(CancellationToken ct) {
             try {
                 var items = _transports.Select((t, i) => new UpstreamConnectionDto {
@@ -120,6 +137,12 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <response code="200">重连请求已执行</response>
         /// <response code="404">连接不存在</response>
         [HttpPost("connections/{index}/reconnect")]
+        [SwaggerOperation(
+            Summary = "重连指定的上游连接",
+            Description = "重启或重连指定索引的上游 TCP 连接。索引从 0 开始，对应 connections 列表中的位置。")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 404)]
+        [Produces("application/json")]
         public async Task<ApiResponse<string>> Reconnect(int index, CancellationToken ct) {
             var t = _transports?.ElementAtOrDefault(index);
             if (t is null)

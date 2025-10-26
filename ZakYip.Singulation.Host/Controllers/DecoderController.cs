@@ -10,6 +10,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -36,7 +37,17 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <summary>
         /// 解码器健康检查
         /// </summary>
+        /// <remarks>
+        /// 检查解码器服务是否正常运行。
+        /// </remarks>
+        /// <returns>健康状态</returns>
+        /// <response code="200">解码器服务正常</response>
         [HttpGet("health")]
+        [SwaggerOperation(
+            Summary = "解码器健康检查",
+            Description = "检查解码器服务是否正常运行")]
+        [ProducesResponseType(typeof(ApiResponse<object>), 200)]
+        [Produces("application/json")]
         public Task<ApiResponse<object>> Health() {
             var data = new { ok = true, codec = _codec.GetType().Name };
             return Task.FromResult(ApiResponse<object>.Success(data));
@@ -54,6 +65,12 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <response code="200">读取成功</response>
         /// <response code="500">读取失败</response>
         [HttpGet("options")]
+        [SwaggerOperation(
+            Summary = "获取解码器配置选项",
+            Description = "读取解码器的配置选项，优先从持久化存储读取。如果持久化存储不可用，则返回运行时配置。")]
+        [ProducesResponseType(typeof(ApiResponse<UpstreamCodecOptions>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<UpstreamCodecOptions>), 500)]
+        [Produces("application/json")]
         public async Task<ApiResponse<UpstreamCodecOptions>> GetOptions(CancellationToken ct) {
             try {
                 if (_store is not null) {
@@ -84,6 +101,13 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <response code="200">保存成功</response>
         /// <response code="400">参数验证失败</response>
         [HttpPut("options")]
+        [SwaggerOperation(
+            Summary = "保存解码器配置选项",
+            Description = "保存解码器的配置选项到持久化存储。MainCount 和 EjectCount 必须大于等于 0。如果持久化存储不可用，配置不会被保存。")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 400)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
         public async Task<ActionResult<ApiResponse<string>>> SaveOptions([FromBody] UpstreamCodecOptions dto,
             CancellationToken ct) {
             if (dto is null)
@@ -133,6 +157,13 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <response code="200">解码成功或无法识别</response>
         /// <response code="400">数据格式错误</response>
         [HttpPost("frames")]
+        [SwaggerOperation(
+            Summary = "在线解码帧数据",
+            Description = "对提供的帧数据进行在线解码。支持 Bytes（原始字节数组，优先）、Hex（十六进制字符串）、Base64 三种输入格式。解码成功后返回解析出的速度数据。")]
+        [ProducesResponseType(typeof(ApiResponse<DecodeResult>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<DecodeResult>), 400)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
         public ActionResult<ApiResponse<DecodeResult>> CreateDecodeJob([FromBody] DecodeRequest req) {
             if (!TryMaterializeBytes(req, out var bytes, out var err))
                 return ApiResponse<DecodeResult>.Fail(err!);
