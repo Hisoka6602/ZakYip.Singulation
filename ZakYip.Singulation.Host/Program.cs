@@ -8,10 +8,12 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
+using ZakYip.Singulation.Host.Safety;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Host.Runtime;
 using ZakYip.Singulation.Host.Workers;
 using Microsoft.AspNetCore.Diagnostics;
+using ZakYip.Singulation.Host.Services;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Common;
@@ -25,14 +27,12 @@ using ZakYip.Singulation.Host.SwaggerOptions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using Microsoft.AspNetCore.ResponseCompression;
 using ZakYip.Singulation.Protocol.Abstractions;
+using ZakYip.Singulation.Infrastructure.Safety;
 using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Protocol.Vendors.Huarary;
-using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Core.Abstractions.Safety;
-using ZakYip.Singulation.Infrastructure.Safety;
-using ZakYip.Singulation.Host.Safety;
+using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Persistence;
-using ZakYip.Singulation.Host.Services;
 
 ThreadPool.SetMinThreads(128, 128);
 System.Runtime.GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
@@ -116,15 +116,7 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ---------- Swagger ----------
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen(c => {
-            c.SwaggerDoc("v1", new OpenApiInfo {
-                Title = "ZakYip.Singulation API",
-                Version = "v1"
-            });
-            // 如需 XML 注释：
-            // var xml = Path.Combine(AppContext.BaseDirectory, "ZakYip.Singulation.Host.xml");
-            // if (File.Exists(xml)) c.IncludeXmlComments(xml, includeControllerXmlComments: true);
-        });
+        services.AddSwaggerGen();
 
         // 使用 IConfigureOptions 延迟配置 Swagger（避免在此处 BuildServiceProvider）
         services.AddTransient<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerOptions>();
