@@ -10,6 +10,8 @@
 	<ItemGroup>
 		<ProjectReference Include="..\ZakYip.Singulation.Core\ZakYip.Singulation.Core.csproj" />
 		<ProjectReference Include="..\ZakYip.Singulation.Drivers\ZakYip.Singulation.Drivers.csproj" />
+		<ProjectReference Include="..\ZakYip.Singulation.Host\ZakYip.Singulation.Host.csproj" />
+		<ProjectReference Include="..\ZakYip.Singulation.Infrastructure\ZakYip.Singulation.Infrastructure.csproj" />
 		<None Include="..\ZakYip.Singulation.Drivers\Leadshine\LTDMC.dll">
 			<Link>LTDMC.dll</Link>
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -17,7 +19,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+	  <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.10" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
 	</ItemGroup>
 
 </Project>

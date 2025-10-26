@@ -24,7 +24,7 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
 
     internal static class RegressionRunner {
         public static async Task RunAsync() {
-            using var host = Host.CreateDefaultBuilder()
+            using var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
                 .ConfigureLogging(builder => builder.SetMinimumLevel(LogLevel.Information))
                 .ConfigureServices((_, services) => {
                     services.AddLogging(b => b.AddSimpleConsole(options => {
