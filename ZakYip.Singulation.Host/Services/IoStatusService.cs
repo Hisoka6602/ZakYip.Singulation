@@ -190,7 +190,7 @@ namespace ZakYip.Singulation.Host.Services {
 
             try {
                 // 将 IoState 枚举转换为 API 需要的值
-                // IoState.High = 1, IoState.Low = 0
+                // IoState.High = 1, IoState.Low = 0 （枚举值已在定义时确保为 0 或 1）
                 ushort onOff = (ushort)state;
 
                 _logger.LogInformation(

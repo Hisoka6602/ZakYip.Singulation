@@ -175,7 +175,7 @@ namespace ZakYip.Singulation.Host.Controllers {
             CancellationToken ct = default) {
 
             try {
-                // 模型验证已由 [ValidateModelFilter] 自动处理
+                // 参数验证
                 if (!ModelState.IsValid) {
                     return BadRequest(ApiResponse<object>.Invalid("请求参数无效"));
                 }
