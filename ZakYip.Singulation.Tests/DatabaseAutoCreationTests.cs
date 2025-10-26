@@ -17,6 +17,7 @@ namespace ZakYip.Singulation.Tests {
             // 使用临时目录进行测试
             var testDir = Path.Combine(Path.GetTempPath(), $"test_db_{Guid.NewGuid()}");
             var dbPath = Path.Combine(testDir, "singulation.db");
+            ILiteDatabase? db = null;
 
             try {
                 // 确保测试目录不存在
@@ -30,18 +31,18 @@ namespace ZakYip.Singulation.Tests {
                 var sp = services.BuildServiceProvider();
 
                 // 获取数据库实例（这会触发目录创建）
-                var db = sp.GetRequiredService<ILiteDatabase>();
+                db = sp.GetRequiredService<ILiteDatabase>();
 
                 // 验证目录已创建
                 MiniAssert.True(Directory.Exists(testDir), "数据库目录应该已创建");
 
                 // 验证数据库文件已创建
                 MiniAssert.True(File.Exists(dbPath), "数据库文件应该已创建");
-
-                // 清理
-                db.Dispose();
             }
             finally {
+                // 清理数据库连接
+                db?.Dispose();
+                
                 // 清理测试目录
                 if (Directory.Exists(testDir)) {
                     try {
@@ -59,6 +60,7 @@ namespace ZakYip.Singulation.Tests {
             // 使用临时目录进行测试
             var testDir = Path.Combine(Path.GetTempPath(), $"test_db_{Guid.NewGuid()}");
             var dbPath = Path.Combine(testDir, "singulation.db");
+            ILiteDatabase? db = null;
 
             try {
                 // 预先创建目录
@@ -70,18 +72,18 @@ namespace ZakYip.Singulation.Tests {
                 var sp = services.BuildServiceProvider();
 
                 // 获取数据库实例
-                var db = sp.GetRequiredService<ILiteDatabase>();
+                db = sp.GetRequiredService<ILiteDatabase>();
 
                 // 验证目录存在
                 MiniAssert.True(Directory.Exists(testDir), "数据库目录应该存在");
 
                 // 验证数据库文件已创建
                 MiniAssert.True(File.Exists(dbPath), "数据库文件应该已创建");
-
-                // 清理
-                db.Dispose();
             }
             finally {
+                // 清理数据库连接
+                db?.Dispose();
+                
                 // 清理测试目录
                 if (Directory.Exists(testDir)) {
                     try {
@@ -98,6 +100,7 @@ namespace ZakYip.Singulation.Tests {
         public void WorksWithRootLevelPath() {
             // 测试根级别路径（不带目录）
             var dbPath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.db");
+            ILiteDatabase? db = null;
 
             try {
                 // 注册服务
@@ -106,15 +109,15 @@ namespace ZakYip.Singulation.Tests {
                 var sp = services.BuildServiceProvider();
 
                 // 获取数据库实例
-                var db = sp.GetRequiredService<ILiteDatabase>();
+                db = sp.GetRequiredService<ILiteDatabase>();
 
                 // 验证数据库文件已创建
                 MiniAssert.True(File.Exists(dbPath), "数据库文件应该已创建");
-
-                // 清理
-                db.Dispose();
             }
             finally {
+                // 清理数据库连接
+                db?.Dispose();
+                
                 // 清理测试文件
                 if (File.Exists(dbPath)) {
                     try {
