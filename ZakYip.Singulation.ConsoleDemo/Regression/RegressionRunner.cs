@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Configs;
+using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Abstractions;
@@ -40,6 +42,7 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
                     services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
                     services.AddSingleton<IAxisController, FakeAxisController>();
                     services.AddSingleton<IUpstreamFrameHub, UpstreamFrameHub>();
+                    services.AddSingleton<IUpstreamOptionsStore, FakeUpstreamOptionsStore>();
                     services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
                     services.AddSingleton<LoopbackSafetyIoModule>();
                     services.AddSingleton<ISafetyIoModule>(sp => sp.GetRequiredService<LoopbackSafetyIoModule>());
@@ -208,6 +211,27 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
                 public ushort TranslateNodeId(ushort logicalNodeId) => logicalNodeId;
 
                 public bool ShouldReverse(ushort logicalNodeId) => false;
+            }
+        }
+
+        private sealed class FakeUpstreamOptionsStore : IUpstreamOptionsStore {
+            private readonly UpstreamOptions _options = new() {
+                HeartbeatPort = 5003, // Non-zero to enable heartbeat monitoring in regression tests
+                SpeedPort = 5001,
+                PositionPort = 5002
+            };
+
+            public Task<UpstreamOptions> GetAsync(CancellationToken ct = default) 
+                => Task.FromResult(_options);
+
+            public Task SaveAsync(UpstreamOptions dto, CancellationToken ct = default) {
+                // No-op for tests
+                return Task.CompletedTask;
+            }
+
+            public Task DeleteAsync(CancellationToken ct = default) {
+                // No-op for tests
+                return Task.CompletedTask;
             }
         }
     }
