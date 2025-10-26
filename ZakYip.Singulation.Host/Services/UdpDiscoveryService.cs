@@ -68,7 +68,11 @@ public class UdpDiscoveryService : BackgroundService
 
                     await Task.Delay(TimeSpan.FromSeconds(_options.BroadcastIntervalSeconds), stoppingToken);
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (OperationCanceledException)
+                {
+                    // 正常停止（包括 TaskCanceledException），不记录日志
+                }
+                catch (Exception ex)
                 {
                     _logger.LogError(ex, "发送 UDP 广播时发生错误");
                     await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);

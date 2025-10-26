@@ -16,8 +16,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
         /// 使用 LiteDB 作为轴设置存储，直接存储 AxisSettingsDto。
         /// </summary>
         /// <param name="services">DI 容器。</param>
-        /// <param name="filePath">数据库文件路径。</param>
-        public static IServiceCollection AddLiteDbAxisSettings(this IServiceCollection services, string filePath = "singulation.db") {
+        /// <param name="filePath">数据库文件路径。默认存储在 data 目录下。</param>
+        public static IServiceCollection AddLiteDbAxisSettings(this IServiceCollection services, string filePath = "data/singulation.db") {
             services.AddSingleton<ILiteDatabase>(_ => new LiteDatabase($"Filename={filePath};Mode=Shared"));
             services.AddSingleton<IControllerOptionsStore, LiteDbControllerOptionsStore>();
             return services;

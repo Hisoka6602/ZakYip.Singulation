@@ -2,6 +2,48 @@
 
 ## 本次更新（2025-10-26）
 
+### ✅ 代码质量优化和运维改进
+
+**核心改进**：UDP 异常处理优化、数据库文件组织、API 操作文档完善
+
+#### 1. UDP 服务发现优化 ✅
+- **异常处理改进**：UDP 服务不再输出 TaskCanceledException 到日志
+  - 正常停止时的 OperationCanceledException 不记录日志
+  - 减少日志噪音，便于故障排查
+  - 保持对真实异常的记录
+
+#### 2. 数据库文件组织 ✅
+- **独立数据目录**：所有 .db 文件存储在专用 data/ 目录
+  - 默认路径：`data/singulation.db`
+  - 便于备份和管理
+  - 更新 .gitignore 排除数据库文件（`*.db`, `*.db-shm`, `*.db-wal`, `data/`）
+  - 符合最佳实践的目录结构
+
+#### 3. API 操作文档完善 ✅
+- **详细操作说明**：新增 [API 操作说明文档](docs/API_OPERATIONS.md)
+  - 说明每个 API 调用后会触发什么操作
+  - 详细的系统影响说明
+  - 包含最佳实践和使用示例
+  - 涵盖所有 30+ 个 API 端点：
+    - 轴控制 API（16 个端点）
+    - 安全控制 API（3 个端点）
+    - 上游通信 API（4 个端点）
+    - 解码器 API（4 个端点）
+    - IO 监控 API（3 个端点）
+    - IO 状态 API（1 个端点）
+    - 系统会话 API（1 个端点）
+
+### 技术亮点
+
+- ✅ **运维友好**：数据库文件集中管理，便于备份和迁移
+- ✅ **日志清洁**：减少无意义的异常日志，提高故障排查效率
+- ✅ **文档完善**：每个 API 都有详细的操作说明和系统影响描述
+- ✅ **最佳实践**：提供完整的启动、停止、紧急停止流程示例
+
+---
+
+## 之前的更新（2025-10-26）
+
 ### ✅ 代码现代化与性能优化
 
 **核心改进**：record 类型改造、decimal 精度提升、AggressiveInlining 性能优化、异常隔离增强
@@ -849,6 +891,7 @@ ZakYip.Singulation.MauiApp/
 |------|------|------|
 | **架构设计** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 系统架构和设计文档 |
 | **API 文档** | [docs/API.md](docs/API.md) | REST API 接口文档和使用示例 |
+| **✨ API 操作说明** | [docs/API_OPERATIONS.md](docs/API_OPERATIONS.md) | **每个 API 调用的详细操作说明和系统影响** |
 | **✨ 安全按键快速入门** | [docs/SAFETY_QUICK_START.md](docs/SAFETY_QUICK_START.md) | **5 分钟配置指南和快速参考** |
 | **✨ 安全按键完整指南** | [docs/SAFETY_BUTTONS.md](docs/SAFETY_BUTTONS.md) | **物理按键集成、配置、测试和故障排查** |
 | **MAUI 应用** | [docs/MAUIAPP.md](docs/MAUIAPP.md) | MAUI 客户端功能和使用说明 |
