@@ -116,6 +116,27 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public int LastErrorCode { get; private set; }
         public string? LastErrorMessage { get; private set; }
 
+        public decimal? MaxLinearMmps {
+            get {
+                if (!HasValidMechanicsConfig()) return null;
+                return new AxisRpm(_opts.MaxRpm).ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            }
+        }
+
+        public decimal? MaxAccelMmps2 {
+            get {
+                if (!HasValidMechanicsConfig()) return null;
+                return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxAccelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            }
+        }
+
+        public decimal? MaxDecelMmps2 {
+            get {
+                if (!HasValidMechanicsConfig()) return null;
+                return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxDecelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            }
+        }
+
         [System.Obsolete("默认单位为 mm/s；建议改用 WriteSpeedAsync(mmPerSec)。此方法仅为兼容入口。")]
         public async ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default) {
             await ThrottleAsync(ct);
@@ -232,7 +253,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public async ValueTask SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec, CancellationToken ct = default) {
             await ThrottleAsync(ct);
 
-            if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) {
+            if (!HasValidMechanicsConfig()) {
                 OnAxisFaulted(new InvalidOperationException("mechanics parameters must provide ScrewPitchMm or PulleyPitchDiameterMm"));
                 return;
             }
@@ -469,7 +490,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             CancellationToken ct = default) {
             if (maxLinearMmps <= 0 || maxAccelMmps2 <= 0 || maxDecelMmps2 <= 0) return Task.FromResult(false);
 
-            if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return Task.FromResult(false);
+            if (!HasValidMechanicsConfig()) return Task.FromResult(false);
 
             var maxRpm = AxisRpm.FromMmPerSec(maxLinearMmps, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm).Value;
             var maxAccelRpmPerSec = AxisRpm.MmPerSec2ToRpmPerSec(maxAccelMmps2, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
@@ -506,6 +527,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 return Task.FromResult(false);
             }
         }
+
+        /// <summary>
+        /// Checks if the mechanical configuration is valid for linear speed conversion.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool HasValidMechanicsConfig() =>
+            _opts.ScrewPitchMm > 0m || _opts.PulleyPitchDiameterMm > 0m;
 
         private async ValueTask ThrottleAsync(CancellationToken ct) {
             var now = Stopwatch.GetTimestamp();

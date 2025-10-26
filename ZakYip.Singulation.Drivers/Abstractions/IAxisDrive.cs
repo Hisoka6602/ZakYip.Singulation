@@ -88,6 +88,24 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         string? LastErrorMessage { get; }
 
         /// <summary>
+        /// 最大线速度限制（mm/s）。
+        /// <para>值为 null 表示未配置或不可用。</para>
+        /// </summary>
+        decimal? MaxLinearMmps { get; }
+
+        /// <summary>
+        /// 最大线加速度限制（mm/s²）。
+        /// <para>值为 null 表示未配置或不可用。</para>
+        /// </summary>
+        decimal? MaxAccelMmps2 { get; }
+
+        /// <summary>
+        /// 最大线减速度限制（mm/s²）。
+        /// <para>值为 null 表示未配置或不可用。</para>
+        /// </summary>
+        decimal? MaxDecelMmps2 { get; }
+
+        /// <summary>
         /// 写入目标转速（RPM）。
         /// <list type="bullet">
         /// <item>实现可在内部做单位换算、限幅、同值去重与命令节流。</item>

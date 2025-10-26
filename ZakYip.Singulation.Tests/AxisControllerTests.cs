@@ -107,6 +107,9 @@ namespace ZakYip.Singulation.Tests {
         public bool IsEnabled => true;
         public int LastErrorCode => 0;
         public string? LastErrorMessage => null;
+        public decimal? MaxLinearMmps => 1000m;
+        public decimal? MaxAccelMmps2 => 500m;
+        public decimal? MaxDecelMmps2 => 500m;
 
         public ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default) {
             LastTargetMmps = rpm.Value;
