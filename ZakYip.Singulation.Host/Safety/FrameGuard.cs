@@ -19,6 +19,7 @@ namespace ZakYip.Singulation.Host.Safety {
         private readonly ISafetyPipeline _safety;
         private readonly FrameGuardOptions _options;
         private readonly IUpstreamFrameHub _hub;
+        private readonly IUpstreamOptionsStore _upstreamOptionsStore;
 
         private readonly Queue<int> _window = new();
         private readonly HashSet<int> _seen = new();
@@ -35,23 +36,33 @@ namespace ZakYip.Singulation.Host.Safety {
             ILogger<FrameGuard> log,
             ISafetyPipeline safety,
             IOptions<FrameGuardOptions> options,
-            IUpstreamFrameHub hub) {
+            IUpstreamFrameHub hub,
+            IUpstreamOptionsStore upstreamOptionsStore) {
             _log = log;
             _safety = safety;
             _options = options.Value;
             _hub = hub;
+            _upstreamOptionsStore = upstreamOptionsStore;
             _safety.StateChanged += OnSafetyStateChanged;
         }
 
-        public ValueTask<bool> InitializeAsync(CancellationToken ct) {
-            if (_internalCts is not null) return ValueTask.FromResult(false);
+        public async ValueTask<bool> InitializeAsync(CancellationToken ct) {
+            if (_internalCts is not null) return false;
 
             _internalCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            
+            // Check if heartbeat port is 0, if so skip heartbeat monitoring
+            var upstreamOptions = await _upstreamOptionsStore.GetAsync(ct).ConfigureAwait(false);
+            if (upstreamOptions.HeartbeatPort == 0) {
+                _log.LogInformation("Heartbeat port is 0, skipping heartbeat timeout monitoring.");
+                return true;
+            }
+            
             var (reader, disposer) = _hub.SubscribeHeartbeat(128);
             _heartbeatSubscription = disposer;
             _heartbeatTask = Task.Run(() => RunHeartbeatAsync(reader, _internalCts.Token), ct);
             _watchdogTask = Task.Run(() => RunHeartbeatWatchdogAsync(_internalCts.Token), ct);
-            return ValueTask.FromResult(true);
+            return true;
         }
 
         public FrameGuardDecision Evaluate(SpeedSet set) {
