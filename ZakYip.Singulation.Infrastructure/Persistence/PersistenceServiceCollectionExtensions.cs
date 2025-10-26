@@ -28,5 +28,11 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             services.AddSingleton<IAxisLayoutStore, LiteDbAxisLayoutStore>();
             return services;
         }
+
+        /// <summary>注册雷赛安全 IO 配置存储（与设置共享同一 LiteDB）。</summary>
+        public static IServiceCollection AddLiteDbLeadshineSafetyIo(this IServiceCollection services) {
+            services.AddSingleton<ILeadshineSafetyIoOptionsStore, LiteDbLeadshineSafetyIoOptionsStore>();
+            return services;
+        }
     }
 }
