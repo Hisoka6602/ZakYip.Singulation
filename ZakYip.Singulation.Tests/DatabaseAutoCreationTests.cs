@@ -10,7 +10,7 @@ namespace ZakYip.Singulation.Tests {
     /// <summary>
     /// 测试数据库文件自动创建功能。
     /// </summary>
-    internal sealed class DatabaseAutoCreationTests {
+    public sealed class DatabaseAutoCreationTests {
 
         [MiniFact]
         public void CreatesDirectoryWhenNotExists() {
