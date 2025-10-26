@@ -6,6 +6,13 @@ using ZakYip.Singulation.Host.Dto;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
+    /// <summary>
+    /// 安全命令控制器
+    /// </summary>
+    /// <remarks>
+    /// 提供安全相关的命令接口，包括启动、停止、复位和急停操作。
+    /// 所有安全命令都会被记录并通过安全管线处理。
+    /// </remarks>
     [ApiController]
     [Route("api/[controller]")]
     public sealed class SafetyController : ControllerBase {
@@ -17,6 +24,22 @@ namespace ZakYip.Singulation.Host.Controllers {
             _logger = logger;
         }
 
+        /// <summary>
+        /// 执行安全命令
+        /// </summary>
+        /// <remarks>
+        /// 接收并执行安全相关命令。支持以下命令类型：
+        /// - Start (1): 启动系统运行
+        /// - Stop (2): 停止系统运行
+        /// - Reset (3): 复位系统状态
+        /// - EmergencyStop (4): 紧急停止（急停）
+        /// 
+        /// 所有命令都会被记录到日志中，并通过安全管线处理。
+        /// </remarks>
+        /// <param name="request">安全命令请求对象，包含命令类型和原因说明</param>
+        /// <returns>命令受理结果</returns>
+        /// <response code="202">安全命令已受理</response>
+        /// <response code="400">请求参数无效</response>
         [HttpPost("commands")]
         public ActionResult<ApiResponse<object>> ExecuteCommand([FromBody] SafetyCommandRequestDto? request) {
             if (request is null) {

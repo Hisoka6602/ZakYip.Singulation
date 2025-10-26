@@ -223,14 +223,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// <param name="ct">取消令牌。</param>
         /// <returns>轴数量；若通信失败，返回 0。</returns>
         public Task<int> GetAxisCountAsync(CancellationToken ct = default) {
-            return Safe(async () => {
+            return Safe(() => {
                 ushort total = 0;
                 var ret = LTDMC.nmc_get_total_slaves(_cardNo, _portNo, ref total);
                 if (ret != 0) {
                     throw new InvalidOperationException($"nmc_get_total_slaves failed, ret={ret}");
                 }
 
-                return (int)total;
+                return Task.FromResult((int)total);
             }, "GetAxisCountAsync", defaultValue: 0);
         }
 
@@ -240,14 +240,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// <param name="ct">取消令牌。</param>
         /// <returns>错误码；若通信失败，返回 -999。</returns>
         public Task<int> GetErrorCodeAsync(CancellationToken ct = default) {
-            return Safe(async () => {
+            return Safe(() => {
                 ushort err = 0;
                 var ret = LTDMC.nmc_get_errcode(_cardNo, _portNo, ref err);
                 if (ret != 0) {
                     throw new InvalidOperationException($"nmc_get_errcode failed, ret={ret}");
                 }
 
-                return (int)err;
+                return Task.FromResult((int)err);
             }, "GetErrorCodeAsync", defaultValue: -999);
         }
 
