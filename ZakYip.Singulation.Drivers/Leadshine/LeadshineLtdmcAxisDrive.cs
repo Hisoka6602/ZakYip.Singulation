@@ -166,11 +166,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             if (_opts.IsReverse) deviceVal = -deviceVal;
             
             var ret = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, deviceVal);
-            if (ret != 0) { 
-                SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); 
-                OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); 
-                return; 
-            }
+            if (ret != 0) { SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return; }
 
             _status = DriverStatus.Connected;
             LastTargetMmps = mmPerSec;
