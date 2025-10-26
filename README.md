@@ -2,6 +2,81 @@
 
 ## 本次更新（2025-10-26）
 
+### ✅ 代码现代化与性能优化
+
+**核心改进**：record 类型改造、decimal 精度提升、AggressiveInlining 性能优化、异常隔离增强
+
+#### 1. record 类型改造 ✅
+- **不可变性提升**：将配置类和 DTO 类改为 record，确保数据不可变性
+  - `UpstreamOptions` 改为 record class
+  - `LeadshineSafetyIoOptions` 改为 record class
+  - `PlannerConfig` 改为 record class
+  - `TcpServerOptions` 改为 record class
+  - `TcpClientOptions` 改为 record class
+  - `SetSpeedRequestDto` 改为 record class
+  - `SafetyCommandRequestDto` 改为 record class
+  - `AxisPatchRequestDto` 及其嵌套类改为 record class
+- **required 关键字应用**：为必填字段添加 required 修饰符
+  - `TcpServerOptions.Address` 使用 required
+  - `TcpClientOptions.Host` 使用 required
+  - `AxisSpeedFeedbackEventArgs.Axis` 使用 required
+- **with 表达式优化**：使用 with 表达式更新不可变对象，符合函数式编程最佳实践
+  - `TransportPersistenceExtensions.cs` 中使用 with 表达式
+
+#### 2. decimal 精度替换 ✅
+- **PlannerConfig 精度提升**：所有 double 字段改为 decimal
+  - `BeltDiameter`（皮带直径）：double[] → decimal[]
+  - `GearRatio`（齿轮比）：double[] → decimal[]
+  - `MaxBeltSpeed`（最大速度）：double → decimal
+  - `MinBeltSpeed`（最小速度）：double → decimal
+  - `MaxAccel`（最大加速度）：double → decimal
+  - `MaxJerk`（最大加加速度）：double → decimal
+  - `ControlPeriodSec`（控制周期）：double → decimal
+  - `SafeGapDistance`（安全间距）：double? → decimal?
+- **代码清洁**：移除 DefaultSpeedPlanner 中的类型转换
+  - 移除 `(decimal)_cfg.BeltDiameter[axisIndex]` 等强制转换
+  - 移除 `Math.Max(0.0, _cfg.MinBeltSpeed)` 等 double 运算
+- **保留性能关键路径**：DTO 速度字段保留 double（JSON 序列化兼容性）
+
+#### 3. 高性能特性优化 ✅
+- **AxisKinematics 全面内联**：为所有公共方法添加 `[MethodImpl(MethodImplOptions.AggressiveInlining)]`
+  - `ComputeLinearTravelPerMotorRevMm` - 计算每转线位移
+  - `MmPerSecToRpm` - 线速度转 RPM
+  - `RpmToMmPerSec` - RPM 转线速度
+  - `MmPerSec2ToRpmPerSec` - 线加速度转 RPM/s
+  - `RpmPerSecToMmPerSec2` - RPM/s 转线加速度
+  - `MmPerSecToPulsePerSec` - 线速度转脉冲频率
+  - `RpmToPulsePerSec` - RPM 转脉冲频率
+- **Guard 类已优化**：所有验证方法已使用 AggressiveInlining（之前已完成）
+
+#### 4. 异常隔离器增强 ✅
+- **HeartbeatWorker 异常隔离**：
+  - 单个心跳包处理失败不影响其他心跳包
+  - 外层捕获 OperationCanceledException（正常停止）
+  - 内层捕获单个消息处理异常
+  - 记录详细的异常日志，便于故障排查
+
+### 技术亮点
+
+- ✅ **类型安全**：使用 required 关键字确保必填字段在对象初始化时被设置
+- ✅ **不可变性**：record 类型提供值语义和不可变性，减少并发问题
+- ✅ **精度提升**：decimal 替代 double 用于非性能关键的物理计算，避免浮点误差
+- ✅ **性能优化**：热路径方法内联优化，提升运行时性能
+- ✅ **异常隔离**：单个操作失败不影响整体系统运行，提升稳定性
+- ✅ **代码清洁**：移除不必要的类型转换，代码更简洁易读
+
+### 下一步优化方向
+
+1. ~~record 改造~~：✅ 已完成
+2. ~~required 关键字~~：✅ 已完成
+3. ~~decimal 替换~~：✅ 已完成
+4. **异常隔离器**：✅ 部分完成，可继续完善其他 Worker
+5. ~~高性能特性~~：✅ 已完成核心工具类优化
+
+---
+
+## 之前的更新（2025-10-26）
+
 ### ✅ 代码质量优化和 API 文档完善
 
 **核心改进**：修复编译警告，完善 Swagger API 文档中文注释

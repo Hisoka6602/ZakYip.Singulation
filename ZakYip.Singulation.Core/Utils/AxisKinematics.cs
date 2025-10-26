@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 
 namespace ZakYip.Singulation.Core.Utils {
 
@@ -29,6 +30,7 @@ namespace ZakYip.Singulation.Core.Utils {
         }
 
         /// <summary>将线速度（mm/s）换算为电机轴转速（rpm）。</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal MmPerSecToRpm(decimal mmPerSec, decimal screwPitchMm, decimal pulleyPitchDiameterMm, decimal gearRatio) {
             var travel = ComputeLinearTravelPerMotorRevMm(screwPitchMm, pulleyPitchDiameterMm, gearRatio);
             if (travel <= 0m) return 0m;
@@ -36,6 +38,7 @@ namespace ZakYip.Singulation.Core.Utils {
         }
 
         /// <summary>将电机轴转速（rpm）换算为线速度（mm/s）。</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal RpmToMmPerSec(decimal rpm, decimal screwPitchMm, decimal pulleyPitchDiameterMm, decimal gearRatio) {
             var travel = ComputeLinearTravelPerMotorRevMm(screwPitchMm, pulleyPitchDiameterMm, gearRatio);
             if (travel <= 0m) return 0m;
@@ -43,6 +46,7 @@ namespace ZakYip.Singulation.Core.Utils {
         }
 
         /// <summary>将线加速度（mm/s²）换算为 rpm/s。</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal MmPerSec2ToRpmPerSec(decimal accelMmPerSec2, decimal screwPitchMm, decimal pulleyPitchDiameterMm, decimal gearRatio) {
             var travel = ComputeLinearTravelPerMotorRevMm(screwPitchMm, pulleyPitchDiameterMm, gearRatio);
             if (travel <= 0m) return 0m;
@@ -50,6 +54,7 @@ namespace ZakYip.Singulation.Core.Utils {
         }
 
         /// <summary>将 rpm/s 换算为线加速度（mm/s²）。</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal RpmPerSecToMmPerSec2(decimal accelRpmPerSec, decimal screwPitchMm, decimal pulleyPitchDiameterMm, decimal gearRatio) {
             var travel = ComputeLinearTravelPerMotorRevMm(screwPitchMm, pulleyPitchDiameterMm, gearRatio);
             if (travel <= 0m) return 0m;
@@ -57,6 +62,7 @@ namespace ZakYip.Singulation.Core.Utils {
         }
 
         /// <summary>将线速度（mm/s）换算为编码器脉冲频率（pps）。</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal MmPerSecToPulsePerSec(decimal mmPerSec, decimal screwPitchMm, decimal pulleyPitchDiameterMm, decimal gearRatio, int pulsesPerRev) {
             if (pulsesPerRev <= 0) return 0m;
             var rpm = MmPerSecToRpm(mmPerSec, screwPitchMm, pulleyPitchDiameterMm, gearRatio);
@@ -64,6 +70,7 @@ namespace ZakYip.Singulation.Core.Utils {
         }
 
         /// <summary>将转速（rpm）换算为编码器脉冲频率（pps）。</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal RpmToPulsePerSec(decimal rpm, int pulsesPerRev) {
             if (pulsesPerRev <= 0) return 0m;
             return rpm / 60m * pulsesPerRev;
