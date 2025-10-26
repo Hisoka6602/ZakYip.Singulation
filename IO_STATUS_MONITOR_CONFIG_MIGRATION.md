@@ -61,7 +61,6 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "配置已保存并将在下次轮询时生效（热更新）",
   "data": "配置已保存并将在下次轮询时生效（热更新）"
 }
 ```
@@ -78,7 +77,6 @@ DELETE http://localhost:5005/api/IoMonitor/configs
 ```json
 {
   "success": true,
-  "message": "配置已删除，将使用默认配置",
   "data": "配置已删除，将使用默认配置"
 }
 ```
@@ -214,7 +212,7 @@ DELETE http://localhost:5005/api/IoMonitor/configs
 | 特性 | LeadshineSafetyIo | IoStatusMonitor |
 |------|------------------|-----------------|
 | 配置存储 | LiteDB | LiteDB |
-| 热更新支持 | 是（需要 LeadshineSafetyIoModule 实例） | 是（自动在下次轮询生效） |
+| 热更新支持 | 是（通过 UpdateOptions 方法立即生效） | 是（自动在下次轮询生效） |
 | API 端点 | /api/Safety/io-configs | /api/IoMonitor/configs |
 | 默认启用 | 否（Enabled=false） | 是（Enabled=true） |
 | 配置复杂度 | 较高（多个按键、逻辑反转） | 较低（IO 范围、轮询间隔） |
