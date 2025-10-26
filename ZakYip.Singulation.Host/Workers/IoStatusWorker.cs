@@ -3,8 +3,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using ZakYip.Singulation.Core.Configs;
+using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Host.Services;
 
@@ -17,21 +17,21 @@ namespace ZakYip.Singulation.Host.Workers {
         private readonly ILogger<IoStatusWorker> _logger;
         private readonly IoStatusService _ioStatusService;
         private readonly IRealtimeNotifier _notifier;
-        private readonly IOptionsMonitor<IoStatusMonitorOptions> _optionsMonitor;
+        private readonly IIoStatusMonitorOptionsStore _optionsStore;
 
         public IoStatusWorker(
             ILogger<IoStatusWorker> logger,
             IoStatusService ioStatusService,
             IRealtimeNotifier notifier,
-            IOptionsMonitor<IoStatusMonitorOptions> optionsMonitor) {
+            IIoStatusMonitorOptionsStore optionsStore) {
             _logger = logger;
             _ioStatusService = ioStatusService;
             _notifier = notifier;
-            _optionsMonitor = optionsMonitor;
+            _optionsStore = optionsStore;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-            var options = _optionsMonitor.CurrentValue;
+            var options = await _optionsStore.GetAsync(stoppingToken);
 
             if (!options.Enabled) {
                 _logger.LogInformation("IO 状态监控已禁用");
@@ -46,7 +46,7 @@ namespace ZakYip.Singulation.Host.Workers {
 
             while (!stoppingToken.IsCancellationRequested) {
                 try {
-                    var currentOptions = _optionsMonitor.CurrentValue;
+                    var currentOptions = await _optionsStore.GetAsync(stoppingToken);
 
                     if (!currentOptions.Enabled) {
                         _logger.LogInformation("IO 状态监控已禁用，停止监控");

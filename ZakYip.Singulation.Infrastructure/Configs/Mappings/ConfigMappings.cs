@@ -135,6 +135,27 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             InvertResetLogic = o.InvertResetLogic
         };
 
+        // ====== 新增：IoStatusMonitorOptions ======
+        public static IoStatusMonitorOptions ToOptions(this IoStatusMonitorOptionsDoc d) => new() {
+            Enabled = d.Enabled,
+            InputStart = d.InputStart,
+            InputCount = d.InputCount,
+            OutputStart = d.OutputStart,
+            OutputCount = d.OutputCount,
+            PollingIntervalMs = d.PollingIntervalMs,
+            SignalRChannel = d.SignalRChannel
+        };
+
+        public static IoStatusMonitorOptionsDoc ToDoc(this IoStatusMonitorOptions o) => new() {
+            Enabled = o.Enabled,
+            InputStart = o.InputStart,
+            InputCount = o.InputCount,
+            OutputStart = o.OutputStart,
+            OutputCount = o.OutputCount,
+            PollingIntervalMs = o.PollingIntervalMs,
+            SignalRChannel = o.SignalRChannel
+        };
+
         /// <summary>
         /// 生成“模板级别”的 DriverOptions：已带 Card/Port，NodeId 留 0（让控制器在按轴创建时再映射）。
         /// </summary>
