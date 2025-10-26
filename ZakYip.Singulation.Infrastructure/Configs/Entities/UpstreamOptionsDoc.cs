@@ -18,10 +18,10 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
         public int SpeedPort { get; set; } = 5001;
 
         /// <summary>位置端口。</summary>
-        public int PositionPort { get; set; } = 5002;
+        public int PositionPort { get; set; } = 0;
 
         /// <summary>心跳端口。</summary>
-        public int HeartbeatPort { get; set; } = 5003;
+        public int HeartbeatPort { get; set; } = 0;
 
         /// <summary>是否校验 CRC。</summary>
         public bool ValidateCrc { get; set; } = true;
