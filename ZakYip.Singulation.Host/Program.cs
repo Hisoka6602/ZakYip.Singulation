@@ -176,6 +176,10 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
         services.AddSingleton<IAxisController, AxisController>();
+        
+        // ---------- IO 状态服务 ----------
+        services.AddSingleton<IoStatusService>();
+        
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
         services.AddSingleton<ISafetyIsolator, SafetyIsolator>();

@@ -11,10 +11,11 @@
 5. [安全命令 API](#安全命令-api)
 6. [解码器 API](#解码器-api)
 7. [上游通信 API](#上游通信-api)
-8. [系统管理 API](#系统管理-api)
-9. [SignalR 实时通信](#signalr-实时通信)
-10. [错误码参考](#错误码参考)
-11. [客户端示例代码](#客户端示例代码)
+8. [IO 状态查询 API](#io-状态查询-api)
+9. [系统管理 API](#系统管理-api)
+10. [SignalR 实时通信](#signalr-实时通信)
+11. [错误码参考](#错误码参考)
+12. [客户端示例代码](#客户端示例代码)
 
 ## 统一返回约定
 
@@ -297,6 +298,101 @@ Content-Type: application/json
 | `GET` | `/api/upstream/status` | 查看当前上游连接状态。 |
 
 > ⚠️ Upstream 配置接口仍保持与 LiteDB 同步，需要先通过 `PUT` 写入后再调用 `POST /api/system/session` 触发宿主重载。
+
+## IO 状态查询 API
+
+IO 状态查询接口提供读取雷赛控制器所有输入和输出 IO 端口当前状态的功能。
+
+| 方法 | 路径 | 描述 |
+| --- | --- | --- |
+| `GET` | `/api/io/status` | 查询所有 IO 的当前状态（支持自定义查询范围）。 |
+
+### 查询参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `inputStart` | int | 0 | 输入 IO 起始位号 |
+| `inputCount` | int | 32 | 输入 IO 数量（1-1024） |
+| `outputStart` | int | 0 | 输出 IO 起始位号 |
+| `outputCount` | int | 32 | 输出 IO 数量（1-1024） |
+
+### 示例：查询所有 IO 状态（默认范围）
+
+```http
+GET http://localhost:5005/api/io/status
+Accept: application/json
+```
+
+成功响应：
+
+```json
+{
+  "result": true,
+  "msg": "查询 IO 状态成功",
+  "data": {
+    "inputIos": [
+      {
+        "bitNumber": 0,
+        "type": 0,
+        "state": 1,
+        "isValid": true,
+        "errorMessage": null
+      },
+      {
+        "bitNumber": 1,
+        "type": 0,
+        "state": 0,
+        "isValid": true,
+        "errorMessage": null
+      }
+    ],
+    "outputIos": [
+      {
+        "bitNumber": 0,
+        "type": 1,
+        "state": 0,
+        "isValid": true,
+        "errorMessage": null
+      }
+    ],
+    "totalCount": 64,
+    "validCount": 64,
+    "errorCount": 0
+  }
+}
+```
+
+### 示例：查询自定义范围
+
+```http
+GET http://localhost:5005/api/io/status?inputStart=0&inputCount=16&outputStart=0&outputCount=16
+Accept: application/json
+```
+
+### 字段说明
+
+**IoStatusDto**：
+
+- `bitNumber`：IO 端口编号
+- `type`：IO 类型（0=输入，1=输出）
+- `state`：IO 状态（0=低电平，1=高电平）
+- `isValid`：读取是否成功
+- `errorMessage`：错误信息（如果读取失败）
+
+**IoStatusResponseDto**：
+
+- `inputIos`：输入 IO 状态列表
+- `outputIos`：输出 IO 状态列表
+- `totalCount`：总 IO 数量
+- `validCount`：成功读取的 IO 数量
+- `errorCount`：读取失败的 IO 数量
+
+### 注意事项
+
+- IO 端口编号从 0 开始
+- 如果硬件不支持某些端口，对应的 IO 状态会标记为无效（`isValid=false`）
+- 建议根据实际硬件配置调整查询范围，避免查询不存在的端口
+- 读取单个 IO 失败不会中断整个查询，会继续读取其他 IO
 
 ## SignalR 实时通信
 
