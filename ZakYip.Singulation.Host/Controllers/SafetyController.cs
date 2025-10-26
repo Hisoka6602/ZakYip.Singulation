@@ -40,6 +40,11 @@ namespace ZakYip.Singulation.Host.Controllers {
                     _safety.RequestReset(SafetyTriggerKind.RemoteResetCommand, reason);
                     break;
 
+                case SafetyCommand.EmergencyStop:
+                    _logger.LogWarning("收到远程急停指令：{Reason}", reason);
+                    _safety.RequestStop(SafetyTriggerKind.EmergencyStop, reason);
+                    break;
+
                 default:
                     _logger.LogWarning("收到未知安全命令：{Command}", request.Command);
                     return BadRequest(ApiResponse<object>.Invalid("不支持的安全命令"));

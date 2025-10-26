@@ -106,30 +106,46 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 华雷协议状态响应帧（控制码 0x5B）包含运行状态、报警信息、相机 FPS 等。
+        /// 当前实现为骨架，细节字段解析可按需完整展开。
+        /// </remarks>
         public bool TryDecodeStatus(ReadOnlySpan<byte> frame, out StatusSnapshot status) {
-            // 状态响应 Ctrl=0x5B；包含运行态、报警、相机 FPS/列表等。:contentReference[oaicite:4]{index=4}
+            
             status = new StatusSnapshot(false, 0, Array.Empty<(string, byte)>(), VisionAlarm.None);
             // 这里给出骨架，细字段按需要完整展开。
             return false;
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 华雷协议参数响应帧（控制码 0x5C）包含端口号、疏散数量、速度、延时、版本号等配置信息。
+        /// 当前实现为骨架，字段解析可按需要扩展。
+        /// </remarks>
         public bool TryDecodeParams(ReadOnlySpan<byte> frame, out VisionParams param) {
-            // 参数响应 Ctrl=0x5C；端口/疏散数量/速度/延时/版本号等。:contentReference[oaicite:5]{index=5}
+            // 参数响应 Ctrl=0x5C；端口/疏散数量/速度/延时/版本号等。
             param = new VisionParams();
             // 这里给出骨架，字段解析可按需要扩展。
             return false;
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 编码格式：固定长度10字节
+        /// <code>2A 89 0A 00 00 00 00 [01/00] XOR 3B</code>
+        /// 其中最后一个数据字节为 0x01（启动）或 0x00（停止）。
+        /// </remarks>
         public int EncodeStartStop(IBufferWriter<byte> writer, bool start) {
-            // 固定长度10字节：2A 89 0A 00 00 00 00 [01/00] XOR 3B。:contentReference[oaicite:6]{index=6}
             return EncodeFixed10(writer, HuararyControl.CtrlStartStop, start ? (byte)0x01 : (byte)0x00);
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 编码格式：固定长度11字节
+        /// <code>2A 84 0B 00 [mode] [maxLE2] [minLE2] XOR 3B</code>
+        /// 其中速度值采用小端序 ushort 编码。
+        /// </remarks>
         public int EncodeModeAndSpeed(IBufferWriter<byte> writer, byte mode, ushort maxMmps, ushort minMmps) {
-            // 固定长度11字节：2A 84 0B 00 [mode] [maxLE2] [minLE2] XOR 3B。:contentReference[oaicite:7]{index=7}
             var span = writer.GetSpan(11);
             span[0] = HuararyControl.Start;
             span[1] = HuararyControl.CtrlModeSpeed;
@@ -146,8 +162,12 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 编码格式：固定长度10字节
+        /// <code>2A 86 0A 00 [mmLE2] 02 00 XOR 3B</code>
+        /// 分离模式字节固定为 0x02，间距采用小端序 ushort 编码。
+        /// </remarks>
         public int EncodeSpacing(IBufferWriter<byte> writer, ushort spacingMm) {
-            // 固定长度10字节，分离模式字节固定0x02：2A 86 0A 00 [mmLE2] 02 00 XOR 3B。:contentReference[oaicite:8]{index=8}
             var span = writer.GetSpan(10);
             span[0] = HuararyControl.Start;
             span[1] = HuararyControl.CtrlSpacing;
@@ -163,14 +183,22 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 编码格式：固定长度10字节
+        /// <code>2A 85 0A 00 00 00 00 [01/00] XOR 3B</code>
+        /// 其中最后一个数据字节为 0x01（暂停）或 0x00（恢复）。
+        /// </remarks>
         public int EncodePause(IBufferWriter<byte> writer, bool pause) {
-            // 固定长度10字节：2A 85 0A 00 00 00 00 [01/00] XOR 3B。:contentReference[oaicite:9]{index=9}
             return EncodeFixed10(writer, HuararyControl.CtrlPause, pause ? (byte)0x01 : (byte)0x00);
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 编码格式：固定长度10字节
+        /// <code>2A 83 0A 00 [count] [mmLE2] [delay] XOR 3B</code>
+        /// 其中速度采用小端序 ushort 编码。
+        /// </remarks>
         public int EncodeSetParams(IBufferWriter<byte> writer, byte ejectCount, ushort ejectMmps, byte autoStartDelaySec) {
-            // 固定长度10字节：2A 83 0A 00 [count] [mmLE2] [delay] XOR 3B。:contentReference[oaicite:10]{index=10}
             var span = writer.GetSpan(10);
             span[0] = HuararyControl.Start;
             span[1] = HuararyControl.CtrlSetParams;
@@ -186,14 +214,23 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 编码格式：固定长度10字节
+        /// <code>2A 87 0A 00 00 00 00 00 XOR 3B</code>
+        /// 响应帧控制码为 0x5B。
+        /// </remarks>
         public int EncodeQueryStatus(IBufferWriter<byte> writer) {
-            // 固定长度10字节：2A 87 0A 00 00 00 00 00 XOR 3B（响应为 0x5B）。:contentReference[oaicite:11]{index=11}
+            // 固定长度10字节：2A 87 0A 00 00 00 00 00 XOR 3B（响应为 0x5B）。
             return EncodeFixed10(writer, HuararyControl.CtrlQueryStatus, 0x00);
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// 编码格式：固定长度10字节
+        /// <code>2A 88 0A 00 00 00 00 00 XOR 3B</code>
+        /// 响应帧控制码为 0x5C。
+        /// </remarks>
         public int EncodeGetParams(IBufferWriter<byte> writer) {
-            // 固定长度10字节：2A 88 0A 00 00 00 00 00 XOR 3B（响应为 0x5C）。:contentReference[oaicite:12]{index=12}
             return EncodeFixed10(writer, HuararyControl.CtrlGetParams, 0x00);
         }
 
