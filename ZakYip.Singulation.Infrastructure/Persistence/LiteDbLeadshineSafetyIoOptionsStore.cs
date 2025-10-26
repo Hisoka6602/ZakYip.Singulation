@@ -30,20 +30,24 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             return Task.FromResult(doc.ToOptions());
         }
 
-        public Task SaveAsync(LeadshineSafetyIoOptions options, CancellationToken ct = default) =>
-            Task.Run(() => {
-                lock (_gate) {
-                    var doc = options.ToDoc();
-                    doc.Id = Key; // 强制单文档主键
-                    _col.Upsert(doc);
-                }
-            }, ct);
+        public Task SaveAsync(LeadshineSafetyIoOptions options, CancellationToken ct = default)
+        {
+            lock (_gate)
+            {
+                var doc = options.ToDoc();
+                doc.Id = Key; // 强制单文档主键
+                _col.Upsert(doc);
+            }
+            return Task.CompletedTask;
+        }
 
-        public Task DeleteAsync(CancellationToken ct = default) =>
-            Task.Run(() => {
-                lock (_gate) {
-                    _col.Delete(Key);
-                }
-            }, ct);
+        public Task DeleteAsync(CancellationToken ct = default)
+        {
+            lock (_gate)
+            {
+                _col.Delete(Key);
+            }
+            return Task.CompletedTask;
+        }
     }
 }
