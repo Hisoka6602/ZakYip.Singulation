@@ -86,12 +86,8 @@ namespace ZakYip.Singulation.Host.Controllers {
             await _store.SaveAsync(options, ct);
             
             _logger.LogInformation(
-                "IO 状态监控配置已更新：Enabled={Enabled}, InputStart={InputStart}, InputCount={InputCount}, " +
-                "OutputStart={OutputStart}, OutputCount={OutputCount}, PollingIntervalMs={PollingIntervalMs}, " +
-                "SignalRChannel={SignalRChannel}",
-                options.Enabled, options.InputStart, options.InputCount,
-                options.OutputStart, options.OutputCount, options.PollingIntervalMs,
-                options.SignalRChannel);
+                "IO 状态监控配置已更新：{@options}",
+                options);
             
             return ApiResponse<string>.Success("配置已保存并将在下次轮询时生效（热更新）");
         }
