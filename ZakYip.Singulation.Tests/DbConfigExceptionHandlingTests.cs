@@ -46,7 +46,7 @@ namespace ZakYip.Singulation.Tests {
             var result = await store.GetAsync();
 
             MiniAssert.Equal(false, result.Enabled, "默认 Enabled 应该为 false");
-            MiniAssert.True(!isolator.DegradedTriggered, "正常读取不应触发降级");
+            MiniAssert.False(isolator.DegradedTriggered, "正常读取不应触发降级");
         }
 
         [MiniFact]
