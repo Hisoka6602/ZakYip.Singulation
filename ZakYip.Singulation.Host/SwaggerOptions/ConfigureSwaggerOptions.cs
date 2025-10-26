@@ -43,11 +43,18 @@ namespace ZakYip.Singulation.Host.SwaggerOptions {
             // e) 启用注解
             opt.EnableAnnotations();
 
+            // 包含主程序集的 XML 注释
             var assembly = Assembly.GetExecutingAssembly();
             var xmlName = $"{assembly.GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlName);
             if (File.Exists(xmlPath)) {
                 opt.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
+            }
+
+            // 包含 Core 项目的 XML 注释（用于 DTO、枚举等）
+            var coreXmlPath = Path.Combine(AppContext.BaseDirectory, "ZakYip.Singulation.Core.xml");
+            if (File.Exists(coreXmlPath)) {
+                opt.IncludeXmlComments(coreXmlPath, includeControllerXmlComments: true);
             }
 
             // 中文注释：不要覆盖 Tag（不要使用 TagActionsBy），否则文档内的 Chute/Packages 等功能分组会被合并
