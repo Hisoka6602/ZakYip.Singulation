@@ -1,4 +1,4 @@
-set serviceName=ZakYip.Singulation.Host
+set serviceName=ZakYip.Singulation
 
 sc stop   %serviceName% 
 sc delete %serviceName% 
