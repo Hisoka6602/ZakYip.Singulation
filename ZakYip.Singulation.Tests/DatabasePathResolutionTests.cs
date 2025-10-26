@@ -25,7 +25,12 @@ namespace ZakYip.Singulation.Tests {
             try {
                 // 清理可能存在的测试目录
                 if (Directory.Exists(expectedDir)) {
-                    Directory.Delete(expectedDir, true);
+                    try {
+                        Directory.Delete(expectedDir, true);
+                    }
+                    catch {
+                        // Ignore deletion failure due to race condition
+                    }
                 }
 
                 // 注册服务
