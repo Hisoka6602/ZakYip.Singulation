@@ -2,8 +2,11 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -13,15 +16,30 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
     public sealed class LiteDbControllerOptionsStore : IControllerOptionsStore {
         private const string Key = "default";
         private readonly ILiteCollection<ControllerOptionsDoc> _coll;
+        private readonly ILogger<LiteDbControllerOptionsStore> _logger;
+        private readonly ISafetyIsolator _safetyIsolator;
 
-        public LiteDbControllerOptionsStore(ILiteDatabase db) {
+        public LiteDbControllerOptionsStore(
+            ILiteDatabase db,
+            ILogger<LiteDbControllerOptionsStore> logger,
+            ISafetyIsolator safetyIsolator) {
             _coll = db.GetCollection<ControllerOptionsDoc>("controller_options");
             _coll.EnsureIndex(x => x.Id, unique: true);
             if (_coll.FindById(Key) is null) _coll.Upsert(new ControllerOptionsDoc { Id = Key });
+            _logger = logger;
+            _safetyIsolator = safetyIsolator;
         }
 
-        public Task<ControllerOptions> GetAsync(CancellationToken ct = default)
-            => Task.FromResult(_coll.FindById(Key)?.ToDto() ?? ConfigDefaults.Controller());
+        public Task<ControllerOptions> GetAsync(CancellationToken ct = default) {
+            try {
+                return Task.FromResult(_coll.FindById(Key)?.ToDto() ?? ConfigDefaults.Controller());
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "读取DB配置异常：ControllerOptions");
+                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, "读取DB配置异常：ControllerOptions");
+                return Task.FromResult(ConfigDefaults.Controller());
+            }
+        }
 
         public Task UpsertAsync(ControllerOptions dto, CancellationToken ct = default) {
             _coll.Upsert(dto.ToDoc(Key));

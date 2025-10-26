@@ -4,8 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -17,19 +20,33 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
         private const string CollName = "upstream_codec_options";
         private const string Key = "default";
         private readonly ILiteDatabase _db;
+        private readonly ILogger<LiteDbUpstreamCodecOptionsStore> _logger;
+        private readonly ISafetyIsolator _safetyIsolator;
         private readonly object _gate = new();
 
-        public LiteDbUpstreamCodecOptionsStore(ILiteDatabase db) {
+        public LiteDbUpstreamCodecOptionsStore(
+            ILiteDatabase db,
+            ILogger<LiteDbUpstreamCodecOptionsStore> logger,
+            ISafetyIsolator safetyIsolator) {
             _db = db ?? throw new ArgumentNullException(nameof(db));
             var col = _db.GetCollection<UpstreamCodecOptionsDoc>(CollName);
             col.EnsureIndex(x => x.Id, unique: true);
+            _logger = logger;
+            _safetyIsolator = safetyIsolator;
         }
 
         public Task<UpstreamCodecOptions> GetAsync(CancellationToken ct = default) {
-            lock (_gate) {
-                var col = _db.GetCollection<UpstreamCodecOptionsDoc>(CollName);
-                var doc = col.FindById(Key);
-                return Task.FromResult(doc?.ToOptions() ?? ConfigDefaults.Codec());
+            try {
+                lock (_gate) {
+                    var col = _db.GetCollection<UpstreamCodecOptionsDoc>(CollName);
+                    var doc = col.FindById(Key);
+                    return Task.FromResult(doc?.ToOptions() ?? ConfigDefaults.Codec());
+                }
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "读取DB配置异常：UpstreamCodecOptions");
+                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, "读取DB配置异常：UpstreamCodecOptions");
+                return Task.FromResult(ConfigDefaults.Codec());
             }
         }
 
