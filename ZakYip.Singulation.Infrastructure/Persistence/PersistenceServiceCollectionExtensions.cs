@@ -20,12 +20,17 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
         /// <param name="filePath">数据库文件路径。默认存储在 data 目录下。</param>
         public static IServiceCollection AddLiteDbAxisSettings(this IServiceCollection services, string filePath = "data/singulation.db") {
             services.AddSingleton<ILiteDatabase>(_ => {
+                // 如果是相对路径，则相对于应用程序基目录解析
+                var resolvedPath = Path.IsPathRooted(filePath)
+                    ? filePath
+                    : Path.Combine(AppContext.BaseDirectory, filePath);
+                
                 // 确保数据库文件所在目录存在
-                var directory = Path.GetDirectoryName(filePath);
+                var directory = Path.GetDirectoryName(resolvedPath);
                 if (!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory)) {
                     Directory.CreateDirectory(directory);
                 }
-                return new LiteDatabase($"Filename={filePath};Mode=Shared");
+                return new LiteDatabase($"Filename={resolvedPath};Mode=Shared");
             });
             services.AddSingleton<IControllerOptionsStore, LiteDbControllerOptionsStore>();
             return services;
