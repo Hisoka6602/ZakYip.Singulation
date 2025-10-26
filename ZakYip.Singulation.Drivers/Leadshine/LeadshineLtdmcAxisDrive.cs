@@ -657,7 +657,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 ThreadPool.UnsafeQueueUserWorkItem(static s => {
                     var st = (EvState<T>)s!;
                     try { st.Handler(st.Sender, st.Args); }
-                    catch (Exception ex) {
+                    catch {
                         // 这里没 logger，只能静默；外层可包 SafeLog
                     }
                 }, state, preferLocal: true);

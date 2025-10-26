@@ -49,14 +49,34 @@ namespace ZakYip.Singulation.Host.Controllers {
             };
         }
 
-        /// <summary>读取控制器模板（vendor + driver options）。</summary>
+        /// <summary>
+        /// 读取控制器模板配置
+        /// </summary>
+        /// <remarks>
+        /// 获取当前控制器的厂商类型和驱动选项配置。
+        /// 返回包含 Vendor（厂商名称）和 Template（驱动参数模板）的配置对象。
+        /// </remarks>
+        /// <param name="ct">取消令牌，用于请求取消</param>
+        /// <returns>控制器配置对象，包含厂商和驱动选项</returns>
+        /// <response code="200">获取成功</response>
         [HttpGet("controller/options")]
         public async Task<ActionResult<ControllerOptions>> GetControllerOptions(CancellationToken ct) {
             var dto = await _ctrlOptsStore.GetAsync(ct);
             return Ok(ApiResponse<ControllerOptions>.Success(dto, "获取成功"));
         }
 
-        /// <summary>写入/更新控制器模板。</summary>
+        /// <summary>
+        /// 更新控制器模板配置
+        /// </summary>
+        /// <remarks>
+        /// 写入或更新控制器的厂商类型和驱动选项。
+        /// Vendor 字段为必填项，必须指定有效的厂商名称。
+        /// </remarks>
+        /// <param name="dto">控制器配置对象</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">更新成功</response>
+        /// <response code="400">参数验证失败</response>
         [HttpPut("controller/options")]
         public async Task<IActionResult> PutControllerOptions([FromBody] ControllerOptions dto, CancellationToken ct) {
             if (string.IsNullOrWhiteSpace(dto.Vendor))
@@ -69,9 +89,15 @@ namespace ZakYip.Singulation.Host.Controllers {
         // ================= 网格布局单例资源 =================
 
         /// <summary>
-        /// 获取当前的轴网格布局（单例资源）。
+        /// 获取轴网格布局配置
         /// </summary>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 获取当前的轴网格布局（单例资源），包含行数、列数和轴位置信息。
+        /// 用于定义多轴系统的物理布局排列方式。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>轴网格布局配置对象</returns>
+        /// <response code="200">获取布局成功</response>
         [HttpGet("topology")]
         public async Task<ActionResult<AxisGridLayoutOptions>> GetTopology(CancellationToken ct) {
             var dto = await _layoutStore.GetAsync(ct);
@@ -79,10 +105,18 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 全量覆盖轴网格布局（单例资源）。
+        /// 更新轴网格布局配置
         /// </summary>
-        /// <param name="req">新的布局定义（Rows/Cols/Placements）。</param>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 全量覆盖当前的轴网格布局配置。
+        /// 需要提供完整的布局定义，包括行数（Rows）、列数（Cols）和轴位置映射（Placements）。
+        /// 行列数必须大于等于 1。
+        /// </remarks>
+        /// <param name="req">新的布局定义</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">布局更新成功</response>
+        /// <response code="400">参数验证失败</response>
         [HttpPut("topology")]
         public async Task<IActionResult> PutTopology([FromBody] AxisGridLayoutOptions req, CancellationToken ct) {
             if (req.Rows < 1 || req.Cols < 1)
@@ -93,9 +127,15 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 删除当前的轴网格布局（恢复为空）。
+        /// 删除轴网格布局配置
         /// </summary>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 删除当前的轴网格布局，恢复为空配置。
+        /// 此操作会清除所有布局信息。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">布局已删除</response>
         [HttpDelete("topology")]
         public async Task<IActionResult> DeleteTopology(CancellationToken ct) {
             await _layoutStore.DeleteAsync(ct);
@@ -105,9 +145,15 @@ namespace ZakYip.Singulation.Host.Controllers {
         // ================= 控制器（总线）单例资源 =================
 
         /// <summary>
-        /// 查询控制器（总线）状态与轴数量。
+        /// 获取控制器状态信息
         /// </summary>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 查询控制器（总线）的当前状态，包括轴数量、错误码和初始化状态。
+        /// Initialized 字段为 true 表示控制器已正常初始化且无错误。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>控制器状态对象</returns>
+        /// <response code="200">获取控制器状态成功</response>
         [HttpGet("controller")]
         public async Task<ActionResult<ControllerResponseDto>> GetController(CancellationToken ct) {
             var count = await _axisController.Bus.GetAxisCountAsync(ct);
@@ -121,12 +167,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 控制器复位（冷/热）。
-        /// 冷复位：调用 <see cref="_bus.ResetAsync"/>；
-        /// 热复位：默认 Close → Initialize（如有专用软复位 API 可替换）。
+        /// 控制器复位操作
         /// </summary>
-        /// <param name="req">复位类型（硬/软）。</param>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 执行控制器复位操作，支持硬复位和软复位两种模式：
+        /// - Hard（硬复位）：调用底层硬件复位接口，完全重置控制器
+        /// - Soft（软复位）：先关闭连接，然后重新初始化控制器
+        /// 复位后会验证控制器是否成功初始化。
+        /// </remarks>
+        /// <param name="req">复位请求，指定复位类型（Hard 或 Soft）</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">控制器复位成功</response>
+        /// <response code="500">控制器复位失败</response>
         [HttpPost("controller/reset")]
         public async Task<ActionResult<object>> ResetController([FromBody] ControllerResetRequestDto req, CancellationToken ct) {
             // 1) 取模板
@@ -160,9 +213,15 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 获取控制器当前错误码（0 表示无错）。
+        /// 获取控制器错误码
         /// </summary>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 获取控制器当前的错误码。
+        /// ErrorCode 为 0 表示无错误，非 0 值表示存在错误。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>包含错误码的对象</returns>
+        /// <response code="200">获取错误码成功</response>
         [HttpGet("controller/errors")]
         public async Task<object> GetControllerErrors(CancellationToken ct) {
             var err = await _axisController.Bus.GetErrorCodeAsync(ct);
@@ -170,9 +229,16 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 清空控制器错误（通常通过复位实现）。
+        /// 清除控制器错误
         /// </summary>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 清空控制器的错误状态。
+        /// 此操作通常通过复位控制器来实现。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">错误已清除</response>
+        /// <response code="500">清除错误失败</response>
         [HttpDelete("controller/errors")]
         public async Task<object> ClearControllerErrors(CancellationToken ct) {
             var ok = await Safe(() => _axisController.Bus.ResetAsync(ct));
@@ -185,8 +251,14 @@ namespace ZakYip.Singulation.Host.Controllers {
         // ================= 轴集合资源：/axes =================
 
         /// <summary>
-        /// 列举当前注册的所有轴资源快照。
+        /// 获取所有轴的状态列表
         /// </summary>
+        /// <remarks>
+        /// 列举当前系统中注册的所有轴的资源快照。
+        /// 返回每个轴的 ID、状态、使能状态、目标速度、反馈速度和错误信息等。
+        /// </remarks>
+        /// <returns>轴状态列表</returns>
+        /// <response code="200">获取轴列表成功</response>
         [HttpGet("axes")]
         public ActionResult<IEnumerable<AxisResponseDto>> ListAxes() {
             var drives = _axisController.Drives;
@@ -195,9 +267,16 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 获取指定轴的资源快照。
+        /// 获取指定轴的状态信息
         /// </summary>
-        /// <param name="axisId">轴的整数 ID（与 AxisId.Value 对齐）。</param>
+        /// <remarks>
+        /// 根据轴 ID 获取单个轴的详细状态信息。
+        /// 包括轴的状态、使能状态、速度信息和错误信息等。
+        /// </remarks>
+        /// <param name="axisId">轴的整数 ID</param>
+        /// <returns>轴状态对象</returns>
+        /// <response code="200">获取轴成功</response>
+        /// <response code="404">轴未找到</response>
         [HttpGet("axes/{axisId}")]
         public ActionResult<AxisResponseDto> GetAxis(int axisId) {
             var axisDrive = _axisController.Drives.FirstOrDefault(f => f.Axis.Value.Equals(axisId));
@@ -231,11 +310,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 单轴部分更新（启停、目标线速度、加减速、限幅、机械参数等）。
+        /// 更新单个轴的参数
         /// </summary>
-        /// <param name="axisId">轴标识（字符串形式，与注册表 key 一致）。</param>
-        /// <param name="req">部分更新请求。</param>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 部分更新指定轴的参数，包括加减速、速度限制、机械参数等。
+        /// 只更新请求体中明确提供的字段，未提供的字段保持不变。
+        /// </remarks>
+        /// <param name="axisId">轴 ID</param>
+        /// <param name="req">部分更新请求体</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">轴参数更新成功</response>
+        /// <response code="400">轴参数更新失败</response>
+        /// <response code="404">轴未找到</response>
         [HttpPatch("axes/{axisId}")]
         public async Task<ActionResult<AxisCommandResultDto>> PatchAxis(int axisId, [FromBody] AxisPatchRequestDto req, CancellationToken ct) {
             var axisDrive = _axisController.Drives.FirstOrDefault(f => f.Axis.Value.Equals(axisId));
@@ -255,11 +342,18 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 批量使能轴（Enable）。
-        /// 未传 axisIds 或为空时，对全部轴生效。
+        /// 批量使能轴
         /// </summary>
-        /// <param name="axisIds">要操作的轴 ID；缺省/空 = 全部轴。</param>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 批量使能（启用）指定的轴或全部轴。
+        /// 使能后轴可以接受运动命令并执行。
+        /// 如果不指定 axisIds 或传入空数组，则对所有轴生效。
+        /// </remarks>
+        /// <param name="axisIds">要使能的轴 ID 列表，为空表示全部轴</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>批量操作结果</returns>
+        /// <response code="200">批量使能完成</response>
+        /// <response code="404">未找到匹配的轴</response>
         [HttpPost("axes/enable")]
         public async Task<ActionResult<BatchCommandResponseDto>> EnableAxes(
             [FromQuery] int[]? axisIds,
@@ -275,11 +369,18 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 批量释放/禁用轴（Disable）。
-        /// 未传 axisIds 或为空时，对全部轴生效。
+        /// 批量禁用轴
         /// </summary>
-        /// <param name="axisIds">要操作的轴 ID；缺省/空 = 全部轴。</param>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 批量禁用（释放）指定的轴或全部轴。
+        /// 禁用后轴不再响应运动命令。
+        /// 如果不指定 axisIds 或传入空数组，则对所有轴生效。
+        /// </remarks>
+        /// <param name="axisIds">要禁用的轴 ID 列表，为空表示全部轴</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>批量操作结果</returns>
+        /// <response code="200">批量禁用完成</response>
+        /// <response code="404">未找到匹配的轴</response>
         [HttpPost("axes/disable")]
         public async Task<ActionResult<BatchCommandResponseDto>> DisableAxes(
             [FromQuery] int[]? axisIds,
@@ -300,12 +401,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        ///— 批量设置轴速度（线速度，单位 mm/s）。
-        /// 未传 axisIds 或为空时，对全部轴生效。
+        /// 批量设置轴速度
         /// </summary>
-        /// <param name="axisIds">要操作的轴 ID；缺省/空 = 全部轴。</param>
-        /// <param name="req">目标线速度请求体（mm/s）。</param>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 批量设置指定轴或全部轴的目标线速度。
+        /// 速度单位为 mm/s（毫米/秒）。
+        /// 如果不指定 axisIds 或传入空数组，则对所有轴生效。
+        /// </remarks>
+        /// <param name="axisIds">要设置速度的轴 ID 列表，为空表示全部轴</param>
+        /// <param name="req">目标线速度请求体，包含速度值（mm/s）</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>批量操作结果</returns>
+        /// <response code="200">设置速度成功</response>
+        /// <response code="404">未找到匹配的轴</response>
         [HttpPost("axes/speed")]
         public async Task<ActionResult<BatchCommandResponseDto>> SetAxesSpeed(
             [FromQuery] int[]? axisIds,

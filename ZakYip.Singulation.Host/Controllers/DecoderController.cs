@@ -33,13 +33,26 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         // ---------------- 健康探测 ----------------
+        /// <summary>
+        /// 解码器健康检查
+        /// </summary>
         [HttpGet("health")]
-        public async Task<ApiResponse<object>> Health() {
+        public Task<ApiResponse<object>> Health() {
             var data = new { ok = true, codec = _codec.GetType().Name };
-            return ApiResponse<object>.Success(data);
+            return Task.FromResult(ApiResponse<object>.Success(data));
         }
 
-        // ---------------- 读取选项（优先持久化，没有则尝试运行时读取） ----------------
+        /// <summary>
+        /// 获取解码器配置选项
+        /// </summary>
+        /// <remarks>
+        /// 读取解码器的配置选项，优先从持久化存储读取。
+        /// 如果持久化存储不可用，则返回运行时配置。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>解码器配置对象</returns>
+        /// <response code="200">读取成功</response>
+        /// <response code="500">读取失败</response>
         [HttpGet("options")]
         public async Task<ApiResponse<UpstreamCodecOptions>> GetOptions(CancellationToken ct) {
             try {
@@ -57,7 +70,19 @@ namespace ZakYip.Singulation.Host.Controllers {
             }
         }
 
-        // ---------------- 保存选项（持久化；若实现支持则热更新） ----------------
+        /// <summary>
+        /// 保存解码器配置选项
+        /// </summary>
+        /// <remarks>
+        /// 保存解码器的配置选项到持久化存储。
+        /// MainCount 和 EjectCount 必须大于等于 0。
+        /// 如果持久化存储不可用，配置不会被保存。
+        /// </remarks>
+        /// <param name="dto">解码器配置对象</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">保存成功</response>
+        /// <response code="400">参数验证失败</response>
         [HttpPut("options")]
         public async Task<ActionResult<ApiResponse<string>>> SaveOptions([FromBody] UpstreamCodecOptions dto,
             CancellationToken ct) {
@@ -91,7 +116,22 @@ namespace ZakYip.Singulation.Host.Controllers {
             }
         }
 
-        // ---------------- 在线解码 ----------------
+        /// <summary>
+        /// 在线解码帧数据
+        /// </summary>
+        /// <remarks>
+        /// 对提供的帧数据进行在线解码。
+        /// 支持三种输入格式：
+        /// - Bytes: 原始字节数组（优先）
+        /// - Hex: 十六进制字符串（允许空格和破折号分隔）
+        /// - Base64: Base64 编码的字符串
+        /// 
+        /// 解码成功后返回解析出的速度数据，包含主线速度和弹射速度。
+        /// </remarks>
+        /// <param name="req">解码请求，包含要解码的数据</param>
+        /// <returns>解码结果</returns>
+        /// <response code="200">解码成功或无法识别</response>
+        /// <response code="400">数据格式错误</response>
         [HttpPost("frames")]
         public ActionResult<ApiResponse<DecodeResult>> CreateDecodeJob([FromBody] DecodeRequest req) {
             if (!TryMaterializeBytes(req, out var bytes, out var err))

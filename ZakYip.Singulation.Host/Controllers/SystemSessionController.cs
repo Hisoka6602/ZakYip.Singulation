@@ -24,10 +24,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// 删除当前运行会话资源，通知宿主退出进程。
-        /// 外部部署工具（例如 install.bat）将检测到退出并完成重启。
+        /// 删除当前运行会话
         /// </summary>
-        /// <param name="ct">取消令牌。</param>
+        /// <remarks>
+        /// 删除当前运行会话资源，触发宿主应用优雅退出。
+        /// 此操作会通知宿主停止运行并退出进程。
+        /// 外部部署工具（如 Windows 服务管理器或 systemd）应配置为自动重启服务。
+        /// 
+        /// 注意：此操作是异步执行的，API 会立即返回 202 状态码，实际退出会在后台进行。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作受理结果</returns>
+        /// <response code="202">关闭请求已受理，服务正在准备退出</response>
+        /// <response code="400">请求已取消</response>
         [HttpDelete]
         public ActionResult<ApiResponse<object>> DeleteCurrentSession(CancellationToken ct) {
             if (ct.IsCancellationRequested) {
