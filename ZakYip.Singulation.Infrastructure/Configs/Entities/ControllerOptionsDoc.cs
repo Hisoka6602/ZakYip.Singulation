@@ -26,6 +26,9 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
         /// <summary>控制器 IP（例如 192.168.5.11）。</summary>
         public string ControllerIp { get; set; } = "192.168.5.11";
 
+        /// <summary>本地模式固定速度（mm/s），默认 100.0。</summary>
+        public decimal LocalFixedSpeedMmps { get; set; } = 100.0m;
+
         /// <summary>DriverOptions 的可序列化镜像（去掉 Card/Port/NodeId/IsReverse）。</summary>
         public DriverOptionsTemplateDoc Template { get; set; } = new();
     }

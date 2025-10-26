@@ -39,5 +39,14 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
 
         /// <summary>复位按键是否反转输入逻辑。</summary>
         public bool? InvertResetLogic { get; set; } = null;
+
+        /// <summary>远程/本地模式切换输入位编号，-1 表示禁用。</summary>
+        public int RemoteLocalModeBit { get; set; } = -1;
+
+        /// <summary>远程/本地模式是否反转输入逻辑。</summary>
+        public bool? InvertRemoteLocalLogic { get; set; } = null;
+
+        /// <summary>远程/本地模式高电平对应的模式：true=高电平为远程模式，false=高电平为本地模式。</summary>
+        public bool RemoteLocalActiveHigh { get; set; } = true;
     }
 }
