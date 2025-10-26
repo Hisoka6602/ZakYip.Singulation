@@ -34,5 +34,11 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             services.AddSingleton<ILeadshineSafetyIoOptionsStore, LiteDbLeadshineSafetyIoOptionsStore>();
             return services;
         }
+
+        /// <summary>注册 IO 状态监控配置存储（与设置共享同一 LiteDB）。</summary>
+        public static IServiceCollection AddLiteDbIoStatusMonitor(this IServiceCollection services) {
+            services.AddSingleton<IIoStatusMonitorOptionsStore, LiteDbIoStatusMonitorOptionsStore>();
+            return services;
+        }
     }
 }

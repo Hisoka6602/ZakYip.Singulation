@@ -136,7 +136,7 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- SignalR ----------
         services.AddSingulationSignalR();
         // ---------- 配置存储 ----------
-        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineSafetyIo();
+        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineSafetyIo().AddLiteDbIoStatusMonitor();
         // ---------- 设备相关注入 ----------
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
@@ -179,7 +179,6 @@ var host = Host.CreateDefaultBuilder(args)
         
         // ---------- IO 状态服务 ----------
         services.AddSingleton<IoStatusService>();
-        services.Configure<IoStatusMonitorOptions>(configuration.GetSection("IoStatusMonitor"));
         services.AddHostedService<IoStatusWorker>();
         
         // ---------- 安全 ----------
