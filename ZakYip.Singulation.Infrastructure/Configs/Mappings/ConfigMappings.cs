@@ -106,6 +106,35 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
 
         public static AxisGridLayoutDoc ToDoc(this AxisGridLayoutOptions dto) => new() { Rows = dto.Rows, Cols = dto.Cols };
 
+        // ====== 新增：LeadshineSafetyIoOptions ======
+        public static LeadshineSafetyIoOptions ToOptions(this LeadshineSafetyIoOptionsDoc d) => new() {
+            Enabled = d.Enabled,
+            EmergencyStopBit = d.EmergencyStopBit,
+            StopBit = d.StopBit,
+            StartBit = d.StartBit,
+            ResetBit = d.ResetBit,
+            PollingIntervalMs = d.PollingIntervalMs,
+            InvertLogic = d.InvertLogic,
+            InvertEmergencyStopLogic = d.InvertEmergencyStopLogic,
+            InvertStopLogic = d.InvertStopLogic,
+            InvertStartLogic = d.InvertStartLogic,
+            InvertResetLogic = d.InvertResetLogic
+        };
+
+        public static LeadshineSafetyIoOptionsDoc ToDoc(this LeadshineSafetyIoOptions o) => new() {
+            Enabled = o.Enabled,
+            EmergencyStopBit = o.EmergencyStopBit,
+            StopBit = o.StopBit,
+            StartBit = o.StartBit,
+            ResetBit = o.ResetBit,
+            PollingIntervalMs = o.PollingIntervalMs,
+            InvertLogic = o.InvertLogic,
+            InvertEmergencyStopLogic = o.InvertEmergencyStopLogic,
+            InvertStopLogic = o.InvertStopLogic,
+            InvertStartLogic = o.InvertStartLogic,
+            InvertResetLogic = o.InvertResetLogic
+        };
+
         /// <summary>
         /// 生成“模板级别”的 DriverOptions：已带 Card/Port，NodeId 留 0（让控制器在按轴创建时再映射）。
         /// </summary>

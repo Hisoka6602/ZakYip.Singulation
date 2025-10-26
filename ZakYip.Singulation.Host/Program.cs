@@ -136,7 +136,7 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- SignalR ----------
         services.AddSingulationSignalR();
         // ---------- 配置存储 ----------
-        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb();
+        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineSafetyIo();
         // ---------- 设备相关注入 ----------
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
@@ -180,27 +180,33 @@ var host = Host.CreateDefaultBuilder(args)
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
         services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
         
-        // 根据配置选择安全 IO 模块实现
-        var safetyIoSection = configuration.GetSection("LeadshineSafetyIo");
-        var safetyIoEnabled = safetyIoSection.GetValue<bool>("Enabled", false);
+        // 注册 LoopbackSafetyIoModule
+        services.AddSingleton<LoopbackSafetyIoModule>();
         
-        if (safetyIoEnabled) {
-            // 使用硬件安全 IO 模块（雷赛控制器物理按键）
-            services.Configure<LeadshineSafetyIoOptions>(safetyIoSection);
-            services.AddSingleton<ISafetyIoModule>(sp => {
-                var logger = sp.GetRequiredService<ILogger<LeadshineSafetyIoModule>>();
-                var busStore = sp.GetRequiredService<IControllerOptionsStore>();
-                var busDto = busStore.GetAsync().GetAwaiter().GetResult();
-                var cardNo = (ushort)busDto.Template.Card;
-                var options = sp.GetRequiredService<IOptions<LeadshineSafetyIoOptions>>().Value;
-                return new LeadshineSafetyIoModule(logger, cardNo, options);
-            });
-        }
-        else {
-            // 使用回环测试模块（仅用于开发测试）
-            services.AddSingleton<LoopbackSafetyIoModule>();
-            services.AddSingleton<ISafetyIoModule>(sp => sp.GetRequiredService<LoopbackSafetyIoModule>());
-        }
+        // 注册 LeadshineSafetyIoModule（可能不会被使用，取决于配置）
+        services.AddSingleton<LeadshineSafetyIoModule>(sp => {
+            var logger = sp.GetRequiredService<ILogger<LeadshineSafetyIoModule>>();
+            var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
+            var options = safetyStore.GetAsync().GetAwaiter().GetResult();
+            var busStore = sp.GetRequiredService<IControllerOptionsStore>();
+            var busDto = busStore.GetAsync().GetAwaiter().GetResult();
+            var cardNo = (ushort)busDto.Template.Card;
+            return new LeadshineSafetyIoModule(logger, cardNo, options);
+        });
+        
+        // 根据数据库配置选择安全 IO 模块实现
+        services.AddSingleton<ISafetyIoModule>(sp => {
+            var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
+            var options = safetyStore.GetAsync().GetAwaiter().GetResult();
+            
+            if (options.Enabled) {
+                // 使用硬件安全 IO 模块（雷赛控制器物理按键）
+                return sp.GetRequiredService<LeadshineSafetyIoModule>();
+            } else {
+                // 使用回环测试模块（仅用于开发测试）
+                return sp.GetRequiredService<LoopbackSafetyIoModule>();
+            }
+        });
         
         services.AddSingleton<ICommissioningSequence, DefaultCommissioningSequence>();
         services.AddSingleton<FrameGuard>();

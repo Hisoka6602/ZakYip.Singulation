@@ -1,5 +1,5 @@
 using System;
-using ZakYip.Singulation.Host.Safety;
+using ZakYip.Singulation.Core.Configs;
 
 namespace ZakYip.Singulation.Tests {
 
