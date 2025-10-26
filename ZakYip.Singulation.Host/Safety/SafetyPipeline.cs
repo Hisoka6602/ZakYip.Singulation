@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
@@ -11,6 +10,8 @@ using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Contracts;
+using System.Collections.Generic;
 
 namespace ZakYip.Singulation.Host.Safety {
 
@@ -24,7 +25,12 @@ namespace ZakYip.Singulation.Host.Safety {
         private readonly IAxisController _axisController;
         private readonly IAxisEventAggregator _axisEvents;
         private readonly IRealtimeNotifier _realtime;
+        private readonly IControllerOptionsStore _controllerOptionsStore;
         private readonly Channel<SafetyOperation> _operations;
+
+        // 当前远程/本地模式状态：true=远程模式，false=本地模式
+        private bool _isRemoteMode = true;
+        private readonly object _modeLock = new();
 
         public SafetyPipeline(
             ILogger<SafetyPipeline> log,
@@ -32,13 +38,15 @@ namespace ZakYip.Singulation.Host.Safety {
             IEnumerable<ISafetyIoModule> ioModules,
             IAxisController axisController,
             IAxisEventAggregator axisEvents,
-            IRealtimeNotifier realtime) {
+            IRealtimeNotifier realtime,
+            IControllerOptionsStore controllerOptionsStore) {
             _log = log;
             _isolator = isolator;
             _ioModules = ioModules.ToArray();
             _axisController = axisController;
             _axisEvents = axisEvents;
             _realtime = realtime;
+            _controllerOptionsStore = controllerOptionsStore;
             _operations = Channel.CreateUnbounded<SafetyOperation>(new UnboundedChannelOptions {
                 SingleReader = true,
                 SingleWriter = false,
@@ -52,6 +60,12 @@ namespace ZakYip.Singulation.Host.Safety {
                 module.StopRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, SafetyTriggerKind.StopButton, e.Description, true));
                 module.StartRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Start, SafetyTriggerKind.StartButton, e.Description, true));
                 module.ResetRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Reset, SafetyTriggerKind.ResetButton, e.Description, true));
+                module.RemoteLocalModeChanged += (_, e) => {
+                    lock (_modeLock) {
+                        _isRemoteMode = e.IsRemoteMode;
+                    }
+                    _log.LogInformation("远程/本地模式已切换：{Mode}", e.IsRemoteMode ? "远程模式" : "本地模式");
+                };
             }
 
             _axisEvents.AxisFaulted += (_, e) => Enqueue(SafetyOperation.AxisHealth(SafetyTriggerKind.AxisFault, e.Axis.ToString(), e.Exception?.Message));
@@ -154,6 +168,32 @@ namespace ZakYip.Singulation.Host.Safety {
                         return;
                     }
                     StartRequested?.Invoke(this, args);
+                    
+                    // 启动流程：1) 使能所有轴 2) 根据远程/本地模式设置速度
+                    try {
+                        _log.LogInformation("执行启动流程：使能所有轴");
+                        await _axisController.EnableAllAsync(ct).ConfigureAwait(false);
+                        
+                        bool isRemote;
+                        lock (_modeLock) {
+                            isRemote = _isRemoteMode;
+                        }
+                        
+                        if (isRemote) {
+                            _log.LogInformation("启动流程：远程模式，等待 Upstream 速度");
+                            // 远程模式：速度由 Upstream 控制，不在这里设置
+                        } else {
+                            _log.LogInformation("启动流程：本地模式，设置固定速度");
+                            // 本地模式：从配置中读取固定速度并设置
+                            var controllerOpts = await _controllerOptionsStore.GetAsync(ct).ConfigureAwait(false);
+                            var fixedSpeed = controllerOpts.LocalFixedSpeedMmps;
+                            _log.LogInformation("设置本地固定速度：{Speed} mm/s", fixedSpeed);
+                            await _axisController.WriteSpeedAllAsync(fixedSpeed, ct).ConfigureAwait(false);
+                        }
+                    } catch (Exception ex) {
+                        _log.LogError(ex, "启动流程执行失败");
+                    }
+                    
                     await _realtime.PublishDeviceAsync(new {
                         kind = "safety.start", reason = operation.CommandReason
                     }, ct).ConfigureAwait(false);
@@ -167,6 +207,15 @@ namespace ZakYip.Singulation.Host.Safety {
                     break;
                 case SafetyCommand.Reset:
                     ResetRequested?.Invoke(this, args);
+                    
+                    // 复位流程：1) 清除控制器错误 2) 从隔离/降级状态恢复
+                    try {
+                        _log.LogInformation("执行复位流程：清除控制器错误");
+                        await _axisController.Bus.ResetAsync(ct).ConfigureAwait(false);
+                    } catch (Exception ex) {
+                        _log.LogError(ex, "清除控制器错误失败");
+                    }
+                    
                     if (_isolator.IsIsolated) {
                         var reset = _isolator.TryResetIsolation(operation.CommandReason ?? "reset", ct);
                         _log.LogInformation("隔离复位结果={Result}", reset);

@@ -29,5 +29,11 @@ namespace ZakYip.Singulation.Core.Configs {
         /// 驱动参数模板，包含控制器的详细驱动配置信息。
         /// </summary>
         public DriverOptionsTemplateOptions Template { get; init; } = new();
+
+        /// <summary>
+        /// 本地模式固定速度（mm/s），当安全IO为本地模式时使用此速度。默认 100.0 mm/s。
+        /// </summary>
+        [Range(0.0, 10000.0, ErrorMessage = "本地固定速度必须在 0.0 到 10000.0 mm/s 之间")]
+        public decimal LocalFixedSpeedMmps { get; init; } = 100.0m;
     }
 }

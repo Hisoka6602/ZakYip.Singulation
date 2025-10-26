@@ -49,6 +49,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Vendor = d.Vendor,
             OverrideAxisCount = d.OverrideAxisCount,
             ControllerIp = d.ControllerIp,
+            LocalFixedSpeedMmps = d.LocalFixedSpeedMmps,
             Template = new DriverOptionsTemplateOptions {
                 // 机构/传动
                 GearRatio = d.Template.GearRatio,
@@ -78,6 +79,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Vendor = dto.Vendor,
             OverrideAxisCount = dto.OverrideAxisCount,
             ControllerIp = dto.ControllerIp,
+            LocalFixedSpeedMmps = dto.LocalFixedSpeedMmps,
             Template = new DriverOptionsTemplateDoc {
                 // 机构/传动
                 GearRatio = dto.Template.GearRatio,
@@ -118,7 +120,10 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             InvertEmergencyStopLogic = d.InvertEmergencyStopLogic,
             InvertStopLogic = d.InvertStopLogic,
             InvertStartLogic = d.InvertStartLogic,
-            InvertResetLogic = d.InvertResetLogic
+            InvertResetLogic = d.InvertResetLogic,
+            RemoteLocalModeBit = d.RemoteLocalModeBit,
+            InvertRemoteLocalLogic = d.InvertRemoteLocalLogic,
+            RemoteLocalActiveHigh = d.RemoteLocalActiveHigh
         };
 
         public static LeadshineSafetyIoOptionsDoc ToDoc(this LeadshineSafetyIoOptions o) => new() {
@@ -132,7 +137,10 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             InvertEmergencyStopLogic = o.InvertEmergencyStopLogic,
             InvertStopLogic = o.InvertStopLogic,
             InvertStartLogic = o.InvertStartLogic,
-            InvertResetLogic = o.InvertResetLogic
+            InvertResetLogic = o.InvertResetLogic,
+            RemoteLocalModeBit = o.RemoteLocalModeBit,
+            InvertRemoteLocalLogic = o.InvertRemoteLocalLogic,
+            RemoteLocalActiveHigh = o.RemoteLocalActiveHigh
         };
 
         // ====== 新增：IoStatusMonitorOptions ======

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using ZakYip.Singulation.Core.Contracts.Dto;
 
 namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
@@ -25,6 +26,10 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
 
         /// <summary>控制器 IP（例如 192.168.5.11）。</summary>
         public string ControllerIp { get; set; } = "192.168.5.11";
+
+        /// <summary>本地模式固定速度（mm/s），默认 100.0。</summary>
+        [Range(0.0, 10000.0, ErrorMessage = "本地固定速度必须在 0.0 到 10000.0 mm/s 之间")]
+        public decimal LocalFixedSpeedMmps { get; set; } = 100.0m;
 
         /// <summary>DriverOptions 的可序列化镜像（去掉 Card/Port/NodeId/IsReverse）。</summary>
         public DriverOptionsTemplateDoc Template { get; set; } = new();

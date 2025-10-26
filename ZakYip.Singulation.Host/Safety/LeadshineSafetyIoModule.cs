@@ -28,6 +28,7 @@ namespace ZakYip.Singulation.Host.Safety {
         private bool _lastStopState;
         private bool _lastStartState;
         private bool _lastResetState;
+        private bool _lastRemoteLocalModeState;
 
         public string Name => "leadshine-hardware-io";
 
@@ -35,6 +36,7 @@ namespace ZakYip.Singulation.Host.Safety {
         public event EventHandler<SafetyTriggerEventArgs>? StopRequested;
         public event EventHandler<SafetyTriggerEventArgs>? StartRequested;
         public event EventHandler<SafetyTriggerEventArgs>? ResetRequested;
+        public event EventHandler<RemoteLocalModeChangedEventArgs>? RemoteLocalModeChanged;
 
         public LeadshineSafetyIoModule(
             ILogger<LeadshineSafetyIoModule> logger,
@@ -107,6 +109,20 @@ namespace ZakYip.Singulation.Host.Safety {
                             ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.ResetButton, "物理复位按键"));
                         }
                         _lastResetState = currentState;
+                    }
+
+                    // 读取远程/本地模式
+                    if (currentOptions.RemoteLocalModeBit >= 0) {
+                        bool rawState = ReadInputBit(currentOptions.RemoteLocalModeBit, currentOptions.InvertRemoteLocalLogic ?? currentOptions.InvertLogic);
+                        // 根据 RemoteLocalActiveHigh 配置决定高电平对应的模式
+                        bool isRemoteMode = currentOptions.RemoteLocalActiveHigh ? rawState : !rawState;
+                        
+                        if (isRemoteMode != _lastRemoteLocalModeState) {
+                            var modeText = isRemoteMode ? "远程模式" : "本地模式";
+                            _logger.LogInformation("检测到远程/本地模式切换：{Mode}", modeText);
+                            RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, $"切换到{modeText}"));
+                            _lastRemoteLocalModeState = isRemoteMode;
+                        }
                     }
 
                     await Task.Delay(currentOptions.PollingIntervalMs, ct).ConfigureAwait(false);

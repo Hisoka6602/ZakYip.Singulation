@@ -2,6 +2,153 @@
 
 ## 本次更新（2025-10-26）
 
+### ✅ 安全按钮远程/本地模式切换功能
+
+**核心改进**：实现安全按钮的远程/本地模式切换，支持根据IO输入动态选择Upstream速度或固定速度，增强系统灵活性
+
+#### 1. 远程/本地模式配置 ✅
+- **新增 IO 输入位配置**：`LeadshineSafetyIoOptions` 新增远程/本地模式切换功能
+  - `RemoteLocalModeBit`：远程/本地模式切换输入位编号（-1 表示禁用）
+  - `RemoteLocalActiveHigh`：高电平对应的模式（true=远程，false=本地），默认 true
+  - `InvertRemoteLocalLogic`：反转输入逻辑（支持常开/常闭开关）
+- **本地固定速度配置**：`ControllerOptions` 新增本地模式参数
+  - `LocalFixedSpeedMmps`：本地模式固定速度（mm/s），默认 100.0
+  - 范围：0.0 - 10000.0 mm/s
+  - 通过 `/api/Axes/controller/options` 可读写
+- **修改文件**：
+  - `LeadshineSafetyIoOptions.cs` - 新增远程/本地模式配置字段
+  - `ControllerOptions.cs` - 新增本地固定速度字段
+
+#### 2. 启动流程增强 ✅
+- **智能速度选择**：启动按钮触发时根据远程/本地模式自动选择速度
+  - **远程模式**：等待 Upstream 推送速度，实现动态速度控制
+  - **本地模式**：使用 ControllerOptions 中配置的固定速度
+- **完整启动流程**：
+  1. 检查系统是否处于隔离状态，如果隔离则拒绝启动
+  2. 触发 `StartRequested` 事件通知订阅者
+  3. 调用 `EnableAllAsync()` 使能所有轴
+  4. 根据当前模式设置速度：
+     - 远程模式：记录日志，速度由 Upstream 控制
+     - 本地模式：读取配置的固定速度并设置到所有轴
+  5. 发布实时通知到所有连接的客户端
+- **修改文件**：
+  - `SafetyPipeline.cs` - 实现启动流程和模式状态跟踪
+
+#### 3. 复位命令实现 ✅
+- **完整复位流程**：复位按钮触发时执行以下操作
+  1. 清除控制器错误：调用 `Bus.ResetAsync()` 复位控制器
+  2. 状态恢复：
+     - 如果系统处于隔离状态，调用 `TryResetIsolation()` 恢复
+     - 如果系统处于降级状态，调用 `TryRecoverFromDegraded()` 恢复
+  3. 记录复位结果到日志
+- **等价 API 调用**：复位功能等同于先后调用：
+  - `DELETE /api/Axes/controller/errors` - 清除控制器错误
+  - `DELETE /api/system/session` - 重置系统会话（可选，取决于需要）
+- **修改文件**：
+  - `SafetyPipeline.HandleCommandAsync()` - 实现复位命令处理
+
+#### 4. 停止/急停确认 ✅
+- **完整停机流程**（已有实现，本次确认）：
+  1. 设置所有轴速度为 0：`WriteSpeedAllAsync(0m)`
+  2. 停止所有轴：`StopAllAsync()`
+  3. 禁用所有轴使能：`DisableAllAsync()`
+  4. 确保电机完全断电，避免意外运动
+- **修改文件**：
+  - `SafetyPipeline.StopAllAsync()` - 已实现完整停机流程
+
+#### 5. 速度单位确认 ✅
+- **统一速度单位**：所有速度接口均使用 mm/s（毫米/秒）
+  - 前端输入：mm/s
+  - API 接口：mm/s
+  - 配置文件：mm/s
+  - 内部转换：mm/s → RPM → PPS（脉冲/秒）
+- **转换公式验证**：
+  - 输入：线速度 `v` (mm/s)
+  - 计算每电机轴转一圈的线位移：`travel = (π × 直径) / 齿轮比`
+  - 计算电机转速：`rpm = v × 60 / travel`
+  - 计算脉冲频率：`pps = (rpm / 60) × PPR`
+  - 输出：脉冲频率 `pps` (counts/s) 写入 0x60FF 寄存器
+- **代码位置**：
+  - `AxisKinematics.MmPerSecToPulsePerSec()` - 速度转换核心函数
+  - `LeadshineLtdmcAxisDrive.WriteSpeedAsync(decimal mmPerSec)` - 速度写入实现
+
+### 技术亮点
+
+- ✅ **灵活切换**：支持远程/本地模式实时切换，适应不同生产场景
+- ✅ **配置简单**：通过 IO 输入位即可切换模式，无需修改代码
+- ✅ **速度可控**：本地模式固定速度可通过 API 动态配置
+- ✅ **完整流程**：启动、停止、复位流程完整实现，安全可靠
+- ✅ **单位统一**：所有速度单位统一为 mm/s，前后端一致
+- ✅ **事件驱动**：模式切换触发事件通知，便于系统响应和日志记录
+
+### 使用示例
+
+#### 配置远程/本地模式（appsettings.json）
+
+```json
+{
+  "LeadshineSafetyIo": {
+    "Enabled": true,
+    "EmergencyStopBit": 0,
+    "StopBit": 1,
+    "StartBit": 2,
+    "ResetBit": 3,
+    "RemoteLocalModeBit": 4,          // 新增：远程/本地模式切换位
+    "RemoteLocalActiveHigh": true,    // 新增：高电平=远程模式
+    "InvertRemoteLocalLogic": false,  // 新增：逻辑反转
+    "PollingIntervalMs": 50
+  }
+}
+```
+
+#### 配置本地固定速度（API）
+
+```bash
+# 获取控制器配置
+curl -X GET http://localhost:5000/api/Axes/controller/options
+
+# 更新本地固定速度为 150 mm/s
+curl -X PUT http://localhost:5000/api/Axes/controller/options \
+  -H "Content-Type: application/json" \
+  -d '{
+    "Vendor": "leadshine",
+    "ControllerIp": "192.168.5.11",
+    "LocalFixedSpeedMmps": 150.0
+  }'
+```
+
+#### 运行流程
+
+1. **远程模式运行**：
+   - IO4 输入高电平（远程模式）
+   - 按下启动按钮（IO2）
+   - 系统使能所有轴
+   - 等待 Upstream 推送速度
+   - 根据 Upstream 速度运行
+
+2. **本地模式运行**：
+   - IO4 输入低电平（本地模式）
+   - 按下启动按钮（IO2）
+   - 系统使能所有轴
+   - 读取配置的固定速度（150 mm/s）
+   - 以固定速度运行
+
+3. **停止操作**：
+   - 按下停止按钮（IO1）或急停按钮（IO0）
+   - 系统速度降为 0
+   - 停止所有轴
+   - 禁用所有轴使能
+
+4. **复位操作**：
+   - 按下复位按钮（IO3）
+   - 清除控制器错误
+   - 从隔离/降级状态恢复
+   - 系统恢复正常状态
+
+---
+
+## 之前的更新（2025-10-26）
+
 ### ✅ 安全IO控制与速度转换修复
 
 **核心改进**：修复安全IO高低电平变化时的使能控制，修复速度转换公式，确保系统安全可靠运行
