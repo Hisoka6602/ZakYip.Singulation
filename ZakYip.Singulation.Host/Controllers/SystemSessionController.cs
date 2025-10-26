@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Host.Dto;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -38,6 +39,12 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <response code="202">关闭请求已受理，服务正在准备退出</response>
         /// <response code="400">请求已取消</response>
         [HttpDelete]
+        [SwaggerOperation(
+            Summary = "删除当前运行会话",
+            Description = "删除当前运行会话资源，触发宿主应用优雅退出。此操作会通知宿主停止运行并退出进程。注意：此操作是异步执行的，API 会立即返回 202 状态码，实际退出会在后台进行。")]
+        [ProducesResponseType(typeof(ApiResponse<object>), 202)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [Produces("application/json")]
         public ActionResult<ApiResponse<object>> DeleteCurrentSession(CancellationToken ct) {
             if (ct.IsCancellationRequested) {
                 return BadRequest(ApiResponse<object>.Invalid("请求已取消"));
