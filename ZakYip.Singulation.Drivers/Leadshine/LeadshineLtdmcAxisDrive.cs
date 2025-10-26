@@ -253,7 +253,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public async ValueTask SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec, CancellationToken ct = default) {
             await ThrottleAsync(ct);
 
-            if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) {
+            if (!HasValidMechanicsConfig()) {
                 OnAxisFaulted(new InvalidOperationException("mechanics parameters must provide ScrewPitchMm or PulleyPitchDiameterMm"));
                 return;
             }
@@ -490,7 +490,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             CancellationToken ct = default) {
             if (maxLinearMmps <= 0 || maxAccelMmps2 <= 0 || maxDecelMmps2 <= 0) return Task.FromResult(false);
 
-            if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return Task.FromResult(false);
+            if (!HasValidMechanicsConfig()) return Task.FromResult(false);
 
             var maxRpm = AxisRpm.FromMmPerSec(maxLinearMmps, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm).Value;
             var maxAccelRpmPerSec = AxisRpm.MmPerSec2ToRpmPerSec(maxAccelMmps2, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
@@ -529,7 +529,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         }
 
         /// <summary>
-        /// 检查机械配置是否有效，用于线速度转换。
+        /// Checks if the mechanical configuration is valid for linear speed conversion.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool HasValidMechanicsConfig() =>
