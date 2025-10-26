@@ -118,21 +118,21 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         public decimal? MaxLinearMmps {
             get {
-                if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return null;
+                if (!HasValidMechanicsConfig()) return null;
                 return new AxisRpm(_opts.MaxRpm).ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             }
         }
 
         public decimal? MaxAccelMmps2 {
             get {
-                if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return null;
+                if (!HasValidMechanicsConfig()) return null;
                 return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxAccelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             }
         }
 
         public decimal? MaxDecelMmps2 {
             get {
-                if (_opts.ScrewPitchMm <= 0m && _opts.PulleyPitchDiameterMm <= 0m) return null;
+                if (!HasValidMechanicsConfig()) return null;
                 return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxDecelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             }
         }
@@ -527,6 +527,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 return Task.FromResult(false);
             }
         }
+
+        /// <summary>
+        /// 检查机械配置是否有效，用于线速度转换。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool HasValidMechanicsConfig() =>
+            _opts.ScrewPitchMm > 0m || _opts.PulleyPitchDiameterMm > 0m;
 
         private async ValueTask ThrottleAsync(CancellationToken ct) {
             var now = Stopwatch.GetTimestamp();
