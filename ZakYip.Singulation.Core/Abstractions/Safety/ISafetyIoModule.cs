@@ -16,6 +16,7 @@ namespace ZakYip.Singulation.Core.Abstractions.Safety {
         event EventHandler<SafetyTriggerEventArgs>? StopRequested;
         event EventHandler<SafetyTriggerEventArgs>? StartRequested;
         event EventHandler<SafetyTriggerEventArgs>? ResetRequested;
+        event EventHandler<RemoteLocalModeChangedEventArgs>? RemoteLocalModeChanged;
 
         Task StartAsync(CancellationToken ct);
     }

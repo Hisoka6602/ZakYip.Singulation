@@ -43,5 +43,15 @@ namespace ZakYip.Singulation.Core.Configs {
 
         /// <summary>复位按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
         public bool? InvertResetLogic { get; init; } = null;
+
+        /// <summary>远程/本地模式切换输入位编号，-1 表示禁用。</summary>
+        [Range(-1, 1000, ErrorMessage = "输入位编号必须在 -1 到 1000 之间")]
+        public int RemoteLocalModeBit { get; init; } = -1;
+
+        /// <summary>远程/本地模式是否反转输入逻辑，null 时使用 InvertLogic 的值。</summary>
+        public bool? InvertRemoteLocalLogic { get; init; } = null;
+
+        /// <summary>远程/本地模式高电平对应的模式：true=高电平为远程模式，false=高电平为本地模式。默认 true（高电平=远程）。</summary>
+        public bool RemoteLocalActiveHigh { get; init; } = true;
     }
 }

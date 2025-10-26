@@ -16,6 +16,7 @@ namespace ZakYip.Singulation.Host.Safety {
         public event EventHandler<SafetyTriggerEventArgs>? StopRequested;
         public event EventHandler<SafetyTriggerEventArgs>? StartRequested;
         public event EventHandler<SafetyTriggerEventArgs>? ResetRequested;
+        public event EventHandler<RemoteLocalModeChangedEventArgs>? RemoteLocalModeChanged;
 
         public LoopbackSafetyIoModule(string name = "loopback") => Name = name;
 
@@ -32,5 +33,8 @@ namespace ZakYip.Singulation.Host.Safety {
 
         public void TriggerReset(string? reason = null)
             => ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(Core.Enums.SafetyTriggerKind.ResetButton, reason));
+
+        public void TriggerRemoteLocalModeChange(bool isRemoteMode, string? reason = null)
+            => RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, reason));
     }
 }
