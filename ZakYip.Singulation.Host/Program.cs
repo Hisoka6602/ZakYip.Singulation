@@ -179,6 +179,8 @@ var host = Host.CreateDefaultBuilder(args)
         
         // ---------- IO 状态服务 ----------
         services.AddSingleton<IoStatusService>();
+        services.Configure<IoStatusMonitorOptions>(configuration.GetSection("IoStatusMonitor"));
+        services.AddHostedService<IoStatusWorker>();
         
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
