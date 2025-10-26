@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
 
     /// <summary>
@@ -41,6 +43,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
         public bool? InvertResetLogic { get; set; } = null;
 
         /// <summary>远程/本地模式切换输入位编号，-1 表示禁用。</summary>
+        [Range(-1, 1000, ErrorMessage = "输入位编号必须在 -1 到 1000 之间")]
         public int RemoteLocalModeBit { get; set; } = -1;
 
         /// <summary>远程/本地模式是否反转输入逻辑。</summary>
