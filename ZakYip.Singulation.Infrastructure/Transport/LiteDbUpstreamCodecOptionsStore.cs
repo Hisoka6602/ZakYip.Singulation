@@ -19,6 +19,8 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
     public sealed class LiteDbUpstreamCodecOptionsStore : IUpstreamCodecOptionsStore, IDisposable {
         private const string CollName = "upstream_codec_options";
         private const string Key = "default";
+        private const string ErrorMessage = "读取DB配置异常：UpstreamCodecOptions";
+        
         private readonly ILiteDatabase _db;
         private readonly ILogger<LiteDbUpstreamCodecOptionsStore> _logger;
         private readonly ISafetyIsolator _safetyIsolator;
@@ -44,8 +46,8 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
                 }
             }
             catch (Exception ex) {
-                _logger.LogError(ex, "读取DB配置异常：UpstreamCodecOptions");
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, "读取DB配置异常：UpstreamCodecOptions");
+                _logger.LogError(ex, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
                 return Task.FromResult(ConfigDefaults.Codec());
             }
         }

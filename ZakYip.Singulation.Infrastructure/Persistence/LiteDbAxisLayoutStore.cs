@@ -20,6 +20,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
     /// </summary>
     public sealed class LiteDbAxisLayoutStore : IAxisLayoutStore {
         private const string Key = "singleton";
+        private const string ErrorMessage = "读取DB配置异常：AxisGridLayoutOptions";
+        
         private readonly ILiteCollection<AxisGridLayoutDoc> _coll;
         private readonly ILogger<LiteDbAxisLayoutStore> _logger;
         private readonly ISafetyIsolator _safetyIsolator;
@@ -41,8 +43,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
                 return Task.FromResult(_coll.FindById(Key)?.ToDto() ?? ConfigDefaults.AxisGrid());
             }
             catch (Exception ex) {
-                _logger.LogError(ex, "读取DB配置异常：AxisGridLayoutOptions");
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, "读取DB配置异常：AxisGridLayoutOptions");
+                _logger.LogError(ex, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
                 return Task.FromResult(ConfigDefaults.AxisGrid());
             }
         }

@@ -15,6 +15,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
 
     public sealed class LiteDbControllerOptionsStore : IControllerOptionsStore {
         private const string Key = "default";
+        private const string ErrorMessage = "读取DB配置异常：ControllerOptions";
+        
         private readonly ILiteCollection<ControllerOptionsDoc> _coll;
         private readonly ILogger<LiteDbControllerOptionsStore> _logger;
         private readonly ISafetyIsolator _safetyIsolator;
@@ -35,8 +37,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
                 return Task.FromResult(_coll.FindById(Key)?.ToDto() ?? ConfigDefaults.Controller());
             }
             catch (Exception ex) {
-                _logger.LogError(ex, "读取DB配置异常：ControllerOptions");
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, "读取DB配置异常：ControllerOptions");
+                _logger.LogError(ex, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
                 return Task.FromResult(ConfigDefaults.Controller());
             }
         }

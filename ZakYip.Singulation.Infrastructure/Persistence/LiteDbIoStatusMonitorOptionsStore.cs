@@ -16,6 +16,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
     public sealed class LiteDbIoStatusMonitorOptionsStore : IIoStatusMonitorOptionsStore {
         private const string CollName = "io_status_monitor_options";
         private const string Key = "default";
+        private const string ErrorMessage = "读取DB配置异常：IoStatusMonitorOptions";
 
         private readonly ILiteCollection<IoStatusMonitorOptionsDoc> _col;
         private readonly ILogger<LiteDbIoStatusMonitorOptionsStore> _logger;
@@ -42,8 +43,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
                 return Task.FromResult(doc.ToOptions());
             }
             catch (Exception ex) {
-                _logger.LogError(ex, "读取DB配置异常：IoStatusMonitorOptions");
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, "读取DB配置异常：IoStatusMonitorOptions");
+                _logger.LogError(ex, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
                 // 返回默认值
                 return Task.FromResult(new IoStatusMonitorOptions());
             }

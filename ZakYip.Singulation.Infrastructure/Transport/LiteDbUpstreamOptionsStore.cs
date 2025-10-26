@@ -19,6 +19,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
     public sealed class LiteDbUpstreamOptionsStore : IUpstreamOptionsStore {
         private const string CollName = "upstream_options";
         private const string Key = "upstream_options_singleton";
+        private const string ErrorMessage = "读取DB配置异常：UpstreamOptions";
 
         private readonly ILiteCollection<UpstreamOptionsDoc> _col;
         private readonly ILogger<LiteDbUpstreamOptionsStore> _logger;
@@ -40,8 +41,8 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
                 return Task.FromResult(_col.FindById(Key)?.ToDto() ?? ConfigDefaults.Upstream());
             }
             catch (Exception ex) {
-                _logger.LogError(ex, "读取DB配置异常：UpstreamOptions");
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, "读取DB配置异常：UpstreamOptions");
+                _logger.LogError(ex, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
                 return Task.FromResult(ConfigDefaults.Upstream());
             }
         }
