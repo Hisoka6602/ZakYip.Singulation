@@ -61,6 +61,12 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         Task EnableAllAsync(CancellationToken ct = default);
 
         /// <summary>
+        /// 禁用所有已创建的轴驱动（关闭使能）。
+        /// <para>通常对应 CANopen 的 "Disable Operation" 或 "Switch On Disabled"。</para>
+        /// </summary>
+        Task DisableAllAsync(CancellationToken ct = default);
+
+        /// <summary>
         /// 为所有轴统一设置加速度/减速度（线加速度，单位：mm/s²）。
         /// <para>内部会自动转换为对应的电机参数格式。</para>
         /// </summary>

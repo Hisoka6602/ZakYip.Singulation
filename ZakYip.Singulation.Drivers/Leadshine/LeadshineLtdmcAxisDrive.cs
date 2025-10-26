@@ -151,21 +151,26 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             // 取 PPR（带缓存）
             var ppr = await GetPprCachedAsync(ct);
-            int deviceVal;
-            if (ppr > 0) {
-                var pps = AxisRpm.MmPerSecToPps(mmPerSec, _opts.PulleyPitchDiameterMm, ppr, _opts.GearRatio, _opts.ScrewPitchMm);
-                Debug.WriteLine($"pps:{pps}");
-                deviceVal = (int)Math.Round(pps);
-            }
-            else {
-                // 退化（保持旧比例）
-                var rpmVo = AxisRpm.FromMmPerSec(mmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
-                deviceVal = (int)Math.Round(rpmVo.Value);
+            if (ppr <= 0) {
+                var errMsg = "PPR 未初始化，无法执行速度转换。请先调用 EnableAsync() 或确保驱动器正常连接。";
+                SetError(-1, errMsg);
+                OnAxisFaulted(new InvalidOperationException(errMsg));
+                return;
             }
 
+            // 计算脉冲频率 (pps)：0x60FF 寄存器要求单位为 counts/s
+            var pps = AxisRpm.MmPerSecToPps(mmPerSec, _opts.PulleyPitchDiameterMm, ppr, _opts.GearRatio, _opts.ScrewPitchMm);
+            Debug.WriteLine($"[WriteSpeed] mmPerSec={mmPerSec}, ppr={ppr}, pps={pps}");
+            
+            int deviceVal = (int)Math.Round(pps);
             if (_opts.IsReverse) deviceVal = -deviceVal;
+            
             var ret = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, deviceVal);
-            if (ret != 0) { SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return; }
+            if (ret != 0) { 
+                SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); 
+                OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); 
+                return; 
+            }
 
             _status = DriverStatus.Connected;
             LastTargetMmps = mmPerSec;

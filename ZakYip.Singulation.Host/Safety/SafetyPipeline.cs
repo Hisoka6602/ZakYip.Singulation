@@ -205,6 +205,7 @@ namespace ZakYip.Singulation.Host.Safety {
                 _log.LogWarning("【{Source}】执行紧急停机，原因：{Reason}", source, text);
                 await _axisController.WriteSpeedAllAsync(0m, ct).ConfigureAwait(false);
                 await _axisController.StopAllAsync(ct).ConfigureAwait(false);
+                await _axisController.DisableAllAsync(ct).ConfigureAwait(false);
                 await _realtime.PublishDeviceAsync(new {
                     kind = "safety.stopall", source, reason = text
                 }, ct).ConfigureAwait(false);

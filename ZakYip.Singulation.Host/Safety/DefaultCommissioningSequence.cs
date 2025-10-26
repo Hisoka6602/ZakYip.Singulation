@@ -32,7 +32,9 @@ namespace ZakYip.Singulation.Host.Safety {
 
         public async Task FailToSafeAsync(string reason, CancellationToken ct) {
             _log.LogWarning("Commissioning: Fail to safe due to {Reason}.", reason);
+            await _controller.WriteSpeedAllAsync(0m, ct).ConfigureAwait(false);
             await _controller.StopAllAsync(ct).ConfigureAwait(false);
+            await _controller.DisableAllAsync(ct).ConfigureAwait(false);
         }
     }
 }
