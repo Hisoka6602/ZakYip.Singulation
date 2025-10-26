@@ -165,6 +165,13 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         Task EnableAsync(CancellationToken ct = default);
 
         /// <summary>
+        /// 轴禁用（关闭使能）
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        ValueTask DisableAsync(CancellationToken ct = default);
+
+        /// <summary>
         /// 更新线速度/加减速度的限幅（单位均为 mm/s 或 mm/s²）。
         /// <para>实现要求：仅更新内存缓存与后续命令的限幅逻辑，不得外抛异常；若需要持久化由上层仓储处理。</para>
         /// </summary>
