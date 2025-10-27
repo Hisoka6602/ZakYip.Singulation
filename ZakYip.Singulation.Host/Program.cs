@@ -225,13 +225,11 @@ var host = Host.CreateDefaultBuilder(args)
             return new IndicatorLightService(logger, cardNo, options);
         });
 
-        //services.AddSingleton<ICommissioningSequence, DefaultCommissioningSequence>();
         services.AddSingleton<FrameGuard>();
         services.AddSingleton<IFrameGuard>(sp => sp.GetRequiredService<FrameGuard>());
         services.AddSingleton<SafetyPipeline>();
         services.AddSingleton<ISafetyPipeline>(sp => sp.GetRequiredService<SafetyPipeline>());
         services.AddHostedService(sp => sp.GetRequiredService<SafetyPipeline>());
-        //services.AddHostedService<CommissioningWorker>();
         // ---------- 上游数据连接Tcp相关注入 ----------
         services.AddUpstreamTcpFromLiteDb();
         // ---------- 解码器相关注入 ----------

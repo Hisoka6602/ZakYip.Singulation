@@ -89,10 +89,6 @@ namespace ZakYip.Singulation.Host.Services {
             response.ValidCount = validCount;
             response.ErrorCount = errorCount;
 
-            _logger.LogInformation(
-                "查询 IO 状态完成：输入 IO {InputCount} 个，输出 IO {OutputCount} 个，成功 {ValidCount} 个，失败 {ErrorCount} 个",
-                inputCount, outputCount, validCount, errorCount);
-
             return response;
         }
 
