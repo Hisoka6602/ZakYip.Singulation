@@ -29,6 +29,12 @@ namespace ZakYip.Singulation.Host.Safety {
         private bool _lastStartState;
         private bool _lastResetState;
         private bool _lastRemoteLocalModeState;
+        
+        // 按钮防抖：记录上次触发时间，避免在短时间内重复触发
+        private DateTime _lastStopTriggerTime = DateTime.MinValue;
+        private DateTime _lastStartTriggerTime = DateTime.MinValue;
+        private DateTime _lastResetTriggerTime = DateTime.MinValue;
+        private const int ButtonDebounceMs = 200; // 按钮防抖时间200ms
 
         public string Name => "leadshine-hardware-io";
 
@@ -72,6 +78,7 @@ namespace ZakYip.Singulation.Host.Safety {
                     }
 
                     // 读取急停按键（如果端口号大于99或小于0则不检测）
+                    // 急停是开关类型IO，检测电平变化即可
                     if (currentOptions.EmergencyStopBit >= 0 && currentOptions.EmergencyStopBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.EmergencyStopBit, currentOptions.InvertEmergencyStopLogic ?? currentOptions.InvertLogic);
                         if (currentState && !_lastEmergencyStopState) {
@@ -82,36 +89,64 @@ namespace ZakYip.Singulation.Host.Safety {
                     }
 
                     // 读取停止按键（如果端口号大于99或小于0则不检测）
+                    // 停止按钮是瞬时触发型，使用边沿检测+防抖
                     if (currentOptions.StopBit >= 0 && currentOptions.StopBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.StopBit, currentOptions.InvertStopLogic ?? currentOptions.InvertLogic);
+                        // 检测上升沿（按下）并进行防抖处理
                         if (currentState && !_lastStopState) {
-                            _logger.LogInformation("【IO端点调用】检测到停止按键按下 - IO端口：IN{Port}", currentOptions.StopBit);
-                            StopRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StopButton, "物理停止按键"));
+                            var now = DateTime.UtcNow;
+                            var timeSinceLastTrigger = (now - _lastStopTriggerTime).TotalMilliseconds;
+                            if (timeSinceLastTrigger > ButtonDebounceMs) {
+                                _logger.LogInformation("【IO端点调用】检测到停止按键按下 - IO端口：IN{Port}", currentOptions.StopBit);
+                                StopRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StopButton, "物理停止按键"));
+                                _lastStopTriggerTime = now;
+                            } else {
+                                _logger.LogDebug("停止按键触发被防抖过滤，距上次触发仅{Ms}ms", timeSinceLastTrigger);
+                            }
                         }
                         _lastStopState = currentState;
                     }
 
                     // 读取启动按键（如果端口号大于99或小于0则不检测）
+                    // 启动按钮是瞬时触发型，使用边沿检测+防抖
                     if (currentOptions.StartBit >= 0 && currentOptions.StartBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.StartBit, currentOptions.InvertStartLogic ?? currentOptions.InvertLogic);
+                        // 检测上升沿（按下）并进行防抖处理
                         if (currentState && !_lastStartState) {
-                            _logger.LogInformation("【IO端点调用】检测到启动按键按下 - IO端口：IN{Port}", currentOptions.StartBit);
-                            StartRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StartButton, "物理启动按键"));
+                            var now = DateTime.UtcNow;
+                            var timeSinceLastTrigger = (now - _lastStartTriggerTime).TotalMilliseconds;
+                            if (timeSinceLastTrigger > ButtonDebounceMs) {
+                                _logger.LogInformation("【IO端点调用】检测到启动按键按下 - IO端口：IN{Port}", currentOptions.StartBit);
+                                StartRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StartButton, "物理启动按键"));
+                                _lastStartTriggerTime = now;
+                            } else {
+                                _logger.LogDebug("启动按键触发被防抖过滤，距上次触发仅{Ms}ms", timeSinceLastTrigger);
+                            }
                         }
                         _lastStartState = currentState;
                     }
 
                     // 读取复位按键（如果端口号大于99或小于0则不检测）
+                    // 复位按钮是瞬时触发型，使用边沿检测+防抖
                     if (currentOptions.ResetBit >= 0 && currentOptions.ResetBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.ResetBit, currentOptions.InvertResetLogic ?? currentOptions.InvertLogic);
+                        // 检测上升沿（按下）并进行防抖处理
                         if (currentState && !_lastResetState) {
-                            _logger.LogInformation("【IO端点调用】检测到复位按键按下 - IO端口：IN{Port}", currentOptions.ResetBit);
-                            ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.ResetButton, "物理复位按键"));
+                            var now = DateTime.UtcNow;
+                            var timeSinceLastTrigger = (now - _lastResetTriggerTime).TotalMilliseconds;
+                            if (timeSinceLastTrigger > ButtonDebounceMs) {
+                                _logger.LogInformation("【IO端点调用】检测到复位按键按下 - IO端口：IN{Port}", currentOptions.ResetBit);
+                                ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.ResetButton, "物理复位按键"));
+                                _lastResetTriggerTime = now;
+                            } else {
+                                _logger.LogDebug("复位按键触发被防抖过滤，距上次触发仅{Ms}ms", timeSinceLastTrigger);
+                            }
                         }
                         _lastResetState = currentState;
                     }
 
                     // 读取远程/本地模式（如果端口号大于99或小于0则不检测）
+                    // 远程/本地是开关类型IO，检测电平变化即可
                     if (currentOptions.RemoteLocalModeBit >= 0 && currentOptions.RemoteLocalModeBit <= 99) {
                         bool rawState = ReadInputBit(currentOptions.RemoteLocalModeBit, currentOptions.InvertRemoteLocalLogic ?? currentOptions.InvertLogic);
                         // 根据 RemoteLocalActiveHigh 配置决定高电平对应的模式
