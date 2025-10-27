@@ -52,15 +52,22 @@ namespace ZakYip.Singulation.Host.Controllers {
 
             _logger.LogInformation("收到关闭请求，将在后台停止宿主应用。");
 
-            // 设置退出码为 1，以触发 Windows 服务的自动重启机制
-            Environment.ExitCode = 1;
-            _ = Task.Run(() => {
+            _ = Task.Run(async () => {
                 try {
-                    _logger.LogInformation("触发宿主停止。");
+                    // 先触发优雅停止
+                    _logger.LogInformation("触发宿主优雅停止，2秒后强制退出。");
                     _lifetime.StopApplication();
+                    
+                    // 等待最多2秒让应用优雅关闭
+                    await Task.Delay(2000);
+                    
+                    // 强制退出进程，退出码为1以触发Windows服务重启
+                    _logger.LogWarning("强制退出进程，退出码=1，触发服务重启");
+                    Environment.Exit(1);
                 }
                 catch (Exception ex) {
-                    _logger.LogError(ex, "停止宿主时发生异常。");
+                    _logger.LogError(ex, "停止宿主时发生异常，强制退出。");
+                    Environment.Exit(1);
                 }
             }, CancellationToken.None);
 

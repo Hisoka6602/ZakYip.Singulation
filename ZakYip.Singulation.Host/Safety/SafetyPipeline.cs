@@ -173,6 +173,19 @@ namespace ZakYip.Singulation.Host.Safety {
             
             switch (operation.Command) {
                 case SafetyCommand.Start:
+                    // 检测到启动IO变化时->检测当前状态是否运行中,如果是运行中或者报警则不做任何操作
+                    if (_indicatorLightService != null) {
+                        var currentState = _indicatorLightService.CurrentState;
+                        if (currentState == SystemState.Running) {
+                            _log.LogWarning("忽略启动请求：系统已处于运行中状态");
+                            return;
+                        }
+                        if (currentState == SystemState.Alarm) {
+                            _log.LogWarning("忽略启动请求：系统处于报警状态，请先复位");
+                            return;
+                        }
+                    }
+                    
                     if (_isolator.IsIsolated) {
                         _log.LogWarning("忽略启动请求：系统处于隔离状态");
                         return;
@@ -180,6 +193,7 @@ namespace ZakYip.Singulation.Host.Safety {
                     StartRequested?.Invoke(this, args);
                     
                     // 启动流程：1) 使能所有轴 2) 根据远程/本地模式设置速度
+                    // 等同于调用 /api/Axes/axes/enable + /api/Axes/axes/speed (使用默认的localFixedSpeedMmps)
                     try {
                         _log.LogInformation("【启动流程开始】步骤1：调用 IAxisController.EnableAllAsync() 使能所有轴");
                         await _axisController.EnableAllAsync(ct).ConfigureAwait(false);
@@ -220,8 +234,19 @@ namespace ZakYip.Singulation.Host.Safety {
                     }, ct).ConfigureAwait(false);
                     break;
                 case SafetyCommand.Stop:
+                    // 检测到停止IO变化时->检测当前状态是否已停止/准备中,如果是则不做任何操作
+                    if (_indicatorLightService != null) {
+                        var currentState = _indicatorLightService.CurrentState;
+                        if (currentState == SystemState.Stopped || currentState == SystemState.Ready) {
+                            _log.LogInformation("忽略停止请求：系统已处于停止/准备状态");
+                            return;
+                        }
+                    }
+                    
                     StopRequested?.Invoke(this, args);
                     _log.LogInformation("【停止流程开始】触发类型：{Kind}", operation.CommandKind);
+                    
+                    // 等同于调用 /api/Axes/axes/speed (设置0速度) + /api/Axes/axes/disable
                     if (operation.CommandKind == SafetyTriggerKind.EmergencyStop) {
                         _log.LogInformation("【停止流程】急停模式：调用 StopAllAsync() 紧急停机");
                         await StopAllAsync("emergency-stop", operation.CommandReason, ct).ConfigureAwait(false);
@@ -231,9 +256,20 @@ namespace ZakYip.Singulation.Host.Safety {
                             await _indicatorLightService.UpdateStateAsync(SystemState.Alarm, ct).ConfigureAwait(false);
                         }
                     } else {
+                        // 正常停止流程
+                        try {
+                            _log.LogInformation("【停止流程】步骤1：设置所有轴速度为0");
+                            await _axisController.WriteSpeedAllAsync(0m, ct).ConfigureAwait(false);
+                            _log.LogInformation("【停止流程】步骤2：禁用所有轴使能");
+                            await _axisController.DisableAllAsync(ct).ConfigureAwait(false);
+                            _log.LogInformation("【停止流程】步骤完成：所有轴已停止并禁用");
+                        } catch (Exception ex) {
+                            _log.LogError(ex, "【停止流程】执行失败");
+                        }
+                        
                         // 更新系统状态为已停止
                         if (_indicatorLightService != null) {
-                            _log.LogInformation("【停止流程】正常停止：调用 IndicatorLightService.UpdateStateAsync(state: Stopped) 更新指示灯为停止状态");
+                            _log.LogInformation("【停止流程】调用 IndicatorLightService.UpdateStateAsync(state: Stopped) 更新指示灯为停止状态");
                             await _indicatorLightService.UpdateStateAsync(SystemState.Stopped, ct).ConfigureAwait(false);
                         }
                     }
@@ -243,31 +279,37 @@ namespace ZakYip.Singulation.Host.Safety {
                 case SafetyCommand.Reset:
                     ResetRequested?.Invoke(this, args);
                     
-                    // 复位流程：1) 清除控制器错误 2) 从隔离/降级状态恢复
+                    // 复位流程：等同于调用 /api/Axes/axes/speed (设置0速度) + /api/Axes/axes/disable + /api/system/session
                     try {
-                        _log.LogInformation("【复位流程开始】步骤1：调用 IAxisController.Bus.ResetAsync() 清除控制器错误");
+                        _log.LogInformation("【复位流程开始】步骤1：设置所有轴速度为0");
+                        await _axisController.WriteSpeedAllAsync(0m, ct).ConfigureAwait(false);
+                        
+                        _log.LogInformation("【复位流程】步骤2：禁用所有轴使能");
+                        await _axisController.DisableAllAsync(ct).ConfigureAwait(false);
+                        
+                        _log.LogInformation("【复位流程】步骤3：调用 IAxisController.Bus.ResetAsync() 清除控制器错误");
                         await _axisController.Bus.ResetAsync(ct).ConfigureAwait(false);
-                        _log.LogInformation("【复位流程】步骤1完成：控制器错误已清除");
+                        _log.LogInformation("【复位流程】步骤3完成：控制器错误已清除");
                     } catch (Exception ex) {
-                        _log.LogError(ex, "【复位流程】步骤1失败：清除控制器错误失败");
+                        _log.LogError(ex, "【复位流程】步骤1-3失败");
                     }
                     
                     if (_isolator.IsIsolated) {
-                        _log.LogInformation("【复位流程】步骤2：系统处于隔离状态，调用 ISafetyIsolator.TryResetIsolation(reason: {Reason}) 尝试恢复", operation.CommandReason ?? "reset");
+                        _log.LogInformation("【复位流程】步骤4：系统处于隔离状态，调用 ISafetyIsolator.TryResetIsolation(reason: {Reason}) 尝试恢复", operation.CommandReason ?? "reset");
                         var reset = _isolator.TryResetIsolation(operation.CommandReason ?? "reset", ct);
                         _log.LogInformation("【复位流程】隔离复位结果={Result}", reset);
                     }
                     else if (_isolator.IsDegraded) {
-                        _log.LogInformation("【复位流程】步骤2：系统处于降级状态，调用 ISafetyIsolator.TryRecoverFromDegraded(reason: {Reason}) 尝试恢复", operation.CommandReason ?? "reset");
+                        _log.LogInformation("【复位流程】步骤4：系统处于降级状态，调用 ISafetyIsolator.TryRecoverFromDegraded(reason: {Reason}) 尝试恢复", operation.CommandReason ?? "reset");
                         var ok = _isolator.TryRecoverFromDegraded(operation.CommandReason ?? "reset");
                         _log.LogInformation("【复位流程】降级恢复结果={Result}", ok);
                     }
                     
                     // 更新系统状态为准备中
                     if (_indicatorLightService != null) {
-                        _log.LogInformation("【复位流程】步骤3：调用 IndicatorLightService.UpdateStateAsync(state: Ready) 更新指示灯为准备状态");
+                        _log.LogInformation("【复位流程】步骤5：调用 IndicatorLightService.UpdateStateAsync(state: Ready) 更新指示灯为准备状态");
                         await _indicatorLightService.UpdateStateAsync(SystemState.Ready, ct).ConfigureAwait(false);
-                        _log.LogInformation("【复位流程】步骤3完成：系统状态已更新为准备中");
+                        _log.LogInformation("【复位流程】步骤5完成：系统状态已更新为准备中");
                     }
                     _log.LogInformation("【复位流程完成】所有步骤执行成功");
                     break;
