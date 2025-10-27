@@ -149,8 +149,8 @@ namespace ZakYip.Singulation.Host.Services {
                 if (result < 0) {
                     _logger.LogWarning("设置{Name}（位{BitNo}）失败，错误码：{ErrorCode}", name, bitNo, result);
                 } else {
-                    _logger.LogDebug("设置{Name}（位{BitNo}）= {State}（逻辑：{Logic}，电平：{Level}）", 
-                        name, bitNo, on ? "亮" : "灭", invertLogic ? "低电平亮灯" : "高电平亮灯", state);
+                    _logger.LogDebug("设置{Name}（位{BitNo}）= {State}（逻辑：{Logic}）", 
+                        name, bitNo, on ? "亮" : "灭", invertLogic ? "低电平亮灯" : "高电平亮灯");
                 }
             }
             catch (Exception ex) {
