@@ -92,6 +92,8 @@ namespace ZakYip.Singulation.Tests {
 
             public Task EnableAllAsync(CancellationToken ct = default) => Task.CompletedTask;
 
+            public Task DisableAllAsync(CancellationToken ct = default) => Task.CompletedTask;
+
             public Task SetAccelDecelAllAsync(decimal accelMmPerSec2, decimal decelMmPerSec2, CancellationToken ct = default) => Task.CompletedTask;
 
             public Task WriteSpeedAllAsync(decimal mmPerSec, CancellationToken ct = default) {
