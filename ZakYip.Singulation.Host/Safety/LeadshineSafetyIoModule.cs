@@ -29,12 +29,6 @@ namespace ZakYip.Singulation.Host.Safety {
         private bool _lastStartState;
         private bool _lastResetState;
         private bool _lastRemoteLocalModeState;
-        
-        // 按钮防抖：记录上次触发时间，避免在短时间内重复触发
-        private DateTime _lastStopTriggerTime = DateTime.MinValue;
-        private DateTime _lastStartTriggerTime = DateTime.MinValue;
-        private DateTime _lastResetTriggerTime = DateTime.MinValue;
-        private const int ButtonDebounceMs = 200; // 按钮防抖时间200ms
 
         public string Name => "leadshine-hardware-io";
 
@@ -89,58 +83,40 @@ namespace ZakYip.Singulation.Host.Safety {
                     }
 
                     // 读取停止按键（如果端口号大于99或小于0则不检测）
-                    // 停止按钮是瞬时触发型，使用边沿检测+防抖
+                    // 停止按钮是瞬时触发型，使用电平检测+边沿触发（检测到触发电平时触发一次）
                     if (currentOptions.StopBit >= 0 && currentOptions.StopBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.StopBit, currentOptions.InvertStopLogic ?? currentOptions.InvertLogic);
-                        // 检测上升沿（按下）并进行防抖处理
+                        // 检测到触发电平（从非触发状态到触发状态的转换）时触发一次
+                        // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastStopState) {
-                            var now = DateTime.UtcNow;
-                            var timeSinceLastTrigger = (now - _lastStopTriggerTime).TotalMilliseconds;
-                            if (timeSinceLastTrigger > ButtonDebounceMs) {
-                                _logger.LogInformation("【IO端点调用】检测到停止按键按下 - IO端口：IN{Port}", currentOptions.StopBit);
-                                StopRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StopButton, "物理停止按键"));
-                                _lastStopTriggerTime = now;
-                            } else {
-                                _logger.LogDebug("停止按键触发被防抖过滤，距上次触发仅{Ms}ms", timeSinceLastTrigger);
-                            }
+                            _logger.LogInformation("【IO端点调用】检测到停止按键按下 - IO端口：IN{Port}", currentOptions.StopBit);
+                            StopRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StopButton, "物理停止按键"));
                         }
                         _lastStopState = currentState;
                     }
 
                     // 读取启动按键（如果端口号大于99或小于0则不检测）
-                    // 启动按钮是瞬时触发型，使用边沿检测+防抖
+                    // 启动按钮是瞬时触发型，使用电平检测+边沿触发（检测到触发电平时触发一次）
                     if (currentOptions.StartBit >= 0 && currentOptions.StartBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.StartBit, currentOptions.InvertStartLogic ?? currentOptions.InvertLogic);
-                        // 检测上升沿（按下）并进行防抖处理
+                        // 检测到触发电平（从非触发状态到触发状态的转换）时触发一次
+                        // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastStartState) {
-                            var now = DateTime.UtcNow;
-                            var timeSinceLastTrigger = (now - _lastStartTriggerTime).TotalMilliseconds;
-                            if (timeSinceLastTrigger > ButtonDebounceMs) {
-                                _logger.LogInformation("【IO端点调用】检测到启动按键按下 - IO端口：IN{Port}", currentOptions.StartBit);
-                                StartRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StartButton, "物理启动按键"));
-                                _lastStartTriggerTime = now;
-                            } else {
-                                _logger.LogDebug("启动按键触发被防抖过滤，距上次触发仅{Ms}ms", timeSinceLastTrigger);
-                            }
+                            _logger.LogInformation("【IO端点调用】检测到启动按键按下 - IO端口：IN{Port}", currentOptions.StartBit);
+                            StartRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StartButton, "物理启动按键"));
                         }
                         _lastStartState = currentState;
                     }
 
                     // 读取复位按键（如果端口号大于99或小于0则不检测）
-                    // 复位按钮是瞬时触发型，使用边沿检测+防抖
+                    // 复位按钮是瞬时触发型，使用电平检测+边沿触发（检测到触发电平时触发一次）
                     if (currentOptions.ResetBit >= 0 && currentOptions.ResetBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.ResetBit, currentOptions.InvertResetLogic ?? currentOptions.InvertLogic);
-                        // 检测上升沿（按下）并进行防抖处理
+                        // 检测到触发电平（从非触发状态到触发状态的转换）时触发一次
+                        // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastResetState) {
-                            var now = DateTime.UtcNow;
-                            var timeSinceLastTrigger = (now - _lastResetTriggerTime).TotalMilliseconds;
-                            if (timeSinceLastTrigger > ButtonDebounceMs) {
-                                _logger.LogInformation("【IO端点调用】检测到复位按键按下 - IO端口：IN{Port}", currentOptions.ResetBit);
-                                ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.ResetButton, "物理复位按键"));
-                                _lastResetTriggerTime = now;
-                            } else {
-                                _logger.LogDebug("复位按键触发被防抖过滤，距上次触发仅{Ms}ms", timeSinceLastTrigger);
-                            }
+                            _logger.LogInformation("【IO端点调用】检测到复位按键按下 - IO端口：IN{Port}", currentOptions.ResetBit);
+                            ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.ResetButton, "物理复位按键"));
                         }
                         _lastResetState = currentState;
                     }
@@ -177,7 +153,7 @@ namespace ZakYip.Singulation.Host.Safety {
         private bool ReadInputBit(int bitNo, bool invertLogic) {
             try {
                 // 调用雷赛 API 读取输入位
-                // 返回值：0=低电平/未按下，1=高电平/按下，<0=错误
+                // 返回值：0=低电平，1=高电平，<0=错误
                 short result = LTDMC.dmc_read_inbit(_cardNo, (ushort)bitNo);
                 
                 if (result < 0) {
@@ -185,7 +161,10 @@ namespace ZakYip.Singulation.Host.Safety {
                     return false;
                 }
 
-                // 根据配置决定是否反转逻辑（常开/常闭）
+                // 根据 invertLogic 配置应用反转逻辑：
+                // invertLogic=false: 高电平(1)时返回true（常开按键，按下时为高电平）
+                // invertLogic=true:  低电平(0)时返回true（常闭按键，按下时为低电平）
+                // 返回值 true 表示按键处于"触发状态"（按下），false 表示"非触发状态"（未按下）
                 bool state = result == 1;
                 return invertLogic ? !state : state;
             }
