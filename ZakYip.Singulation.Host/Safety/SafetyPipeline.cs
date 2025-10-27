@@ -48,8 +48,8 @@ namespace ZakYip.Singulation.Host.Safety {
         /// <summary>安全操作通道。</summary>
         private readonly Channel<SafetyOperation> _operations;
 
-        /// <summary>当前远程/本地模式状态：true=远程模式，false=本地模式。</summary>
-        private bool _isRemoteMode = true;
+        /// <summary>当前远程/本地模式状态：true=远程模式，false=本地模式。默认为本地模式。</summary>
+        private bool _isRemoteMode = false;
         
         /// <summary>模式状态的线程锁。</summary>
         private readonly object _modeLock = new();

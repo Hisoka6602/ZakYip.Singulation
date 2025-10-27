@@ -324,7 +324,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             // 2) 402 状态机三步
             if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
             if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
-            if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, 0)) return;
+            if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
             if (!Volatile.Read(ref _sPprReady)) {
                 try {
                     var ppr = await ReadAxisPulsesPerRevAsync(ct);
