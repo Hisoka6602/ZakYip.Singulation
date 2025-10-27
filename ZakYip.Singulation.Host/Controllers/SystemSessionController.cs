@@ -63,7 +63,7 @@ namespace ZakYip.Singulation.Host.Controllers {
 
                     // 等待优雅退出完成（容忍时间，可按需调参）
                     var gracefulWaitMs = 3000; // 3 秒容忍时间
-                    await Task.Delay(gracefulWaitMs).ConfigureAwait(false);
+                    await Task.Delay(gracefulWaitMs, ct).ConfigureAwait(false);
 
                     // ——兜底：若进程仍未退出，则以非零码强制结束以触发服务恢复——
                     // 若项目已注册 ForceNonZeroExitHostedService，则可删除以下强制退出段
