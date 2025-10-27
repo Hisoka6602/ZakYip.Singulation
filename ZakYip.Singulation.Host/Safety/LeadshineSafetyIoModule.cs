@@ -111,7 +111,9 @@ namespace ZakYip.Singulation.Host.Safety {
             // 启动时读取远程/本地模式 IO 状态并触发初始事件
             if (_options.RemoteLocalModeBit >= 0 && _options.RemoteLocalModeBit <= 99) {
                 try {
+                    // ReadInputBit 返回 true 表示触发状态（考虑了 InvertRemoteLocalLogic）
                     bool rawState = ReadInputBit(_options.RemoteLocalModeBit, _options.InvertRemoteLocalLogic ?? _options.InvertLogic);
+                    // RemoteLocalActiveHigh 决定高电平对应哪个模式：true=高电平为远程，false=高电平为本地
                     bool isRemoteMode = _options.RemoteLocalActiveHigh ? rawState : !rawState;
                     _lastRemoteLocalModeState = isRemoteMode;
                     
