@@ -143,7 +143,7 @@ namespace ZakYip.Singulation.Host.Services {
         /// 更新配置选项（用于热更新）。
         /// </summary>
         public void UpdateOptions(LeadshineSafetyIoOptions newOptions) {
-            // 注意：此处简化处理，实际使用中可能需要创建新实例
+            _options = newOptions;
             _logger.LogInformation("指示灯服务配置已更新");
         }
     }
