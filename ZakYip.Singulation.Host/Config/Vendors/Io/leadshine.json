@@ -1,0 +1,26 @@
+{
+  "Vendor": "Leadshine",
+  "Category": "IO",
+  "Description": "雷赛 IO 配置",
+  "Enabled": true,
+  "InputConfig": {
+    "StartAddress": 0,
+    "Count": 16,
+    "PollingIntervalMs": 100
+  },
+  "OutputConfig": {
+    "StartAddress": 0,
+    "Count": 16
+  },
+  "Features": {
+    "DigitalInput": true,
+    "DigitalOutput": true,
+    "AnalogInput": false,
+    "AnalogOutput": false
+  },
+  "Monitoring": {
+    "EnableStatusBroadcast": true,
+    "BroadcastIntervalMs": 500,
+    "SignalRChannel": "/io/status"
+  }
+}

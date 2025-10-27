@@ -1,0 +1,25 @@
+{
+  "Vendor": "Huarary",
+  "Category": "Protocol",
+  "Description": "华雷视觉协议配置",
+  "Enabled": true,
+  "Transport": {
+    "Type": "TCP",
+    "Port": 5002,
+    "BufferSize": 8192,
+    "ReceiveTimeout": 3000
+  },
+  "Protocol": {
+    "FrameStartByte": "0x02",
+    "FrameEndByte": "0x03",
+    "UseChecksum": true,
+    "ChecksumType": "XOR",
+    "Encoding": "UTF-8"
+  },
+  "Features": {
+    "SpeedControl": true,
+    "PositionTracking": true,
+    "BidirectionalComm": true,
+    "SupportedFrameTypes": ["Speed", "Position", "Command", "Heartbeat"]
+  }
+}

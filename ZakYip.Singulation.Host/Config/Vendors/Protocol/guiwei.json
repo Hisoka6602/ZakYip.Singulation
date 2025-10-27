@@ -1,0 +1,23 @@
+{
+  "Vendor": "Guiwei",
+  "Category": "Protocol",
+  "Description": "归位视觉协议配置",
+  "Enabled": false,
+  "Transport": {
+    "Type": "TCP",
+    "Port": 5001,
+    "BufferSize": 4096,
+    "ReceiveTimeout": 3000
+  },
+  "Protocol": {
+    "FrameStartByte": "0x02",
+    "FrameEndByte": "0x03",
+    "UseChecksum": false,
+    "Encoding": "UTF-8"
+  },
+  "Features": {
+    "SpeedControl": true,
+    "PositionTracking": false,
+    "BidirectionalComm": false
+  }
+}

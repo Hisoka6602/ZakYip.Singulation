@@ -1,0 +1,26 @@
+{
+  "Vendor": "Leadshine",
+  "Category": "Axis",
+  "Description": "雷赛运动控制器配置",
+  "BusConfig": {
+    "CardNo": 0,
+    "PortNo": 1,
+    "ControllerIp": "192.168.1.100"
+  },
+  "AxisConfig": {
+    "MaxAxes": 8,
+    "DefaultAcceleration": 1000,
+    "DefaultDeceleration": 1000,
+    "MaxSpeed": 5000
+  },
+  "Communication": {
+    "Protocol": "EtherCAT",
+    "Timeout": 5000,
+    "RetryCount": 3
+  },
+  "Advanced": {
+    "EnableHealthMonitoring": true,
+    "HealthCheckIntervalMs": 1000,
+    "EnableResilience": true
+  }
+}
