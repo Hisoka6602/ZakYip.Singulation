@@ -99,6 +99,18 @@ Content-Type: application/json
 | InvertStopLogic | bool? | null | 停止按键独立逻辑反转，null 时使用全局配置 |
 | InvertStartLogic | bool? | null | 启动按键独立逻辑反转，null 时使用全局配置 |
 | InvertResetLogic | bool? | null | 复位按键独立逻辑反转，null 时使用全局配置 |
+| RedLightBit | int | -1 | 红灯输出端口号，-1 表示禁用 |
+| YellowLightBit | int | -1 | 黄灯输出端口号，-1 表示禁用 |
+| GreenLightBit | int | -1 | 绿灯输出端口号，-1 表示禁用 |
+| StartButtonLightBit | int | -1 | 启动按钮灯输出端口号，-1 表示禁用 |
+| StopButtonLightBit | int | -1 | 停止按钮灯输出端口号，-1 表示禁用 |
+| InvertLightLogic | bool | false | 全局灯光逻辑反转（false=高电平亮灯，true=低电平亮灯） |
+| InvertRedLightLogic | bool? | null | 红灯独立逻辑反转，null 时使用 InvertLightLogic |
+| InvertYellowLightLogic | bool? | null | 黄灯独立逻辑反转，null 时使用 InvertLightLogic |
+| InvertGreenLightLogic | bool? | null | 绿灯独立逻辑反转，null 时使用 InvertLightLogic |
+| InvertStartButtonLightLogic | bool? | null | 启动按钮灯独立逻辑反转，null 时使用 InvertLightLogic |
+| InvertStopButtonLightLogic | bool? | null | 停止按钮灯独立逻辑反转，null 时使用 InvertLightLogic |
+
 
 ## 使用指南
 
@@ -136,6 +148,50 @@ Content-Type: application/json
   "invertStopLogic": null,
   "invertStartLogic": true,
   "invertResetLogic": null
+}
+```
+
+#### 场景 3: 配置三色灯和按钮灯（高电平亮灯）
+```json
+{
+  "enabled": true,
+  "redLightBit": 10,
+  "yellowLightBit": 11,
+  "greenLightBit": 12,
+  "startButtonLightBit": 13,
+  "stopButtonLightBit": 14,
+  "invertLightLogic": false
+}
+```
+
+#### 场景 4: 配置三色灯和按钮灯（低电平亮灯）
+```json
+{
+  "enabled": true,
+  "redLightBit": 10,
+  "yellowLightBit": 11,
+  "greenLightBit": 12,
+  "startButtonLightBit": 13,
+  "stopButtonLightBit": 14,
+  "invertLightLogic": true
+}
+```
+
+#### 场景 5: 混合配置（红灯低电平亮灯，其他高电平亮灯）
+```json
+{
+  "enabled": true,
+  "redLightBit": 10,
+  "yellowLightBit": 11,
+  "greenLightBit": 12,
+  "startButtonLightBit": 13,
+  "stopButtonLightBit": 14,
+  "invertLightLogic": false,
+  "invertRedLightLogic": true,
+  "invertYellowLightLogic": null,
+  "invertGreenLightLogic": null,
+  "invertStartButtonLightLogic": null,
+  "invertStopButtonLightLogic": null
 }
 ```
 

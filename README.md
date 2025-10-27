@@ -246,24 +246,33 @@
   - `RedLightBit`：红灯输出位编号（-1 表示禁用）
   - `YellowLightBit`：黄灯输出位编号（-1 表示禁用）
   - `GreenLightBit`：绿灯输出位编号（-1 表示禁用）
+- **灯光逻辑反转配置**：支持配置高电平或低电平亮灯
+  - `InvertLightLogic`：全局灯光逻辑反转（false=高电平亮灯，true=低电平亮灯）
+  - `InvertRedLightLogic`：红灯独立逻辑反转，null 时使用全局配置
+  - `InvertYellowLightLogic`：黄灯独立逻辑反转，null 时使用全局配置
+  - `InvertGreenLightLogic`：绿灯独立逻辑反转，null 时使用全局配置
 - **状态与灯光对应关系**：
   - `Running`（运行中） → 绿灯亮
   - `Stopped`（已停止） → 黄灯亮
   - `Ready`（准备中） → 黄灯 + 绿灯同时亮
   - `Alarm`（报警） → 红灯亮
 - **修改文件**：
-  - `LeadshineSafetyIoOptions.cs` - 新增三色灯输出位字段
+  - `LeadshineSafetyIoOptions.cs` - 新增三色灯输出位字段和逻辑反转配置
   - `LeadshineSafetyIoOptionsDoc.cs` - 新增三色灯配置持久化字段
+  - `IndicatorLightService.cs` - 更新灯光控制逻辑以支持反转配置
 
 #### 3. 按钮灯配置 ✅
 - **新增按钮灯 IO 输出位配置**：`LeadshineSafetyIoOptions` 新增按钮灯控制
   - `StartButtonLightBit`：启动按钮灯输出位编号（-1 表示禁用）
   - `StopButtonLightBit`：停止按钮灯输出位编号（-1 表示禁用）
+- **灯光逻辑反转配置**：支持配置高电平或低电平亮灯
+  - `InvertStartButtonLightLogic`：启动按钮灯独立逻辑反转，null 时使用全局配置
+  - `InvertStopButtonLightLogic`：停止按钮灯独立逻辑反转，null 时使用全局配置
 - **状态与按钮灯对应关系**：
   - 状态 = `Running`（运行中） → 启动按钮灯亮
   - 状态 != `Running`（非运行中） → 停止按钮灯亮
 - **修改文件**：
-  - `LeadshineSafetyIoOptions.cs` - 新增按钮灯输出位字段
+  - `LeadshineSafetyIoOptions.cs` - 新增按钮灯输出位字段和逻辑反转配置
   - `LeadshineSafetyIoOptionsDoc.cs` - 新增按钮灯配置持久化字段
 
 #### 4. 指示灯服务实现 ✅

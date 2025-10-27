@@ -98,9 +98,9 @@ namespace ZakYip.Singulation.Host.Services {
             // 安全检查：确保红灯亮时，黄灯和绿灯必须关闭
 
             await Task.WhenAll(
-                SetLightAsync("红灯", _options.RedLightBit, redOn, ct),
-                SetLightAsync("黄灯", _options.YellowLightBit, yellowOn, ct),
-                SetLightAsync("绿灯", _options.GreenLightBit, greenOn, ct)
+                SetLightAsync("红灯", _options.RedLightBit, redOn, _options.InvertRedLightLogic ?? _options.InvertLightLogic, ct),
+                SetLightAsync("黄灯", _options.YellowLightBit, yellowOn, _options.InvertYellowLightLogic ?? _options.InvertLightLogic, ct),
+                SetLightAsync("绿灯", _options.GreenLightBit, greenOn, _options.InvertGreenLightLogic ?? _options.InvertLightLogic, ct)
             ).ConfigureAwait(false);
         }
 
@@ -114,28 +114,43 @@ namespace ZakYip.Singulation.Host.Services {
             bool stopLightOn = (state != SystemState.Running);
 
             await Task.WhenAll(
-                SetLightAsync("启动按钮灯", _options.StartButtonLightBit, startLightOn, ct),
-                SetLightAsync("停止按钮灯", _options.StopButtonLightBit, stopLightOn, ct)
+                SetLightAsync("启动按钮灯", _options.StartButtonLightBit, startLightOn, _options.InvertStartButtonLightLogic ?? _options.InvertLightLogic, ct),
+                SetLightAsync("停止按钮灯", _options.StopButtonLightBit, stopLightOn, _options.InvertStopButtonLightLogic ?? _options.InvertLightLogic, ct)
             ).ConfigureAwait(false);
         }
 
         /// <summary>
         /// 设置单个灯的电平状态。
         /// </summary>
-        private Task SetLightAsync(string name, int bitNo, bool on, CancellationToken ct) {
+        /// <param name="name">灯的名称</param>
+        /// <param name="bitNo">输出位编号</param>
+        /// <param name="on">是否亮灯</param>
+        /// <param name="invertLogic">是否反转输出逻辑（true=低电平亮灯，false=高电平亮灯）</param>
+        /// <param name="ct">取消令牌</param>
+        private Task SetLightAsync(string name, int bitNo, bool on, bool invertLogic, CancellationToken ct) {
             if (bitNo < 0) {
                 // 该灯未配置，跳过
                 return Task.CompletedTask;
             }
 
             try {
-                ushort state = on ? (ushort)1 : (ushort)0;
+                // 根据 invertLogic 决定电平逻辑
+                // XOR logic: state = on ^ invertLogic
+                // Truth table:
+                //   on | invertLogic | state
+                //  ----+-------------+------
+                //   T  |     F       |  1 (高电平亮灯)
+                //   F  |     F       |  0 (高电平灭灯)
+                //   T  |     T       |  0 (低电平亮灯)
+                //   F  |     T       |  1 (低电平灭灯)
+                ushort state = (on ^ invertLogic) ? (ushort)1 : (ushort)0;
                 short result = LTDMC.dmc_write_outbit(_cardNo, (ushort)bitNo, state);
 
                 if (result < 0) {
                     _logger.LogWarning("设置{Name}（位{BitNo}）失败，错误码：{ErrorCode}", name, bitNo, result);
                 } else {
-                    _logger.LogDebug("设置{Name}（位{BitNo}）= {State}", name, bitNo, on ? "亮" : "灭");
+                    _logger.LogDebug("设置{Name}（位{BitNo}）= {State}（逻辑：{Logic}）", 
+                        name, bitNo, on ? "亮" : "灭", invertLogic ? "低电平亮灯" : "高电平亮灯");
                 }
             }
             catch (Exception ex) {

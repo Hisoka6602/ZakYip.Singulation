@@ -29,6 +29,14 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(-1, options.GreenLightBit, "绿灯默认应禁用");
             MiniAssert.Equal(-1, options.StartButtonLightBit, "启动按钮灯默认应禁用");
             MiniAssert.Equal(-1, options.StopButtonLightBit, "停止按钮灯默认应禁用");
+            
+            // 新增灯光反转逻辑默认值测试
+            MiniAssert.Equal(false, options.InvertLightLogic, "全局灯光反转逻辑默认应为 false");
+            MiniAssert.Equal(null, options.InvertRedLightLogic, "红灯反转逻辑默认应为 null");
+            MiniAssert.Equal(null, options.InvertYellowLightLogic, "黄灯反转逻辑默认应为 null");
+            MiniAssert.Equal(null, options.InvertGreenLightLogic, "绿灯反转逻辑默认应为 null");
+            MiniAssert.Equal(null, options.InvertStartButtonLightLogic, "启动按钮灯反转逻辑默认应为 null");
+            MiniAssert.Equal(null, options.InvertStopButtonLightLogic, "停止按钮灯反转逻辑默认应为 null");
         }
 
         [MiniFact]
@@ -121,6 +129,56 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(12, options.GreenLightBit, "绿灯应配置到端口 12");
             MiniAssert.Equal(13, options.StartButtonLightBit, "启动按钮灯应配置到端口 13");
             MiniAssert.Equal(14, options.StopButtonLightBit, "停止按钮灯应配置到端口 14");
+        }
+
+        [MiniFact]
+        public void LightInvertLogicConfiguration() {
+            // 场景：配置灯光反转逻辑
+            var options = new LeadshineSafetyIoOptions {
+                InvertLightLogic = false,  // 全局默认高电平亮灯
+                InvertRedLightLogic = true,  // 红灯低电平亮灯
+                InvertYellowLightLogic = null,  // 黄灯使用全局配置
+                InvertGreenLightLogic = false,  // 绿灯高电平亮灯（显式指定）
+                InvertStartButtonLightLogic = true,  // 启动按钮灯低电平亮灯
+                InvertStopButtonLightLogic = null  // 停止按钮灯使用全局配置
+            };
+            
+            var redInvert = options.InvertRedLightLogic ?? options.InvertLightLogic;
+            var yellowInvert = options.InvertYellowLightLogic ?? options.InvertLightLogic;
+            var greenInvert = options.InvertGreenLightLogic ?? options.InvertLightLogic;
+            var startButtonInvert = options.InvertStartButtonLightLogic ?? options.InvertLightLogic;
+            var stopButtonInvert = options.InvertStopButtonLightLogic ?? options.InvertLightLogic;
+            
+            MiniAssert.Equal(true, redInvert, "红灯应使用独立配置（低电平亮灯）");
+            MiniAssert.Equal(false, yellowInvert, "黄灯应使用全局默认（高电平亮灯）");
+            MiniAssert.Equal(false, greenInvert, "绿灯应使用独立配置（高电平亮灯）");
+            MiniAssert.Equal(true, startButtonInvert, "启动按钮灯应使用独立配置（低电平亮灯）");
+            MiniAssert.Equal(false, stopButtonInvert, "停止按钮灯应使用全局默认（高电平亮灯）");
+        }
+
+        [MiniFact]
+        public void AllLightsInvertedConfiguration() {
+            // 场景：所有灯都使用低电平亮灯
+            var options = new LeadshineSafetyIoOptions {
+                InvertLightLogic = true,  // 全局低电平亮灯
+                InvertRedLightLogic = null,
+                InvertYellowLightLogic = null,
+                InvertGreenLightLogic = null,
+                InvertStartButtonLightLogic = null,
+                InvertStopButtonLightLogic = null
+            };
+            
+            var redInvert = options.InvertRedLightLogic ?? options.InvertLightLogic;
+            var yellowInvert = options.InvertYellowLightLogic ?? options.InvertLightLogic;
+            var greenInvert = options.InvertGreenLightLogic ?? options.InvertLightLogic;
+            var startButtonInvert = options.InvertStartButtonLightLogic ?? options.InvertLightLogic;
+            var stopButtonInvert = options.InvertStopButtonLightLogic ?? options.InvertLightLogic;
+            
+            MiniAssert.Equal(true, redInvert, "所有灯都应使用全局配置（低电平亮灯）");
+            MiniAssert.Equal(true, yellowInvert, "所有灯都应使用全局配置（低电平亮灯）");
+            MiniAssert.Equal(true, greenInvert, "所有灯都应使用全局配置（低电平亮灯）");
+            MiniAssert.Equal(true, startButtonInvert, "所有灯都应使用全局配置（低电平亮灯）");
+            MiniAssert.Equal(true, stopButtonInvert, "所有灯都应使用全局配置（低电平亮灯）");
         }
     }
 }

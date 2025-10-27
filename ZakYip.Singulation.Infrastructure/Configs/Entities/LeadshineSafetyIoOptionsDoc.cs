@@ -66,5 +66,23 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
 
         /// <summary>停止按钮灯输出位编号，-1 表示禁用。</summary>
         public int StopButtonLightBit { get; set; } = -1;
+
+        /// <summary>是否反转灯光输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。</summary>
+        public bool InvertLightLogic { get; set; } = false;
+
+        /// <summary>红灯是否反转输出逻辑。</summary>
+        public bool? InvertRedLightLogic { get; set; } = null;
+
+        /// <summary>黄灯是否反转输出逻辑。</summary>
+        public bool? InvertYellowLightLogic { get; set; } = null;
+
+        /// <summary>绿灯是否反转输出逻辑。</summary>
+        public bool? InvertGreenLightLogic { get; set; } = null;
+
+        /// <summary>启动按钮灯是否反转输出逻辑。</summary>
+        public bool? InvertStartButtonLightLogic { get; set; } = null;
+
+        /// <summary>停止按钮灯是否反转输出逻辑。</summary>
+        public bool? InvertStopButtonLightLogic { get; set; } = null;
     }
 }
