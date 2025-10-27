@@ -261,7 +261,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             ct.ThrowIfCancellationRequested();
 
             var success = await Safe(async () => {
-                // 执行冷复位并检查返回值
+                // Execute cold reset and check return value
                 var rc = LTDMC.dmc_cool_reset(_cardNo);
                 if (rc != 0) {
                     throw new InvalidOperationException($"dmc_cool_reset failed, ret={rc}");
