@@ -478,9 +478,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             IReadOnlyList<IReadOnlyList<LeadshineBatchPdoOperations.BatchWriteRequest>> requests,
             CancellationToken ct = default) {
             
-            if (nodeIds == null || requests == null || nodeIds.Count != requests.Count) {
-                throw new ArgumentException("节点 ID 列表和请求列表长度必须一致");
-            }
+            if (nodeIds == null)
+                throw new ArgumentNullException(nameof(nodeIds));
+            if (requests == null)
+                throw new ArgumentNullException(nameof(requests));
+            if (nodeIds.Count != requests.Count)
+                throw new ArgumentException("节点 ID 列表和请求列表长度必须一致", nameof(nodeIds));
 
             var results = new Dictionary<ushort, LeadshineBatchPdoOperations.BatchWriteResult[]>();
 
