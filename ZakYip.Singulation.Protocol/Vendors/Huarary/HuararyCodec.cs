@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Core.Utils;
 using ZakYip.Singulation.Protocol.Abstractions;
 
 namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
@@ -41,14 +42,11 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             if (ctrl != HuararyControl.CtrlSpeed) return false;
 
             // 长度一致性
-            var len = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(2, 2));
+            var len = ByteUtils.ReadUInt16LittleEndian(frame.Slice(2, 2));
             if (len != frame.Length) return false;
 
-            // XOR 校验（从起始到 payload 末尾）
-            var checksumIndex = frame.Length - 2;
-            byte xor = 0;
-            for (int i = 0; i < checksumIndex; i++) xor ^= frame[i];
-            if (xor != frame[checksumIndex]) return false;
+            // XOR 校验
+            if (!ByteUtils.VerifyXorChecksum(frame, frame.Length - 2)) return false;
 
             // 载荷 = [起始(1) 控制(1) 长度(2)] ... [XOR(1) 结束(1)]
             var payload = frame.Slice(4, frame.Length - 6);
@@ -57,7 +55,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             var n = payload.Length / 4;
             var all = new int[n];
             for (int i = 0, off = 0; i < n; i++, off += 4)
-                all[i] = BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4)); // mm/s
+                all[i] = ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4)); // mm/s
 
             var main = new int[Math.Min(_mainCount, n)];
             var eject = new int[Math.Min(_ejectCount, Math.Max(0, n - _mainCount))];
@@ -76,28 +74,25 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             if (frame[0] != HuararyControl.Start || frame[^1] != HuararyControl.End) return false;
             if (frame[1] != HuararyControl.CtrlPos) return false;
 
-            var len = BinaryPrimitives.ReadUInt16LittleEndian(frame.Slice(2, 2));
+            var len = ByteUtils.ReadUInt16LittleEndian(frame.Slice(2, 2));
             if (len != frame.Length) return false;
 
-            var checksumIndex = frame.Length - 2;
-            byte xor = 0;
-            for (var i = 0; i < checksumIndex; i++) xor ^= frame[i];
-            if (xor != frame[checksumIndex]) return false;
+            if (!ByteUtils.VerifyXorChecksum(frame, frame.Length - 2)) return false;
 
             var payload = frame.Slice(4, frame.Length - 6);
             if (payload.Length < 4) return false;
 
             var off = 0;
-            var count = BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4)); off += 4;
+            var count = ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4)); off += 4;
 
             var list = new List<ParcelPose>(count);
             for (var i = 0; i < count; i++) {
                 if (off + 5 * 4 > payload.Length) break;
-                var x = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
-                var y = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
-                var l = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
-                var w = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
-                var a = BitConverter.Int32BitsToSingle(BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var x = ByteUtils.Int32BitsToSingle(ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var y = ByteUtils.Int32BitsToSingle(ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var l = ByteUtils.Int32BitsToSingle(ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var w = ByteUtils.Int32BitsToSingle(ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
+                var a = ByteUtils.Int32BitsToSingle(ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4))); off += 4;
                 list.Add(new ParcelPose(x, y, l, w, a));
             }
 
@@ -151,11 +146,9 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             span[1] = HuararyControl.CtrlModeSpeed;
             span[2] = 0x0B; span[3] = 0x00;
             span[4] = mode;
-            BinaryPrimitives.WriteUInt16LittleEndian(span.Slice(5, 2), maxMmps);
-            BinaryPrimitives.WriteUInt16LittleEndian(span.Slice(7, 2), minMmps);
-            byte xor = 0;
-            for (var i = 0; i < 9; i++) xor ^= span[i];
-            span[9] = xor;
+            ByteUtils.WriteUInt16LittleEndian(span.Slice(5, 2), maxMmps);
+            ByteUtils.WriteUInt16LittleEndian(span.Slice(7, 2), minMmps);
+            span[9] = ByteUtils.ComputeXorChecksum(span[..9]);
             span[10] = HuararyControl.End;
             writer.Advance(11);
             return 11;
@@ -172,11 +165,10 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             span[0] = HuararyControl.Start;
             span[1] = HuararyControl.CtrlSpacing;
             span[2] = 0x0A; span[3] = 0x00;
-            BinaryPrimitives.WriteUInt16LittleEndian(span.Slice(4, 2), spacingMm);
+            ByteUtils.WriteUInt16LittleEndian(span.Slice(4, 2), spacingMm);
             span[6] = 0x02; // 分离模式
             span[7] = 0x00; // 备用
-            byte xor = 0; for (var i = 0; i < 8; i++) xor ^= span[i];
-            span[8] = xor;
+            span[8] = ByteUtils.ComputeXorChecksum(span[..8]);
             span[9] = HuararyControl.End;
             writer.Advance(10);
             return 10;
@@ -204,10 +196,9 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             span[1] = HuararyControl.CtrlSetParams;
             span[2] = 0x0A; span[3] = 0x00;
             span[4] = ejectCount;
-            BinaryPrimitives.WriteUInt16LittleEndian(span.Slice(5, 2), ejectMmps);
+            ByteUtils.WriteUInt16LittleEndian(span.Slice(5, 2), ejectMmps);
             span[7] = autoStartDelaySec;
-            byte xor = 0; for (var i = 0; i < 8; i++) xor ^= span[i];
-            span[8] = xor;
+            span[8] = ByteUtils.ComputeXorChecksum(span[..8]);
             span[9] = HuararyControl.End;
             writer.Advance(10);
             return 10;
@@ -298,8 +289,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
             span[1] = ctrl;
             span[2] = 0x0A; span[3] = 0x00; // 长度=10
             span[4] = 0x00; span[5] = 0x00; span[6] = 0x00; span[7] = arg;
-            byte xor = 0; for (var i = 0; i < 8; i++) xor ^= span[i];
-            span[8] = xor;
+            span[8] = ByteUtils.ComputeXorChecksum(span[..8]);
             span[9] = HuararyControl.End;
             writer.Advance(10);
             return 10;
