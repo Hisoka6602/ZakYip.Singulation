@@ -149,20 +149,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public async Task WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default) {
             await ThrottleAsync(ct);
 
-            // 取 PPR（带缓存）
-            var ppr = await GetPprCachedAsync(ct);
-            if (ppr <= 0) {
-                var errMsg = "PPR 未初始化，无法执行速度转换。请先调用 EnableAsync() 或确保驱动器正常连接。";
-                SetError(-1, errMsg);
-                OnAxisFaulted(new InvalidOperationException(errMsg));
-                return;
-            }
-
-            // 计算脉冲频率 (pps)：0x60FF 寄存器要求单位为 counts/s
-            var pps = AxisRpm.MmPerSecToPps(mmPerSec, _opts.PulleyPitchDiameterMm, ppr, _opts.GearRatio, _opts.ScrewPitchMm);
-            Debug.WriteLine($"[WriteSpeed] mmPerSec={mmPerSec}, ppr={ppr}, pps={pps}");
+            // 将线速度 (mm/s) 转换为电机转速 (RPM)
+            // 0x60FF 寄存器要求单位为 RPM（与 0x606C ActualVelocity 一致）
+            var rpm = AxisRpm.FromMmPerSec(mmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
+            Debug.WriteLine($"[WriteSpeed] mmPerSec={mmPerSec}, rpm={rpm.Value}");
             
-            int deviceVal = (int)Math.Round(pps);
+            int deviceVal = (int)Math.Round(rpm.Value);
             if (_opts.IsReverse) deviceVal = -deviceVal;
             
             var ret = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, deviceVal);
@@ -176,10 +168,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// 设置速度模式下的加速度/减速度（单位：RPM/s）。
         /// <para>
         /// 典型实现：将 <c>0x6083</c>（Profile Acceleration）与 <c>0x6084</c>（Profile Deceleration）
-        /// 写为设备单位（优先 <b>counts/s²</b>，即 pps²），失败时退回现场比例系数。
+        /// 写为设备单位（RPM/s），与 0x60FF (TargetVelocity) 的 RPM 单位保持一致。
         /// </para>
         /// <remarks>
-        /// 数学：pps² = ( rpm/s ÷ 60 ) × PPR；若 PPR 未知，则使用 _accelTo6083 比例（兼容旧逻辑）。<br/>
         /// 写入类型通常为 U32（4字节，非负）；这里对负值一律量化为 0。
         /// </remarks>
         /// </summary>
@@ -208,27 +199,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     $"[AccelDecel] over-limit clamped: reqA={accelRpmPerSec} rpm/s, reqD={decelRpmPerSec} rpm/s → effA={effA} rpm/s, effD={effD} rpm/s (limits: A≤{_opts.MaxAccelRpmPerSec}, D≤{_opts.MaxDecelRpmPerSec})"));
             }
 
-            // 3) 量化到设备单位（优先 PPR → counts/s²；否则退化到 rpm/s 原样）
+            // 3) 量化到设备单位（RPM/s → U32）
             static uint ClampU32(decimal v) => v <= 0 ? 0u : (uint)Math.Min(uint.MaxValue, Math.Round(v));
 
-            var ppr = 0;
-            try { ppr = await GetPprCachedAsync(ct).ConfigureAwait(false); } catch { /* 忽略，退化路径 */ }
-
-            uint accDev, decDev;
-            if (ppr > 0) {
-                // pps² = ( rpm/s ÷ 60 ) × PPR
-                var accPps2 = (effA / 60.0m) * ppr;
-                var decPps2 = (effD / 60.0m) * ppr;
-                accDev = ClampU32(accPps2);
-                decDev = ClampU32(decPps2);
-            }
-            else {
-                // 退化：保持现场比例（rpm/s → 设备单位）
-                accDev = ClampU32(effA);
-                decDev = ClampU32(effD);
-                OnAxisFaulted(new InvalidOperationException(
-                    "[AccelDecel] PPR unavailable, degrading to raw rpm/s quantization."));
-            }
+            uint accDev = ClampU32(effA);
+            uint decDev = ClampU32(effD);
 
             // 4) 写寄存器（0x6083 / 0x6084），失败仅事件，不抛异常
             var r1 = WriteRxPdo(LeadshineProtocolMap.Index.ProfileAcceleration, accDev);
@@ -763,31 +738,20 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetErrorFromRet(string action, int ret) { LastErrorCode = ret; LastErrorMessage = $"{action} failed, ret={ret}"; }
 
-        private async ValueTask<bool> WriteTargetVelocityFromRpmAsync(decimal rpm, CancellationToken ct) {
+        private ValueTask<bool> WriteTargetVelocityFromRpmAsync(decimal rpm, CancellationToken ct) {
             var max = Math.Abs(_opts.MaxRpm);
             var targetRpm = Math.Max(-max, Math.Min(max, rpm));
 
-            int deviceVal;
-            int ppr = 0;
-            try { ppr = await GetPprCachedAsync(ct); } catch { /* 忽略 */ }
-
-            if (ppr > 0) {
-                //  改用 AxisRpm 的方法
-                var rpmVo = new AxisRpm(targetRpm);
-                deviceVal = (int)Math.Round(rpmVo.ToPulsePerSec(ppr));   // pps = (rpm/60)*PPR
-            }
-            else {
-                // 退化路径：保留旧比例
-                deviceVal = (int)Math.Round(targetRpm);
-            }
+            // 0x60FF 寄存器单位为 RPM，直接写入
+            int deviceVal = (int)Math.Round(targetRpm);
 
             if (_opts.IsReverse) deviceVal = -deviceVal;
 
             var ret = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, deviceVal);
-            if (ret != 0) { SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return false; }
+            if (ret != 0) { SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return ValueTask.FromResult(false); }
 
             _status = DriverStatus.Connected;
-            return true;
+            return ValueTask.FromResult(true);
         }
 
         /// <summary>获取至少 len 字节的线程本地缓冲。</summary>
