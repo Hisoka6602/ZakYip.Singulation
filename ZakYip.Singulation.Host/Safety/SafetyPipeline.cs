@@ -176,12 +176,10 @@ namespace ZakYip.Singulation.Host.Safety {
                     // 检测到启动IO变化时->检测当前状态是否运行中,如果是运行中或者报警则不做任何操作
                     if (_indicatorLightService != null) {
                         var currentState = _indicatorLightService.CurrentState;
-                        if (currentState == SystemState.Running) {
-                            _log.LogWarning("忽略启动请求：系统已处于运行中状态");
-                            return;
-                        }
-                        if (currentState == SystemState.Alarm) {
-                            _log.LogWarning("忽略启动请求：系统处于报警状态，请先复位");
+                        if (currentState == SystemState.Running || currentState == SystemState.Alarm) {
+                            _log.LogWarning(currentState == SystemState.Running
+                                ? "忽略启动请求：系统已处于运行中状态"
+                                : "忽略启动请求：系统处于报警状态，请先复位");
                             return;
                         }
                     }
