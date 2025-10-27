@@ -555,7 +555,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         }
 
         /// <summary>
-        /// Checks if the mechanical configuration is valid for linear speed conversion.
+        /// 检查机械配置是否有效，用于线速度转换。
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool HasValidMechanicsConfig() =>
