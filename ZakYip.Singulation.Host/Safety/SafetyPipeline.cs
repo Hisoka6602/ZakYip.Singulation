@@ -235,7 +235,8 @@ namespace ZakYip.Singulation.Host.Safety {
                     // 检测到停止IO变化时->检测当前状态是否已停止/准备中,如果是则不做任何操作
                     if (_indicatorLightService != null) {
                         var currentState = _indicatorLightService.CurrentState;
-                        if (currentState == SystemState.Stopped || currentState == SystemState.Ready) {
+                        bool isSystemInStoppedOrReadyState = currentState == SystemState.Stopped || currentState == SystemState.Ready;
+                        if (isSystemInStoppedOrReadyState) {
                             _log.LogInformation("忽略停止请求：系统已处于停止/准备状态");
                             return;
                         }
