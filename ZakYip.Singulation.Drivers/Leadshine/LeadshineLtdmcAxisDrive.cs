@@ -235,10 +235,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             var accPps2Load = Mmps2ToLoadPps2(accelMmPerSec2, lpr, ppr, _opts.GearRatio);
             var decPps2Load = Mmps2ToLoadPps2(decelMmPerSec2, lpr, ppr, _opts.GearRatio);
 
-            static uint ClampU32(decimal v) => v <= 0 ? 0u : (uint)Math.Min(uint.MaxValue, Math.Round(v));
-
-            var accDev = ClampU32(accPps2Load);
-            var decDev = ClampU32(decPps2Load);
+            var accDev = MathUtils.ClampToUInt32(accPps2Load);
+            var decDev = MathUtils.ClampToUInt32(decPps2Load);
 
             // —— 写寄存器（0x6083 / 0x6084）——
             var r1 = WriteRxPdo(LeadshineProtocolMap.Index.ProfileAcceleration, accDev);
@@ -286,9 +284,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             var loadAccelPps2 = _opts.GearRatio > 0m ? motorAccelPps2 / _opts.GearRatio : motorAccelPps2;
             var loadDecelPps2 = _opts.GearRatio > 0m ? motorDecelPps2 / _opts.GearRatio : motorDecelPps2;
 
-            static uint ClampU32(decimal v) => v <= 0 ? 0u : (uint)Math.Min(uint.MaxValue, Math.Round(v));
-            var accDev = ClampU32(loadAccelPps2);
-            var decDev = ClampU32(loadDecelPps2);
+            var accDev = MathUtils.ClampToUInt32(loadAccelPps2);
+            var decDev = MathUtils.ClampToUInt32(loadDecelPps2);
 
             // 4) 写寄存器（0x6083 / 0x6084）
             var r1 = WriteRxPdo(LeadshineProtocolMap.Index.ProfileAcceleration, accDev);
@@ -599,28 +596,28 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private short WriteRxPdoCore(ushort index, object value, byte subIndex = LeadshineProtocolMap.SubIndex.Root, bool suppressLog = false) {
             if (value is int i32) {
                 var buf = GetTxBuffer(4);
-                BinaryPrimitives.WriteInt32LittleEndian(buf, i32);
+                ByteUtils.WriteInt32LittleEndian(buf, i32);
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
                 if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {i32}", ret);
                 return ret;
             }
             if (value is uint u32) {
                 var buf = GetTxBuffer(4);
-                BinaryPrimitives.WriteUInt32LittleEndian(buf, u32);
+                ByteUtils.WriteUInt32LittleEndian(buf, u32);
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
                 if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {u32}", ret);
                 return ret;
             }
             if (value is short i16) {
                 var buf = GetTxBuffer(2);
-                BinaryPrimitives.WriteInt16LittleEndian(buf, i16);
+                ByteUtils.WriteInt16LittleEndian(buf, i16);
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
                 if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {i16}", ret);
                 return ret;
             }
             if (value is ushort u16) {
                 var buf = GetTxBuffer(2);
-                BinaryPrimitives.WriteUInt16LittleEndian(buf, u16);
+                ByteUtils.WriteUInt16LittleEndian(buf, u16);
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
                 if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {u16}", ret);
                 return ret;

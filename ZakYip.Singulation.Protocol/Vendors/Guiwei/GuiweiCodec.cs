@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Core.Utils;
 using ZakYip.Singulation.Protocol.Abstractions;
 
 namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
@@ -40,7 +41,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
             int n = payload.Length / 4;
             var all = new int[n];
             for (int i = 0, off = 0; i < n; i++, off += 4)
-                all[i] = BinaryPrimitives.ReadInt32LittleEndian(payload.Slice(off, 4)); // mm/s
+                all[i] = ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4)); // mm/s
 
             var main = new int[Math.Min(_mainCount, n)];
             var eject = new int[Math.Min(_ejectCount, Math.Max(0, n - _mainCount))];
