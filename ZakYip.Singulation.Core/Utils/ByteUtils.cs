@@ -173,11 +173,4 @@ public static class ByteUtils {
         BinaryPrimitives.WriteUInt16BigEndian(destination, value);
     }
 
-    /// <summary>
-    /// 将 Single（float）转换为字节数组的 Int32 位。
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static int SingleToInt32Bits(float value) {
-        return BitConverter.SingleToInt32Bits(value);
-    }
 }
