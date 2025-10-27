@@ -4,7 +4,10 @@ using System.Text;
 using System.Runtime.InteropServices;
 
 
-// 抑制厂商SDK结构体的未使用字段警告
+// 抑制厂商SDK结构体的未使用字段警告（CS0169）
+// 此文件来自雷赛LTDMC.dll的P/Invoke绑定代码，包含多个用于底层DLL互操作的结构体
+// 某些结构体字段（如struct_hs_cmp_info的start_pos、interval、count）由底层DLL直接访问，C#代码不引用
+// 在文件级别抑制警告，避免对每个结构体单独处理
 #pragma warning disable CS0169
 
 namespace csLTDMC //�����ռ����Ӧ�ó����޸�
