@@ -108,6 +108,33 @@ namespace ZakYip.Singulation.Host.Safety {
                 return Task.CompletedTask;
             }
 
+            // 启动时读取远程/本地模式 IO 状态并触发初始事件
+            if (_options.RemoteLocalModeBit >= 0 && _options.RemoteLocalModeBit <= 99) {
+                try {
+                    // ReadInputBit 返回 true 表示触发状态（考虑了 InvertRemoteLocalLogic）
+                    bool rawState = ReadInputBit(_options.RemoteLocalModeBit, _options.InvertRemoteLocalLogic ?? _options.InvertLogic);
+                    // RemoteLocalActiveHigh 决定高电平对应哪个模式：true=高电平为远程，false=高电平为本地
+                    bool isRemoteMode = _options.RemoteLocalActiveHigh ? rawState : !rawState;
+                    _lastRemoteLocalModeState = isRemoteMode;
+                    
+                    var modeText = isRemoteMode ? "远程模式" : "本地模式";
+                    _logger.LogInformation("启动时读取远程/本地模式 IO 状态：{Mode}", modeText);
+                    
+                    // 触发初始模式事件，让 SafetyPipeline 知道当前模式
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, $"启动时检测到{modeText}"));
+                }
+                catch (Exception ex) {
+                    _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 失败，默认为本地模式");
+                    _lastRemoteLocalModeState = false; // 默认本地模式
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(false, "启动时读取失败，默认为本地模式"));
+                }
+            }
+            else {
+                _logger.LogInformation("远程/本地模式 IO 未配置，默认为本地模式");
+                _lastRemoteLocalModeState = false; // 默认本地模式
+                RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(false, "未配置 IO，默认为本地模式"));
+            }
+
             _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             _pollingTask = Task.Run(() => PollingLoopAsync(_cts.Token), _cts.Token);
 
