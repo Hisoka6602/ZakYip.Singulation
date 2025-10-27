@@ -175,13 +175,6 @@ public static class MathUtils {
         return Max(Max(a, b), c);
     }
 
-    /// <summary>
-    /// 计算绝对值（decimal）。
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static decimal Abs(decimal value) {
-        return Math.Abs(value);
-    }
 
     /// <summary>
     /// 安全除法，避免除以零。
