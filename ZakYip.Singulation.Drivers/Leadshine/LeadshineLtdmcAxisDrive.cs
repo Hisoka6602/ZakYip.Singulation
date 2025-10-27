@@ -2,6 +2,7 @@
 using csLTDMC;
 using System.Linq;
 using System.Text;
+using System.Buffers;
 using System.Threading;
 using System.Diagnostics;
 using System.Buffers.Binary;
@@ -71,7 +72,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private readonly AxisHealthMonitor _health;
         private readonly Polly.ResiliencePipeline<short> _pdoPipe;
 
-        [ThreadStatic] private static byte[]? _tlsTxBuf8;
+        // 内存池优化：使用 ArrayPool 减少 GC 压力
+        private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
 
         public LeadshineLtdmcAxisDrive(DriverOptions opts) {
             _opts = opts;
@@ -595,39 +597,64 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         private short WriteRxPdoCore(ushort index, object value, byte subIndex = LeadshineProtocolMap.SubIndex.Root, bool suppressLog = false) {
             if (value is int i32) {
-                var buf = GetTxBuffer(4);
-                ByteUtils.WriteInt32LittleEndian(buf, i32);
-                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
-                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {i32}", ret);
-                return ret;
+                var buf = BufferPool.Rent(4);
+                try {
+                    ByteUtils.WriteInt32LittleEndian(buf, i32);
+                    var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
+                    if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {i32}", ret);
+                    return ret;
+                }
+                finally {
+                    BufferPool.Return(buf, clearArray: false);
+                }
             }
             if (value is uint u32) {
-                var buf = GetTxBuffer(4);
-                ByteUtils.WriteUInt32LittleEndian(buf, u32);
-                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
-                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {u32}", ret);
-                return ret;
+                var buf = BufferPool.Rent(4);
+                try {
+                    ByteUtils.WriteUInt32LittleEndian(buf, u32);
+                    var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
+                    if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {u32}", ret);
+                    return ret;
+                }
+                finally {
+                    BufferPool.Return(buf, clearArray: false);
+                }
             }
             if (value is short i16) {
-                var buf = GetTxBuffer(2);
-                ByteUtils.WriteInt16LittleEndian(buf, i16);
-                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
-                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {i16}", ret);
-                return ret;
+                var buf = BufferPool.Rent(2);
+                try {
+                    ByteUtils.WriteInt16LittleEndian(buf, i16);
+                    var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
+                    if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {i16}", ret);
+                    return ret;
+                }
+                finally {
+                    BufferPool.Return(buf, clearArray: false);
+                }
             }
             if (value is ushort u16) {
-                var buf = GetTxBuffer(2);
-                ByteUtils.WriteUInt16LittleEndian(buf, u16);
-                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
-                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {u16}", ret);
-                return ret;
+                var buf = BufferPool.Rent(2);
+                try {
+                    ByteUtils.WriteUInt16LittleEndian(buf, u16);
+                    var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
+                    if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {u16}", ret);
+                    return ret;
+                }
+                finally {
+                    BufferPool.Return(buf, clearArray: false);
+                }
             }
             if (value is byte b8) {
-                var buf = GetTxBuffer(1);
-                buf[0] = b8;
-                var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 8, buf);
-                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 8 , {b8}", ret);
-                return ret;
+                var buf = BufferPool.Rent(1);
+                try {
+                    buf[0] = b8;
+                    var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 8, buf);
+                    if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 8 , {b8}", ret);
+                    return ret;
+                }
+                finally {
+                    BufferPool.Return(buf, clearArray: false);
+                }
             }
 
             var bytes = value switch {
@@ -657,31 +684,39 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             }
 
             var byteLen = (bitLen + 7) / 8;
-            var buf = new byte[byteLen];
-            var ret = LTDMC.nmc_read_txpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, (ushort)bitLen, buf);
-            if (!suppressLog) OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", ret);
-            if (ret != 0) return ret;
+            var buf = BufferPool.Rent(byteLen);
+            try {
+                var ret = LTDMC.nmc_read_txpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, (ushort)bitLen, buf);
+                if (!suppressLog) OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", ret);
+                if (ret != 0) return ret;
 
-            object? boxed =
-                typeof(T) == typeof(byte) ? buf[0] :
-                typeof(T) == typeof(sbyte) ? unchecked((sbyte)buf[0]) :
-                typeof(T) == typeof(ushort) ? BitConverter.ToUInt16(buf, 0) :
-                typeof(T) == typeof(short) ? BitConverter.ToInt16(buf, 0) :
-                typeof(T) == typeof(uint) ? BitConverter.ToUInt32(buf, 0) :
-                typeof(T) == typeof(int) ? BitConverter.ToInt32(buf, 0) :
-                typeof(T) == typeof(byte[]) ? buf : null;
+                object? boxed =
+                    typeof(T) == typeof(byte) ? buf[0] :
+                    typeof(T) == typeof(sbyte) ? unchecked((sbyte)buf[0]) :
+                    typeof(T) == typeof(ushort) ? BitConverter.ToUInt16(buf, 0) :
+                    typeof(T) == typeof(short) ? BitConverter.ToInt16(buf, 0) :
+                    typeof(T) == typeof(uint) ? BitConverter.ToUInt32(buf, 0) :
+                    typeof(T) == typeof(int) ? BitConverter.ToInt32(buf, 0) :
+                    // When T is byte[], we return a new array copy for safety.
+                    // Previous behavior may have returned the rented buffer directly, but this is unsafe with ArrayPool.
+                    // Callers expecting the original buffer reference may be affected by this change.
+                    typeof(T) == typeof(byte[]) ? buf.AsSpan(0, byteLen).ToArray() : null;
 
-            if (boxed is null) {
-                OnAxisFaulted(new InvalidOperationException($"Unsupported target type {typeof(T).Name} for read 0x{index:X4}."));
-                return -2;
+                if (boxed is null) {
+                    OnAxisFaulted(new InvalidOperationException($"Unsupported target type {typeof(T).Name} for read 0x{index:X4}."));
+                    return -2;
+                }
+
+                value = (T)boxed;
+
+                if (!suppressLog) OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", 0,
+                    note: $"decoded={boxed}");
+
+                return 0;
             }
-
-            value = (T)boxed;
-
-            if (!suppressLog) OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", 0,
-                note: $"decoded={boxed}");
-
-            return 0;
+            finally {
+                BufferPool.Return(buf, clearArray: false);
+            }
         }
 
         // ---- 事件广播：逐订阅者、非阻塞、与调用方隔离 ----
@@ -770,17 +805,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetErrorFromRet(string action, int ret) { LastErrorCode = ret; LastErrorMessage = $"{action} failed, ret={ret}"; }
-
-        // 线程本地发送缓冲
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static byte[] GetTxBuffer(int len) {
-            var buf = _tlsTxBuf8;
-            if (buf == null || buf.Length < len) {
-                buf = new byte[Math.Max(8, len)];
-                _tlsTxBuf8 = buf;
-            }
-            return buf;
-        }
 
         // —— 便捷事件触发 ——
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

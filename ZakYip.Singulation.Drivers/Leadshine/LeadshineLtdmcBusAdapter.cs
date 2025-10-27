@@ -463,5 +463,92 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         }
 
         #endregion 安全执行工具方法
+
+        #region 批量操作优化方法
+
+        /// <summary>
+        /// 批量写入多个轴的 RxPDO，用于提升批量控制性能。
+        /// </summary>
+        /// <param name="nodeIds">节点 ID 列表</param>
+        /// <param name="requests">每个节点的批量写入请求</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>批量操作结果字典（键为节点 ID）</returns>
+        public async Task<Dictionary<ushort, LeadshineBatchPdoOperations.BatchWriteResult[]>> BatchWriteMultipleAxesAsync(
+            IReadOnlyList<ushort> nodeIds,
+            IReadOnlyList<IReadOnlyList<LeadshineBatchPdoOperations.BatchWriteRequest>> requests,
+            CancellationToken ct = default) {
+            
+            if (nodeIds == null)
+                throw new ArgumentNullException(nameof(nodeIds));
+            if (requests == null)
+                throw new ArgumentNullException(nameof(requests));
+            if (nodeIds.Count != requests.Count)
+                throw new ArgumentException("节点 ID 列表和请求列表长度必须一致", nameof(nodeIds));
+
+            var results = new Dictionary<ushort, LeadshineBatchPdoOperations.BatchWriteResult[]>();
+
+            // 并行处理多个轴的批量写入
+            var tasks = new Task<(ushort nodeId, LeadshineBatchPdoOperations.BatchWriteResult[] result)>[nodeIds.Count];
+            
+            for (int i = 0; i < nodeIds.Count; i++) {
+                var nodeId = nodeIds[i];
+                var request = requests[i];
+                tasks[i] = Task.Run(async () => {
+                    var result = await LeadshineBatchPdoOperations.BatchWriteRxPdoAsync(
+                        _cardNo, _portNo, nodeId, request, ct).ConfigureAwait(false);
+                    return (nodeId, result);
+                }, ct);
+            }
+
+            var allResults = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            foreach (var (nodeId, result) in allResults) {
+                results[nodeId] = result;
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// 批量读取多个轴的 TxPDO，用于提升批量状态查询性能。
+        /// </summary>
+        /// <param name="nodeIds">节点 ID 列表</param>
+        /// <param name="requests">每个节点的批量读取请求</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>批量操作结果字典（键为节点 ID）</returns>
+        public async Task<Dictionary<ushort, LeadshineBatchPdoOperations.BatchReadResult[]>> BatchReadMultipleAxesAsync(
+            IReadOnlyList<ushort> nodeIds,
+            IReadOnlyList<IReadOnlyList<LeadshineBatchPdoOperations.BatchReadRequest>> requests,
+            CancellationToken ct = default) {
+            
+            if (nodeIds == null || requests == null || nodeIds.Count != requests.Count) {
+                throw new ArgumentException("节点 ID 列表和请求列表长度必须一致");
+            }
+
+            var results = new Dictionary<ushort, LeadshineBatchPdoOperations.BatchReadResult[]>();
+
+            // 并行处理多个轴的批量读取
+            var tasks = new Task<(ushort nodeId, LeadshineBatchPdoOperations.BatchReadResult[] result)>[nodeIds.Count];
+            
+            for (int i = 0; i < nodeIds.Count; i++) {
+                var nodeId = nodeIds[i];
+                var request = requests[i];
+                tasks[i] = Task.Run(async () => {
+                    var result = await LeadshineBatchPdoOperations.BatchReadTxPdoAsync(
+                        _cardNo, _portNo, nodeId, request, ct).ConfigureAwait(false);
+                    return (nodeId, result);
+                }, ct);
+            }
+
+            var allResults = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+            foreach (var (nodeId, result) in allResults) {
+                results[nodeId] = result;
+            }
+
+            return results;
+        }
+
+        #endregion 批量操作优化方法
     }
 }
