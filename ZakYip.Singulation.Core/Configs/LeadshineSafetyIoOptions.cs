@@ -29,19 +29,19 @@ namespace ZakYip.Singulation.Core.Configs {
         [Range(10, 10000, ErrorMessage = "轮询间隔必须在 10 到 10000 毫秒之间")]
         public int PollingIntervalMs { get; init; } = 50;
 
-        /// <summary>是否反转输入逻辑（用于常闭按键），默认 false。此属性作为默认值，可被各按键独立配置覆盖。</summary>
+        /// <summary>是否反转输入逻辑（设置触发电平）：false=高电平触发（常开按键），true=低电平触发（常闭按键）。此属性作为默认值，可被各按键独立配置覆盖。</summary>
         public bool InvertLogic { get; init; } = false;
 
-        /// <summary>急停按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
+        /// <summary>急停按键是否反转输入逻辑（设置触发电平）：false=高电平触发，true=低电平触发。null 时使用 InvertLogic 的值。</summary>
         public bool? InvertEmergencyStopLogic { get; init; } = null;
 
-        /// <summary>停止按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
+        /// <summary>停止按键是否反转输入逻辑（设置触发电平）：false=高电平触发，true=低电平触发。null 时使用 InvertLogic 的值。</summary>
         public bool? InvertStopLogic { get; init; } = null;
 
-        /// <summary>启动按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
+        /// <summary>启动按键是否反转输入逻辑（设置触发电平）：false=高电平触发，true=低电平触发。null 时使用 InvertLogic 的值。</summary>
         public bool? InvertStartLogic { get; init; } = null;
 
-        /// <summary>复位按键是否反转输入逻辑（用于常闭按键），null 时使用 InvertLogic 的值。</summary>
+        /// <summary>复位按键是否反转输入逻辑（设置触发电平）：false=高电平触发，true=低电平触发。null 时使用 InvertLogic 的值。</summary>
         public bool? InvertResetLogic { get; init; } = null;
 
         /// <summary>远程/本地模式切换输入位编号，-1 表示禁用。</summary>
