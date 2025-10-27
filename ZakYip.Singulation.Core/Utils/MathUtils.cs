@@ -202,13 +202,6 @@ public static class MathUtils {
         return (int)Math.Min(delay, maxDelayMs);
     }
 
-    /// <summary>
-    /// 舍入到指定小数位数。
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static decimal Round(decimal value, int decimals) {
-        return Math.Round(value, decimals);
-    }
 
     /// <summary>
     /// 向上舍入。
