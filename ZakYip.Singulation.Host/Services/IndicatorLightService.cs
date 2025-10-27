@@ -96,10 +96,6 @@ namespace ZakYip.Singulation.Host.Services {
             }
 
             // 安全检查：确保红灯亮时，黄灯和绿灯必须关闭
-            if (redOn) {
-                yellowOn = false;
-                greenOn = false;
-            }
 
             await Task.WhenAll(
                 SetLightAsync("红灯", _options.RedLightBit, redOn, ct),
