@@ -213,6 +213,17 @@ var host = Host.CreateDefaultBuilder(args)
             }
         });
         
+        // 注册指示灯服务
+        services.AddSingleton<IndicatorLightService>(sp => {
+            var logger = sp.GetRequiredService<ILogger<IndicatorLightService>>();
+            var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
+            var options = safetyStore.GetAsync().GetAwaiter().GetResult();
+            var busStore = sp.GetRequiredService<IControllerOptionsStore>();
+            var busDto = busStore.GetAsync().GetAwaiter().GetResult();
+            var cardNo = (ushort)busDto.Template.Card;
+            return new IndicatorLightService(logger, cardNo, options);
+        });
+        
         services.AddSingleton<ICommissioningSequence, DefaultCommissioningSequence>();
         services.AddSingleton<FrameGuard>();
         services.AddSingleton<IFrameGuard>(sp => sp.GetRequiredService<FrameGuard>());

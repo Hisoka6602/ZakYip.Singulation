@@ -123,7 +123,12 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             InvertResetLogic = d.InvertResetLogic,
             RemoteLocalModeBit = d.RemoteLocalModeBit,
             InvertRemoteLocalLogic = d.InvertRemoteLocalLogic,
-            RemoteLocalActiveHigh = d.RemoteLocalActiveHigh
+            RemoteLocalActiveHigh = d.RemoteLocalActiveHigh,
+            RedLightBit = d.RedLightBit,
+            YellowLightBit = d.YellowLightBit,
+            GreenLightBit = d.GreenLightBit,
+            StartButtonLightBit = d.StartButtonLightBit,
+            StopButtonLightBit = d.StopButtonLightBit
         };
 
         public static LeadshineSafetyIoOptionsDoc ToDoc(this LeadshineSafetyIoOptions o) => new() {
@@ -140,7 +145,12 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             InvertResetLogic = o.InvertResetLogic,
             RemoteLocalModeBit = o.RemoteLocalModeBit,
             InvertRemoteLocalLogic = o.InvertRemoteLocalLogic,
-            RemoteLocalActiveHigh = o.RemoteLocalActiveHigh
+            RemoteLocalActiveHigh = o.RemoteLocalActiveHigh,
+            RedLightBit = o.RedLightBit,
+            YellowLightBit = o.YellowLightBit,
+            GreenLightBit = o.GreenLightBit,
+            StartButtonLightBit = o.StartButtonLightBit,
+            StopButtonLightBit = o.StopButtonLightBit
         };
 
         // ====== 新增：IoStatusMonitorOptions ======
