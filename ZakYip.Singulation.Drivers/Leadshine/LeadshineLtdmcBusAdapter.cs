@@ -261,7 +261,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             ct.ThrowIfCancellationRequested();
 
             var success = await Safe(async () => {
-                LTDMC.dmc_cool_reset(_cardNo);
+                // 执行冷复位并检查返回值
+                var rc = LTDMC.dmc_cool_reset(_cardNo);
+                if (rc != 0) {
+                    throw new InvalidOperationException($"dmc_cool_reset failed, ret={rc}");
+                }
+                
                 await CloseAsync(ct).ConfigureAwait(false);
                 await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
                 await InitializeAsync(ct).ConfigureAwait(false);
