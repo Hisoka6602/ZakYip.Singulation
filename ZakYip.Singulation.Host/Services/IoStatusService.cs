@@ -191,7 +191,20 @@ namespace ZakYip.Singulation.Host.Services {
             try {
                 // 将 IoState 枚举转换为 API 需要的值
                 // IoState.High = 1, IoState.Low = 0 （枚举值已在定义时确保为 0 或 1）
-                ushort onOff = (ushort)state;
+                ushort onOff;
+                switch (state)
+                {
+                    case IoState.Low:
+                        onOff = 0;
+                        break;
+                    case IoState.High:
+                        onOff = 1;
+                        break;
+                    default:
+                        var errorMsg = $"无效的 IO 状态值: {state}";
+                        _logger.LogError(errorMsg);
+                        return (false, errorMsg);
+                }
 
                 _logger.LogInformation(
                     "准备写入输出 IO 位 {BitNo}，状态：{State} ({OnOff})",
