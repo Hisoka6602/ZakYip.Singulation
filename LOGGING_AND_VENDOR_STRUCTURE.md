@@ -176,6 +176,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine
 
 #### 步骤 1：创建目录结构
 
+将 `{VendorName}` 替换为实际厂商名称（如 Leadshine、Siemens 等）：
+
 ```bash
 # 配置实体目录
 mkdir -p ZakYip.Singulation.Infrastructure/Configs/Vendors/{VendorName}/Entities
@@ -187,7 +189,7 @@ mkdir -p ZakYip.Singulation.Infrastructure/Persistence/Vendors/{VendorName}
 
 #### 步骤 2：创建配置实体
 
-创建厂商特定的配置文档类：
+创建厂商特定的配置文档类（将 `{VendorName}` 替换为实际厂商名称）：
 
 ```csharp
 // ZakYip.Singulation.Infrastructure/Configs/Vendors/{VendorName}/Entities/{VendorName}OptionsDoc.cs
@@ -201,7 +203,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Vendors.{VendorName}.Entitie
 
 #### 步骤 3：创建存储实现
 
-创建厂商特定的 LiteDB 存储：
+创建厂商特定的 LiteDB 存储（将 `{VendorName}` 替换为实际厂商名称，`{vendorname}` 为小写形式）：
 
 ```csharp
 // ZakYip.Singulation.Infrastructure/Persistence/Vendors/{VendorName}/LiteDb{VendorName}Store.cs
@@ -212,7 +214,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence.Vendors.{VendorName} {
         private readonly ILiteCollection<{VendorName}OptionsDoc> _col;
         
         public LiteDb{VendorName}Store(ILiteDatabase db, ...) {
-            _col = db.GetCollection<{VendorName}OptionsDoc>("{vendor}_options");
+            // Collection 名称使用小写厂商名，例如 "leadshine_options"
+            _col = db.GetCollection<{VendorName}OptionsDoc>("{vendorname}_options");
             // 实现...
         }
     }
@@ -263,13 +266,13 @@ public static class ConfigMappings {
 
 #### 未来扩展（可选）
 
-如果需要为每个厂商使用独立数据库文件：
+如果需要为每个厂商使用独立数据库文件（将 `{VendorName}` 替换为实际厂商名称，`{vendorname}` 为小写形式）：
 
 ```csharp
 // 在 PersistenceServiceCollectionExtensions 中
 public static IServiceCollection AddLiteDb{VendorName}(
     this IServiceCollection services, 
-    string filePath = "data/vendors/{vendor}/{vendor}.db") {
+    string filePath = "data/vendors/{vendorname}/{vendorname}.db") {
     
     services.AddSingleton<ILiteDatabase>(sp => {
         var resolvedPath = Path.IsPathRooted(filePath)
