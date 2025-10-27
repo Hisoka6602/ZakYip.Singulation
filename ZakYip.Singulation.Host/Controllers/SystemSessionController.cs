@@ -2,9 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using ZakYip.Singulation.Host.Dto;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using ZakYip.Singulation.Host.Dto;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
@@ -31,7 +31,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// 删除当前运行会话资源，触发宿主应用优雅退出。
         /// 此操作会通知宿主停止运行并退出进程。
         /// 外部部署工具（如 Windows 服务管理器或 systemd）应配置为自动重启服务。
-        /// 
+        ///
         /// 注意：此操作是异步执行的，API 会立即返回 202 状态码，实际退出会在后台进行。
         /// </remarks>
         /// <param name="ct">取消令牌</param>
@@ -47,30 +47,37 @@ namespace ZakYip.Singulation.Host.Controllers {
         [Produces("application/json")]
         public ActionResult<ApiResponse<object>> DeleteCurrentSession(CancellationToken ct) {
             if (ct.IsCancellationRequested) {
+                // 本地化提示
                 return BadRequest(ApiResponse<object>.Invalid("请求已取消"));
             }
 
+            // 中文日志：收到关闭请求
             _logger.LogInformation("收到关闭请求，将在后台停止宿主应用。");
 
+            // 后台异步执行，彻底与请求线程解耦，防止异常影响调用方
             _ = Task.Run(async () => {
                 try {
-                    // 先触发优雅停止
-                    _logger.LogInformation("触发宿主优雅停止，2秒后强制退出。");
+                    // 中文日志：优雅停止
+                    _logger.LogInformation("触发宿主优雅停止，准备退出。");
                     _lifetime.StopApplication();
-                    
-                    // 等待最多2秒让应用优雅关闭
-                    await Task.Delay(2000);
-                    
-                    // 强制退出进程，退出码为1以触发Windows服务重启
-                    _logger.LogWarning("强制退出进程，退出码=1，触发服务重启");
+
+                    // 等待优雅退出完成（容忍时间，可按需调参）
+                    var gracefulWaitMs = 3000; // 3 秒容忍时间
+                    await Task.Delay(gracefulWaitMs).ConfigureAwait(false);
+
+                    // ——兜底：若进程仍未退出，则以非零码强制结束以触发服务恢复——
+                    // 若项目已注册 ForceNonZeroExitHostedService，则可删除以下强制退出段
+                    _logger.LogWarning("优雅停止未在 {WaitMs}ms 内完成，执行强制退出，退出码=1。", gracefulWaitMs);
                     Environment.Exit(1);
                 }
                 catch (Exception ex) {
-                    _logger.LogError(ex, "停止宿主时发生异常，强制退出。");
+                    // 中文日志：异常兜底，保证非零退出
+                    _logger.LogError(ex, "停止宿主时发生异常，将强制退出（退出码=1）。");
                     Environment.Exit(1);
                 }
             }, CancellationToken.None);
 
+            // 立即返回 202，提示后台正在处理
             return Accepted(ApiResponse<object>.Success(new { Accepted = true }, "服务正在准备退出"));
         }
     }

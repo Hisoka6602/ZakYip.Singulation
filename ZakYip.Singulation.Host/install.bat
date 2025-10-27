@@ -5,8 +5,9 @@ setlocal enabledelayedexpansion
 :: 配置区（按需修改）
 :: =========================
 set "serviceName=ZakYip.Singulation"
+set "serviceDisplayName=ZakYip.Singulation"  :: 可与 serviceName 不同；仅用于服务管理器显示
 set "serviceDescription=泽业单件分离服务（单件分离 Host）"
-:: 如需要依赖某个服务（示例：MySQL），取消下一行注释并改名：
+:: 如需要依赖某个服务（示例：MySQL），取消下一行注释并改名（多个用/分隔，如 MySQL80/W32Time）：
 :: set "dependService=MySQL80"
 
 :: 计算 EXE 路径（默认放在与本 bat 同目录）
@@ -46,9 +47,12 @@ if %errorlevel%==0 (
 )
 
 :: =========================
-:: 组装 create 参数
+:: 创建服务
 :: =========================
 set "createCmd=sc create "%serviceName%" binPath= "\"%exePath%\"" start= auto"
+:: 设置显示名（可选）
+set "createCmd=%createCmd% DisplayName= "%serviceDisplayName%""
+:: 依赖（可选）
 if defined dependService (
   set "createCmd=%createCmd% depend= %dependService%"
 )
@@ -64,14 +68,20 @@ if %errorlevel% neq 0 (
 :: 设置描述
 sc description "%serviceName%" "%serviceDescription%" >nul
 
+:: （可选）设置延迟自启（如需）
+:: sc config "%serviceName%" start= delayed-auto >nul
+
 :: =========================
 :: 失败自动恢复策略
 ::  - 60 秒内的失败计数窗口
-::  - 失败后 5 秒重启
+::  - 连续三次失败均在 5 秒后重启
+::  - 将“非崩溃/优雅退出”也视为失败（关键）
 :: =========================
-sc failure "%serviceName%" reset= 60 actions= restart/5000 >nul
-:: 可选：始终把失败视为需要恢复（不同系统版本可能无此命令）
-:: sc failureflag "%serviceName%" 1 >nul 2>&1
+sc failure "%serviceName%" reset= 60 actions= restart/5000/restart/5000/restart/5000 >nul
+sc failureflag "%serviceName%" 1 >nul 2>&1
+
+:: （可选）查询验证当前恢复配置
+sc qfailure "%serviceName%"
 
 :: =========================
 :: 启动服务
@@ -87,9 +97,12 @@ if %errorlevel% neq 0 (
 echo.
 echo [完成] 安装脚本执行结束：
 echo   - 服务名：%serviceName%
+echo   - 显示名：%serviceDisplayName%
 echo   - 路径：%exePath%
 echo   - 开机自启：是
-echo   - 失败自动重启：是（5 秒）
+echo   - 失败自动重启：是（5 秒 × 3 次；含非崩溃/优雅退出）
+echo.
+echo [提示] 若需维护时不重启，请暂时禁用服务或临时修改恢复策略。
 echo.
 pause
 endlocal
