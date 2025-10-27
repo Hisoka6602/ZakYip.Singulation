@@ -12,32 +12,82 @@ namespace ZakYip.Singulation.Host.Safety {
 
     /// <summary>
     /// 雷赛硬件安全 IO 模块：通过控制器 IO 端口读取物理按键状态。
-    /// 支持急停、启动、停止、复位四个物理按键。
+    /// 支持急停、启动、停止、复位四个物理按键，以及远程/本地模式切换开关。
     /// </summary>
     public sealed class LeadshineSafetyIoModule : ISafetyIoModule, IDisposable {
+        /// <summary>日志记录器。</summary>
         private readonly ILogger<LeadshineSafetyIoModule> _logger;
+        
+        /// <summary>雷赛控制器卡号。</summary>
         private readonly ushort _cardNo;
+        
+        /// <summary>安全 IO 配置选项。</summary>
         private LeadshineSafetyIoOptions _options;
+        
+        /// <summary>配置选项的线程锁。</summary>
         private readonly object _optionsLock = new();
+        
+        /// <summary>取消令牌源。</summary>
         private CancellationTokenSource? _cts;
+        
+        /// <summary>轮询任务。</summary>
         private Task? _pollingTask;
+        
+        /// <summary>是否已释放资源。</summary>
         private bool _disposed;
 
         // 按键状态缓存（用于边沿检测）
+        /// <summary>上次急停按键状态。</summary>
         private bool _lastEmergencyStopState;
+        
+        /// <summary>上次停止按键状态。</summary>
         private bool _lastStopState;
+        
+        /// <summary>上次启动按键状态。</summary>
         private bool _lastStartState;
+        
+        /// <summary>上次复位按键状态。</summary>
         private bool _lastResetState;
+        
+        /// <summary>上次远程/本地模式状态。</summary>
         private bool _lastRemoteLocalModeState;
 
+        /// <summary>
+        /// 获取模块名称。
+        /// </summary>
         public string Name => "leadshine-hardware-io";
 
+        /// <summary>
+        /// 当检测到急停按键按下时触发的事件。
+        /// </summary>
         public event EventHandler<SafetyTriggerEventArgs>? EmergencyStop;
+        
+        /// <summary>
+        /// 当检测到停止按键按下时触发的事件。
+        /// </summary>
         public event EventHandler<SafetyTriggerEventArgs>? StopRequested;
+        
+        /// <summary>
+        /// 当检测到启动按键按下时触发的事件。
+        /// </summary>
         public event EventHandler<SafetyTriggerEventArgs>? StartRequested;
+        
+        /// <summary>
+        /// 当检测到复位按键按下时触发的事件。
+        /// </summary>
         public event EventHandler<SafetyTriggerEventArgs>? ResetRequested;
+        
+        /// <summary>
+        /// 当检测到远程/本地模式切换时触发的事件。
+        /// </summary>
         public event EventHandler<RemoteLocalModeChangedEventArgs>? RemoteLocalModeChanged;
 
+        /// <summary>
+        /// 初始化 <see cref="LeadshineSafetyIoModule"/> 类的新实例。
+        /// </summary>
+        /// <param name="logger">日志记录器。</param>
+        /// <param name="cardNo">雷赛控制器卡号。</param>
+        /// <param name="options">安全 IO 配置选项。</param>
         public LeadshineSafetyIoModule(
             ILogger<LeadshineSafetyIoModule> logger,
             ushort cardNo,
@@ -47,6 +97,11 @@ namespace ZakYip.Singulation.Host.Safety {
             _options = options;
         }
 
+        /// <summary>
+        /// 启动安全 IO 模块的轮询循环。
+        /// </summary>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>表示异步操作的任务。</returns>
         public Task StartAsync(CancellationToken ct) {
             if (_pollingTask is not null) {
                 _logger.LogWarning("安全 IO 模块已在运行中");
@@ -63,6 +118,11 @@ namespace ZakYip.Singulation.Host.Safety {
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// 轮询循环，持续读取 IO 端口状态并触发相应事件。
+        /// </summary>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>表示异步操作的任务。</returns>
         private async Task PollingLoopAsync(CancellationToken ct) {
             while (!ct.IsCancellationRequested) {
                 try {
@@ -150,6 +210,12 @@ namespace ZakYip.Singulation.Host.Safety {
             _logger.LogInformation("雷赛安全 IO 模块已停止");
         }
 
+        /// <summary>
+        /// 读取指定输入位的状态。
+        /// </summary>
+        /// <param name="bitNo">输入位编号。</param>
+        /// <param name="invertLogic">是否反转逻辑（true=低电平触发，false=高电平触发）。</param>
+        /// <returns>按键是否处于触发状态。true=按下，false=未按下。</returns>
         private bool ReadInputBit(int bitNo, bool invertLogic) {
             try {
                 // 调用雷赛 API 读取输入位
@@ -187,6 +253,9 @@ namespace ZakYip.Singulation.Host.Safety {
             }
         }
 
+        /// <summary>
+        /// 释放模块占用的资源。
+        /// </summary>
         public void Dispose() {
             if (_disposed) return;
 
