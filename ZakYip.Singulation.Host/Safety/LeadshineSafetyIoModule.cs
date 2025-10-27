@@ -71,48 +71,48 @@ namespace ZakYip.Singulation.Host.Safety {
                         currentOptions = _options;
                     }
 
-                    // 读取急停按键
-                    if (currentOptions.EmergencyStopBit >= 0) {
+                    // 读取急停按键（如果端口号大于99或小于0则不检测）
+                    if (currentOptions.EmergencyStopBit >= 0 && currentOptions.EmergencyStopBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.EmergencyStopBit, currentOptions.InvertEmergencyStopLogic ?? currentOptions.InvertLogic);
                         if (currentState && !_lastEmergencyStopState) {
-                            _logger.LogWarning("检测到急停按键按下");
+                            _logger.LogWarning("【IO端点调用】检测到急停按键按下 - IO端口：IN{Port}", currentOptions.EmergencyStopBit);
                             EmergencyStop?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.EmergencyStop, "物理急停按键"));
                         }
                         _lastEmergencyStopState = currentState;
                     }
 
-                    // 读取停止按键
-                    if (currentOptions.StopBit >= 0) {
+                    // 读取停止按键（如果端口号大于99或小于0则不检测）
+                    if (currentOptions.StopBit >= 0 && currentOptions.StopBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.StopBit, currentOptions.InvertStopLogic ?? currentOptions.InvertLogic);
                         if (currentState && !_lastStopState) {
-                            _logger.LogInformation("检测到停止按键按下");
+                            _logger.LogInformation("【IO端点调用】检测到停止按键按下 - IO端口：IN{Port}", currentOptions.StopBit);
                             StopRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StopButton, "物理停止按键"));
                         }
                         _lastStopState = currentState;
                     }
 
-                    // 读取启动按键
-                    if (currentOptions.StartBit >= 0) {
+                    // 读取启动按键（如果端口号大于99或小于0则不检测）
+                    if (currentOptions.StartBit >= 0 && currentOptions.StartBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.StartBit, currentOptions.InvertStartLogic ?? currentOptions.InvertLogic);
                         if (currentState && !_lastStartState) {
-                            _logger.LogInformation("检测到启动按键按下");
+                            _logger.LogInformation("【IO端点调用】检测到启动按键按下 - IO端口：IN{Port}", currentOptions.StartBit);
                             StartRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StartButton, "物理启动按键"));
                         }
                         _lastStartState = currentState;
                     }
 
-                    // 读取复位按键
-                    if (currentOptions.ResetBit >= 0) {
+                    // 读取复位按键（如果端口号大于99或小于0则不检测）
+                    if (currentOptions.ResetBit >= 0 && currentOptions.ResetBit <= 99) {
                         bool currentState = ReadInputBit(currentOptions.ResetBit, currentOptions.InvertResetLogic ?? currentOptions.InvertLogic);
                         if (currentState && !_lastResetState) {
-                            _logger.LogInformation("检测到复位按键按下");
+                            _logger.LogInformation("【IO端点调用】检测到复位按键按下 - IO端口：IN{Port}", currentOptions.ResetBit);
                             ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.ResetButton, "物理复位按键"));
                         }
                         _lastResetState = currentState;
                     }
 
-                    // 读取远程/本地模式
-                    if (currentOptions.RemoteLocalModeBit >= 0) {
+                    // 读取远程/本地模式（如果端口号大于99或小于0则不检测）
+                    if (currentOptions.RemoteLocalModeBit >= 0 && currentOptions.RemoteLocalModeBit <= 99) {
                         bool rawState = ReadInputBit(currentOptions.RemoteLocalModeBit, currentOptions.InvertRemoteLocalLogic ?? currentOptions.InvertLogic);
                         // 根据 RemoteLocalActiveHigh 配置决定高电平对应的模式
                         bool isRemoteMode = currentOptions.RemoteLocalActiveHigh ? rawState : !rawState;
