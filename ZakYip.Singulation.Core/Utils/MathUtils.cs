@@ -203,13 +203,6 @@ public static class MathUtils {
     }
 
 
-    /// <summary>
-    /// 向上舍入。
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static decimal Ceiling(decimal value) {
-        return Math.Ceiling(value);
-    }
 
     /// <summary>
     /// 向下舍入。
