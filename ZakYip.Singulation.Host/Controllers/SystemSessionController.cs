@@ -55,6 +55,8 @@ namespace ZakYip.Singulation.Host.Controllers {
             _ = Task.Run(() => {
                 try {
                     _logger.LogInformation("触发宿主停止。");
+                    // 设置退出码为 1，以触发 Windows 服务的自动重启机制
+                    Environment.ExitCode = 1;
                     _lifetime.StopApplication();
                 }
                 catch (Exception ex) {
