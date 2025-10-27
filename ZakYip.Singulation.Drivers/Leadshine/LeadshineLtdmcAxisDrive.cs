@@ -24,14 +24,16 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
     /// 雷赛 LTDMC 实机轴驱动（EtherCAT）。
     /// - 通过 nmc_write_rxpdo / nmc_read_txpdo 直写/直读 PDO。
     /// - 通过 nmc_set_axis_contrlword 走 402 状态机使能。
-    /// - 目标速度写 0x60FF（INT32），状态字读 0x6041。
-    /// - 端口固定 2；从站 NodeID = 1000 + nodeIndex。:contentReference[oaicite:4]{index=4} :contentReference[oaicite:5]{index=5}
+    /// - 目标速度写 0x60FF（INT32，单位：pps，负载侧脉冲/秒）。
+    /// - 加减速度写 0x6083/0x6084（U32，单位：pps²，负载侧脉冲/秒²）。
+    /// - 状态字读 0x6041；实际速度读 0x606C（INT32，单位：pps，负载侧脉冲/秒）。
+    /// - 端口固定 2；从站 NodeID = 1000 + nodeIndex。
     /// </summary>
     public sealed class LeadshineLtdmcAxisDrive : IAxisDrive {
         private readonly DriverOptions _opts;
         private volatile DriverStatus _status = DriverStatus.Disconnected;
 
-        // —— 全局 PPR（只在 Enable 时读取一次）—— ★ 新增
+        // —— 全局 PPR（只在 Enable 时读取一次）—— ★ 必须成功读取才能写速度
         private static int _sPpr;        // 0 表示未知
 
         private static bool _sPprReady;  // 读取成功的一次性门闩
@@ -140,6 +142,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         [System.Obsolete("默认单位为 mm/s；建议改用 WriteSpeedAsync(mmPerSec)。此方法仅为兼容入口。")]
         public async ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default) {
             await ThrottleAsync(ct);
+            
+            // ★ 检查 PPR 是否已读取
+            if (!Volatile.Read(ref _sPprReady) || Volatile.Read(ref _sPpr) <= 0) {
+                OnAxisFaulted(new InvalidOperationException("写速度失败：PPR 未初始化，请先执行 Enable"));
+                return;
+            }
+            
             var rpmAsync = await WriteTargetVelocityFromRpmAsync(rpm.Value, ct);
             if (rpmAsync) {
                 LastTargetMmps = rpm.ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
@@ -149,12 +158,25 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public async Task WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default) {
             await ThrottleAsync(ct);
 
+            // ★ 检查 PPR 是否已读取
+            if (!Volatile.Read(ref _sPprReady) || Volatile.Read(ref _sPpr) <= 0) {
+                OnAxisFaulted(new InvalidOperationException("写速度失败：PPR 未初始化，请先执行 Enable"));
+                return;
+            }
+
+            var ppr = Volatile.Read(ref _sPpr);
+            
             // 将线速度 (mm/s) 转换为电机转速 (RPM)
-            // 0x60FF 寄存器要求单位为 RPM（与 0x606C ActualVelocity 一致）
             var rpm = AxisRpm.FromMmPerSec(mmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             Debug.WriteLine($"[WriteSpeed] mmPerSec={mmPerSec}, rpm={rpm.Value}");
             
-            int deviceVal = (int)Math.Round(rpm.Value);
+            // rpm → pps(电机侧 pps)
+            var motorPps = rpm.Value / 60m * ppr;
+            
+            // 负载侧 pps = 电机侧 pps ÷ GearRatio
+            var loadPps = _opts.GearRatio > 0m ? motorPps / _opts.GearRatio : motorPps;
+            
+            var deviceVal = (int)Math.Round(loadPps);
             if (_opts.IsReverse) deviceVal = -deviceVal;
             
             var ret = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, deviceVal);
@@ -167,16 +189,24 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// <summary>
         /// 设置速度模式下的加速度/减速度（单位：RPM/s）。
         /// <para>
-        /// 典型实现：将 <c>0x6083</c>（Profile Acceleration）与 <c>0x6084</c>（Profile Deceleration）
-        /// 写为设备单位（RPM/s），与 0x60FF (TargetVelocity) 的 RPM 单位保持一致。
+        /// 实现：将 <c>0x6083</c>（Profile Acceleration）与 <c>0x6084</c>（Profile Deceleration）
+        /// 写为设备单位（pps²），即将 rpm/s 转换为 pps²：pps² = (rpm/s) / 60 * PPR / GearRatio。
         /// </para>
         /// <remarks>
-        /// 写入类型通常为 U32（4字节，非负）；这里对负值一律量化为 0。
+        /// 写入类型为 U32（4字节，非负）；对负值一律量化为 0。
         /// </remarks>
         /// </summary>
         public async Task SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec,
             CancellationToken ct = default) {
             await ThrottleAsync(ct);
+
+            // ★ 检查 PPR 是否已读取
+            if (!Volatile.Read(ref _sPprReady) || Volatile.Read(ref _sPpr) <= 0) {
+                OnAxisFaulted(new InvalidOperationException("写加减速度失败：PPR 未初始化，请先执行 Enable"));
+                return;
+            }
+
+            var ppr = Volatile.Read(ref _sPpr);
 
             // 记录原始请求值（用于事件说明）
             var reqA = accelRpmPerSec;
@@ -188,7 +218,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             if (decelRpmPerSec < 0) { decelRpmPerSec = 0; intercepted = true; }
             if (intercepted) {
                 OnAxisFaulted(new InvalidOperationException(
-                    $"[AccelDecel] negative clamped: reqA={reqA} rpm/s, reqD={reqD} rpm/s → effA={accelRpmPerSec} rpm/s, effD={decelRpmPerSec} rpm/s"));
+                    $"[加减速度] 负值已截断: reqA={reqA} rpm/s, reqD={reqD} rpm/s → effA={accelRpmPerSec} rpm/s, effD={decelRpmPerSec} rpm/s"));
             }
 
             // 2) 限幅（以 rpm/s 为口径），超限也上报一次
@@ -196,14 +226,21 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             var effD = Math.Min(_opts.MaxDecelRpmPerSec, decelRpmPerSec);
             if (effA != accelRpmPerSec || effD != decelRpmPerSec) {
                 OnAxisFaulted(new InvalidOperationException(
-                    $"[AccelDecel] over-limit clamped: reqA={accelRpmPerSec} rpm/s, reqD={decelRpmPerSec} rpm/s → effA={effA} rpm/s, effD={effD} rpm/s (limits: A≤{_opts.MaxAccelRpmPerSec}, D≤{_opts.MaxDecelRpmPerSec})"));
+                    $"[加减速度] 超限值已截断: reqA={accelRpmPerSec} rpm/s, reqD={decelRpmPerSec} rpm/s → effA={effA} rpm/s, effD={effD} rpm/s (limits: A≤{_opts.MaxAccelRpmPerSec}, D≤{_opts.MaxDecelRpmPerSec})"));
             }
 
-            // 3) 量化到设备单位（RPM/s → U32）
+            // 3) 换算到设备单位：rpm/s → pps²(电机侧) ÷ GearRatio → pps²(负载侧)
+            // pps² = (rpm/s) / 60 * PPR / GearRatio
+            var motorAccelPps2 = effA / 60m * ppr;
+            var motorDecelPps2 = effD / 60m * ppr;
+            
+            var loadAccelPps2 = _opts.GearRatio > 0m ? motorAccelPps2 / _opts.GearRatio : motorAccelPps2;
+            var loadDecelPps2 = _opts.GearRatio > 0m ? motorDecelPps2 / _opts.GearRatio : motorDecelPps2;
+            
             static uint ClampU32(decimal v) => v <= 0 ? 0u : (uint)Math.Min(uint.MaxValue, Math.Round(v));
 
-            uint accDev = ClampU32(effA);
-            uint decDev = ClampU32(effD);
+            var accDev = ClampU32(loadAccelPps2);
+            var decDev = ClampU32(loadDecelPps2);
 
             // 4) 写寄存器（0x6083 / 0x6084），失败仅事件，不抛异常
             var r1 = WriteRxPdo(LeadshineProtocolMap.Index.ProfileAcceleration, accDev);
@@ -221,16 +258,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         /// <summary>
         /// 设置速度模式下的加速度/减速度（单位：mm/s²）。
-        /// 内部换算为 RPM/s，再调用主实现写入 0x6083/0x6084。
-        /// 数学公式：
-        ///   rpm/s = ( a(m/s²) / (π·D(m)) ) × 60
-        /// 其中 a(m/s²) = a(mm/s²) / 1000。
+        /// 内部换算为 RPM/s，再调用主实现写入 0x6083/0x6084（转换为 pps²）。
         /// </summary>
         public async ValueTask SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec, CancellationToken ct = default) {
             await ThrottleAsync(ct);
 
             if (!HasValidMechanicsConfig()) {
-                OnAxisFaulted(new InvalidOperationException("mechanics parameters must provide ScrewPitchMm or PulleyPitchDiameterMm"));
+                OnAxisFaulted(new InvalidOperationException("机械参数必须提供 ScrewPitchMm 或 PulleyPitchDiameterMm"));
                 return;
             }
 
@@ -255,7 +289,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         public async Task<bool> PingAsync(CancellationToken ct = default) {
             if (!EnsureNativeLibLoaded()) { _status = DriverStatus.Degraded; return false; }
-            var ret = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort _);
+            // 循环读 IO 不记日志，suppressLog=true
+            var ret = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort _, suppressLog: true);
             if (ret != 0) {
                 SetErrorFromRet("read 0x6041 (StatusWord)", ret);
                 _status = DriverStatus.Degraded;
@@ -265,27 +300,36 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             _status = DriverStatus.Connected;
 
-            ret = ReadTxPdo(LeadshineProtocolMap.Index.ActualVelocity, out int actualRpm);
+            ret = ReadTxPdo(LeadshineProtocolMap.Index.ActualVelocity, out int actualPps, suppressLog: true);
             if (ret != 0) {
                 SetErrorFromRet("read 0x606C (ActualVelocity)", ret);
                 return false;
             }
 
-            // 读实际速度（RPM）并发布反馈
+            // 读实际速度（pps，负载侧）并发布反馈
             var stamp = Stopwatch.GetTimestamp();
 
             // 方向在阈值判断中只应用一次
-            var rpmVal = _opts.IsReverse ? -actualRpm : actualRpm;
+            var loadPpsVal = _opts.IsReverse ? -actualPps : actualPps;
+
+            // 转换：负载侧 pps → 电机侧 pps → rpm → mm/s
+            var ppr = 0;
+            try { ppr = await GetPprCachedAsync(ct).ConfigureAwait(false); } catch { /* 忽略：无 PPR 仍可发布反馈 */ }
+            
+            var rpmVal = 0m;
+            if (ppr > 0) {
+                // 负载侧 pps → 电机侧 pps
+                var motorPps = loadPpsVal * _opts.GearRatio;
+                // 电机侧 pps → rpm
+                rpmVal = motorPps * 60m / ppr;
+            }
 
             // 用 mm/s 做一等公民的节流/阈值判断
             var mmps = new AxisRpm(rpmVal).ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
 
             if (ShouldPublishFeedbackMmps(mmps, stamp)) {
-                var ppr = 0;
-                try { ppr = await GetPprCachedAsync(ct).ConfigureAwait(false); } catch { /* 忽略：无 PPR 仍可发布反馈 */ }
-
-                // 发布时交给 PublishSpeedFeedbackFromActualRpm 统一做方向/单位换算
-                PublishSpeedFeedbackFromActualRpm(actualRpm, ppr);
+                // 发布时交给 PublishSpeedFeedbackFromActualPps 统一做方向/单位换算
+                PublishSpeedFeedbackFromActualPps(actualPps, ppr);
 
                 CommitFeedbackMmps(mmps, stamp);
             }
@@ -325,20 +369,26 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
             if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
             if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
+            
+            // ★ 强制读取 PPR：Enable 成功后必须读取到 PPR，未取到则禁止后续写速度
             if (!Volatile.Read(ref _sPprReady)) {
                 try {
                     var ppr = await ReadAxisPulsesPerRevAsync(ct);
                     if (ppr > 0) {
                         Volatile.Write(ref _sPpr, ppr);
                         Volatile.Write(ref _sPprReady, true);
-                        Debug.WriteLine($"[PPR] initialized once at enable: {ppr}");
+                        Debug.WriteLine($"[PPR] 使能时初始化成功: {ppr}");
                     }
                     else {
-                        OnAxisFaulted(new InvalidOperationException("Read PPR at enable returned 0."));
+                        var errMsg = "使能失败：未能读取到有效的 PPR（脉冲/转），禁止写入速度指令";
+                        OnAxisFaulted(new InvalidOperationException(errMsg));
+                        return;
                     }
                 }
                 catch (Exception ex) {
-                    OnAxisFaulted(new InvalidOperationException($"Read PPR at enable failed: {ex.Message}", ex));
+                    var errMsg = $"使能失败：读取 PPR 时发生错误（{ex.Message}），禁止写入速度指令";
+                    OnAxisFaulted(new InvalidOperationException(errMsg, ex));
+                    return;
                 }
             }
             _status = DriverStatus.Connected;
@@ -531,9 +581,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// 按 Index 自动选择 BitLen，统一写 RxPDO。
         /// 这样上层调用只需要传 Index+值，避免重复定义多个 WriteXxx。
         /// </summary>
-        private short WriteRxPdo(ushort index, object value, byte subIndex = LeadshineProtocolMap.SubIndex.Root) {
+        private short WriteRxPdo(ushort index, object value, byte subIndex = LeadshineProtocolMap.SubIndex.Root, bool suppressLog = false) {
             var ret = _pdoPipe.Execute(
-                (CancellationToken _) => WriteRxPdoCore(index, value, subIndex),
+                (CancellationToken _) => WriteRxPdoCore(index, value, subIndex, suppressLog),
                 cancellationToken: CancellationToken.None);
 
             if (ret != 0) {
@@ -554,40 +604,40 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             return ret;
         }
 
-        private short WriteRxPdoCore(ushort index, object value, byte subIndex = LeadshineProtocolMap.SubIndex.Root) {
+        private short WriteRxPdoCore(ushort index, object value, byte subIndex = LeadshineProtocolMap.SubIndex.Root, bool suppressLog = false) {
             if (value is int i32) {
                 var buf = GetTxBuffer(4);
                 BinaryPrimitives.WriteInt32LittleEndian(buf, i32);
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
-                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {i32}", ret);
+                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {i32}", ret);
                 return ret;
             }
             if (value is uint u32) {
                 var buf = GetTxBuffer(4);
                 BinaryPrimitives.WriteUInt32LittleEndian(buf, u32);
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 32, buf);
-                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {u32}", ret);
+                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 32 , {u32}", ret);
                 return ret;
             }
             if (value is short i16) {
                 var buf = GetTxBuffer(2);
                 BinaryPrimitives.WriteInt16LittleEndian(buf, i16);
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
-                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {i16}", ret);
+                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {i16}", ret);
                 return ret;
             }
             if (value is ushort u16) {
                 var buf = GetTxBuffer(2);
                 BinaryPrimitives.WriteUInt16LittleEndian(buf, u16);
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 16, buf);
-                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {u16}", ret);
+                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 16 , {u16}", ret);
                 return ret;
             }
             if (value is byte b8) {
                 var buf = GetTxBuffer(1);
                 buf[0] = b8;
                 var ret = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, 8, buf);
-                OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 8 , {b8}", ret);
+                if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , 8 , {b8}", ret);
                 return ret;
             }
 
@@ -597,7 +647,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             };
             var bitLen = (ushort)(bytes.Length * 8);
             var retFallback = LTDMC.nmc_write_rxpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, bitLen, bytes);
-            OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {value}", retFallback);
+            if (!suppressLog) OnCommandIssued("nmc_write_rxpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {value}", retFallback);
             return retFallback;
         }
 
@@ -605,7 +655,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// 读 TxPDO 并解码到指定类型；成功返回 0，失败返回 ret（不抛异常）。
         /// 支持 byte/sbyte/ushort/short/uint/int/byte[]。
         /// </summary>
-        private short ReadTxPdo<T>(ushort index, out T value, byte subIndex = LeadshineProtocolMap.SubIndex.Root) {
+        private short ReadTxPdo<T>(ushort index, out T value, byte subIndex = LeadshineProtocolMap.SubIndex.Root, bool suppressLog = false) {
             value = default!;
             ushort bitLen;
             switch (index) {
@@ -622,7 +672,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             var byteLen = (bitLen + 7) / 8;
             var buf = new byte[byteLen];
             var ret = LTDMC.nmc_read_txpdo((ushort)_opts.Card, _opts.Port, _opts.NodeId, index, subIndex, bitLen, buf);
-            OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", ret);
+            if (!suppressLog) OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", ret);
             if (ret != 0) return ret;
 
             object? boxed =
@@ -643,7 +693,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             value = (T)boxed;
 
             // 可选：再发一条带解码值的备注（result=0）
-            OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", 0,
+            if (!suppressLog) OnCommandIssued("nmc_read_txpdo", $"{_opts.Card} , {_opts.Port} , {_opts.NodeId} , {index} , {subIndex} , {bitLen} , {byteLen}", 0,
                 note: $"decoded={boxed}");
 
             return 0;
@@ -676,20 +726,25 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             return ValueTask.FromResult(v);
         }
 
-        private void PublishSpeedFeedbackFromActualRpm(int actualRpm, int pulsesPerRev) {
+        private void PublishSpeedFeedbackFromActualPps(int actualPps, int pulsesPerRev) {
             // 1) 方向一致性：仅在入口处做一次符号
-            var rpmVal = _opts.IsReverse ? -actualRpm : actualRpm;
+            var loadPpsVal = _opts.IsReverse ? -actualPps : actualPps;
 
-            // 2) 用 AxisRpm 统一做换算
+            // 2) 负载侧 pps → 电机侧 pps → rpm → mm/s
+            var rpmVal = 0m;
+            if (pulsesPerRev > 0) {
+                // 负载侧 pps → 电机侧 pps
+                var motorPps = loadPpsVal * _opts.GearRatio;
+                // 电机侧 pps → rpm
+                rpmVal = motorPps * 60m / pulsesPerRev;
+            }
+
             var rpm = new AxisRpm(rpmVal);
             var speedMmps = rpm.ToMmPerSec(_opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             LastFeedbackMmps = speedMmps;
-            // pps：考虑齿比（电机轴:负载轴）
-            var pps = 0m;
-            if (pulsesPerRev > 0) {
-                var motorPps = rpm.ToPulsePerSec(pulsesPerRev);
-                pps = _opts.GearRatio > 0m ? motorPps / _opts.GearRatio : motorPps;
-            }
+            
+            // pps：直接使用负载侧 pps（已考虑齿比）
+            var pps = (decimal)loadPpsVal;
 
             FireEachNonBlocking(SpeedFeedback, this,
                 new AxisSpeedFeedbackEventArgs {
@@ -739,11 +794,23 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private void SetErrorFromRet(string action, int ret) { LastErrorCode = ret; LastErrorMessage = $"{action} failed, ret={ret}"; }
 
         private ValueTask<bool> WriteTargetVelocityFromRpmAsync(decimal rpm, CancellationToken ct) {
+            // ★ 检查 PPR 是否已读取
+            if (!Volatile.Read(ref _sPprReady) || Volatile.Read(ref _sPpr) <= 0) {
+                OnAxisFaulted(new InvalidOperationException("写速度失败：PPR 未初始化，请先执行 Enable"));
+                return ValueTask.FromResult(false);
+            }
+
+            var ppr = Volatile.Read(ref _sPpr);
             var max = Math.Abs(_opts.MaxRpm);
             var targetRpm = Math.Max(-max, Math.Min(max, rpm));
 
-            // 0x60FF 寄存器单位为 RPM，直接写入
-            int deviceVal = (int)Math.Round(targetRpm);
+            // rpm → pps(电机侧)
+            var motorPps = targetRpm / 60m * ppr;
+            
+            // 负载侧 pps = 电机侧 pps ÷ GearRatio
+            var loadPps = _opts.GearRatio > 0m ? motorPps / _opts.GearRatio : motorPps;
+            
+            var deviceVal = (int)Math.Round(loadPps);
 
             if (_opts.IsReverse) deviceVal = -deviceVal;
 

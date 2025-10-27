@@ -49,21 +49,21 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             /// <summary>
             /// 0x60FF 目标速度 (Target Velocity)，INTEGER32。
-            /// 单位: RPM（转/分），速度模式下写入。
+            /// 单位: pps（脉冲/秒，负载侧），速度模式下写入。
             /// 注：与 0x606C (ActualVelocity) 单位保持一致。
             /// </summary>
             public const ushort TargetVelocity = 0x60FF;
 
             /// <summary>
             /// 0x6083 Profile Acceleration，加速度，UNSIGNED32。
-            /// 单位：RPM/s（转/分/秒），与 0x60FF (TargetVelocity) 的单位保持一致。
+            /// 单位：pps²（脉冲/秒²，负载侧），与 0x60FF (TargetVelocity) 的单位保持一致。
             /// 用于设定速度模式下的加速斜率。
             /// </summary>
             public const ushort ProfileAcceleration = 0x6083;
 
             /// <summary>
             /// 0x6084 Profile Deceleration，减速度，UNSIGNED32。
-            /// 单位：RPM/s（转/分/秒），与 0x60FF (TargetVelocity) 的单位保持一致。
+            /// 单位：pps²（脉冲/秒²，负载侧），与 0x60FF (TargetVelocity) 的单位保持一致。
             /// 用于设定速度模式下的减速斜率。
             /// </summary>
             public const ushort ProfileDeceleration = 0x6084;
@@ -82,7 +82,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             /// <summary>
             /// 0x606C 实际速度 (Actual Velocity)，INTEGER32。
-            /// 单位：RPM（现场确认）。
+            /// 单位：pps（脉冲/秒，负载侧）。
             /// 由驱动反馈当前实时速度。
             /// </summary>
             public const ushort ActualVelocity = 0x606C;
