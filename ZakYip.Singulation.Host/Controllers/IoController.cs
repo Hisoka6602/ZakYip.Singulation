@@ -115,5 +115,92 @@ namespace ZakYip.Singulation.Host.Controllers {
                 return StatusCode(500, ApiResponse<object>.Fail("查询 IO 状态失败：" + ex.Message));
             }
         }
+
+        /// <summary>
+        /// 写入指定 IO 端口的电平状态
+        /// </summary>
+        /// <remarks>
+        /// 向雷赛控制器的指定输出 IO 端口写入高电平或低电平。
+        /// 
+        /// **功能说明**：
+        /// - 支持设置任意输出 IO 端口的电平状态
+        /// - 可设置为高电平（High，值为 1）或低电平（Low，值为 0）
+        /// - 仅支持写入输出 IO，不支持写入输入 IO
+        /// - 写入前会验证 IO 端口编号的有效性
+        /// 
+        /// **使用示例**：
+        /// 
+        /// 设置 IO 0 为高电平：
+        /// ```json
+        /// POST /api/io/write
+        /// {
+        ///   "bitNumber": 0,
+        ///   "state": 1
+        /// }
+        /// ```
+        /// 
+        /// 设置 IO 5 为低电平：
+        /// ```json
+        /// POST /api/io/write
+        /// {
+        ///   "bitNumber": 5,
+        ///   "state": 0
+        /// }
+        /// ```
+        /// 
+        /// **注意事项**：
+        /// - IO 端口编号从 0 开始，范围为 0-1023
+        /// - State 值：0 表示低电平（Low），1 表示高电平（High）
+        /// - 仅支持写入输出 IO 端口，写入输入 IO 无效
+        /// - 写入前请确认 IO 端口未被其他功能占用
+        /// - 错误的 IO 操作可能影响系统运行，请谨慎使用
+        /// </remarks>
+        /// <param name="request">写入 IO 请求对象</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>写入操作结果</returns>
+        /// <response code="200">写入成功</response>
+        /// <response code="400">参数验证失败</response>
+        /// <response code="500">写入失败</response>
+        [HttpPost("write")]
+        [SwaggerOperation(
+            Summary = "写入指定 IO 端口的电平状态",
+            Description = "向雷赛控制器的指定输出 IO 端口写入高电平或低电平。支持设置 IO 0-1023，状态为 High (1) 或 Low (0)。")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 400)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 500)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        public async Task<ActionResult<ApiResponse<string>>> WriteIo(
+            [FromBody] WriteIoRequestDto request,
+            CancellationToken ct = default) {
+
+            try {
+                // 参数验证
+                if (!ModelState.IsValid) {
+                    return BadRequest(ApiResponse<object>.Invalid("请求参数无效"));
+                }
+
+                _logger.LogInformation(
+                    "收到写入 IO 请求：位号 {BitNumber}，状态 {State}",
+                    request.BitNumber, request.State);
+
+                var (success, message) = await _ioStatusService.WriteOutputBitAsync(
+                    request.BitNumber,
+                    request.State,
+                    ct);
+
+                if (!success) {
+                    return StatusCode(500, ApiResponse<object>.Fail(message));
+                }
+
+                return Ok(ApiResponse<string>.Success(
+                    $"成功写入 IO {request.BitNumber} 为 {request.State}",
+                    message));
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "写入 IO 时发生异常");
+                return StatusCode(500, ApiResponse<object>.Fail("写入 IO 失败：" + ex.Message));
+            }
+        }
     }
 }
