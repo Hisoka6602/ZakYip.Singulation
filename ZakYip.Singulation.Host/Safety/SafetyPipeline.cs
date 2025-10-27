@@ -18,22 +18,53 @@ namespace ZakYip.Singulation.Host.Safety {
 
     /// <summary>
     /// 安全联动管线：把 IO、驱动健康事件汇聚到安全隔离器，并触发 StopAll。
+    /// 支持远程/本地模式切换的自动使能/禁用功能。
     /// </summary>
     public sealed class SafetyPipeline : BackgroundService, ISafetyPipeline {
+        /// <summary>日志记录器。</summary>
         private readonly ILogger<SafetyPipeline> _log;
+        
+        /// <summary>安全隔离器。</summary>
         private readonly ISafetyIsolator _isolator;
+        
+        /// <summary>安全 IO 模块集合。</summary>
         private readonly IReadOnlyCollection<ISafetyIoModule> _ioModules;
+        
+        /// <summary>轴控制器。</summary>
         private readonly IAxisController _axisController;
+        
+        /// <summary>轴事件聚合器。</summary>
         private readonly IAxisEventAggregator _axisEvents;
+        
+        /// <summary>实时通知器。</summary>
         private readonly IRealtimeNotifier _realtime;
+        
+        /// <summary>控制器选项存储。</summary>
         private readonly IControllerOptionsStore _controllerOptionsStore;
+        
+        /// <summary>指示灯服务（可选）。</summary>
         private readonly IndicatorLightService? _indicatorLightService;
+        
+        /// <summary>安全操作通道。</summary>
         private readonly Channel<SafetyOperation> _operations;
 
-        // 当前远程/本地模式状态：true=远程模式，false=本地模式
+        /// <summary>当前远程/本地模式状态：true=远程模式，false=本地模式。</summary>
         private bool _isRemoteMode = true;
+        
+        /// <summary>模式状态的线程锁。</summary>
         private readonly object _modeLock = new();
 
+        /// <summary>
+        /// 初始化 <see cref="SafetyPipeline"/> 类的新实例。
+        /// </summary>
+        /// <param name="log">日志记录器。</param>
+        /// <param name="isolator">安全隔离器。</param>
+        /// <param name="ioModules">安全 IO 模块集合。</param>
+        /// <param name="axisController">轴控制器。</param>
+        /// <param name="axisEvents">轴事件聚合器。</param>
+        /// <param name="realtime">实时通知器。</param>
+        /// <param name="controllerOptionsStore">控制器选项存储。</param>
+        /// <param name="indicatorLightService">指示灯服务（可选）。</param>
         public SafetyPipeline(
             ILogger<SafetyPipeline> log,
             ISafetyIsolator isolator,
@@ -64,11 +95,33 @@ namespace ZakYip.Singulation.Host.Safety {
                 module.StopRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, SafetyTriggerKind.StopButton, e.Description, true));
                 module.StartRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Start, SafetyTriggerKind.StartButton, e.Description, true));
                 module.ResetRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Reset, SafetyTriggerKind.ResetButton, e.Description, true));
-                module.RemoteLocalModeChanged += (_, e) => {
+                module.RemoteLocalModeChanged += async (_, e) => {
+                    bool previousMode;
                     lock (_modeLock) {
+                        previousMode = _isRemoteMode;
                         _isRemoteMode = e.IsRemoteMode;
                     }
-                    _log.LogInformation("远程/本地模式已切换：{Mode}", e.IsRemoteMode ? "远程模式" : "本地模式");
+                    
+                    var modeText = e.IsRemoteMode ? "远程模式" : "本地模式";
+                    _log.LogInformation("【远程/本地模式切换】从 {PrevMode} 切换到 {NewMode}", 
+                        previousMode ? "远程模式" : "本地模式", modeText);
+                    
+                    // 根据切换方向执行不同操作
+                    try {
+                        if (!previousMode && e.IsRemoteMode) {
+                            // [本地] -> [远程]：自动调用使能，不需要按启动按钮
+                            _log.LogInformation("【远程/本地模式切换】检测到切换为远程模式，自动调用使能");
+                            await _axisController.EnableAllAsync(CancellationToken.None).ConfigureAwait(false);
+                            _log.LogInformation("【远程/本地模式切换】自动使能完成，等待远程速度推送");
+                        } else if (previousMode && !e.IsRemoteMode) {
+                            // [远程] -> [本地]：调用禁用使能
+                            _log.LogInformation("【远程/本地模式切换】检测到切换为本地模式，调用禁用使能");
+                            await _axisController.DisableAllAsync(CancellationToken.None).ConfigureAwait(false);
+                            _log.LogInformation("【远程/本地模式切换】禁用使能完成");
+                        }
+                    } catch (Exception ex) {
+                        _log.LogError(ex, "【远程/本地模式切换】执行自动操作失败");
+                    }
                 };
             }
 
@@ -77,30 +130,97 @@ namespace ZakYip.Singulation.Host.Safety {
             _axisEvents.DriverNotLoaded += (_, e) => Enqueue(SafetyOperation.AxisHealth(SafetyTriggerKind.AxisFault, e.LibraryName, e.Message));
         }
 
+        /// <summary>
+        /// 当安全隔离状态发生变化时触发的事件。
+        /// </summary>
         public event EventHandler<SafetyStateChangedEventArgs>? StateChanged;
+        
+        /// <summary>
+        /// 当收到启动请求时触发的事件。
+        /// </summary>
         public event EventHandler<SafetyTriggerEventArgs>? StartRequested;
+        
+        /// <summary>
+        /// 当收到停止请求时触发的事件。
+        /// </summary>
+        /// <summary>
+        /// 当收到停止请求时触发的事件。
+        /// </summary>
         public event EventHandler<SafetyTriggerEventArgs>? StopRequested;
+        
+        /// <summary>
+        /// 当收到复位请求时触发的事件。
+        /// </summary>
         public event EventHandler<SafetyTriggerEventArgs>? ResetRequested;
 
+        /// <summary>
+        /// 获取当前安全隔离状态。
+        /// </summary>
         public SafetyIsolationState State => _isolator.State;
 
+        /// <summary>
+        /// 尝试进入隔离状态。
+        /// </summary>
+        /// <param name="kind">触发类型。</param>
+        /// <param name="reason">触发原因。</param>
+        /// <returns>是否成功进入隔离状态。</returns>
         public bool TryTrip(SafetyTriggerKind kind, string reason) => _isolator.TryTrip(kind, reason);
 
+        /// <summary>
+        /// 尝试进入降级状态。
+        /// </summary>
+        /// <param name="kind">触发类型。</param>
+        /// <param name="reason">触发原因。</param>
+        /// <returns>是否成功进入降级状态。</returns>
         public bool TryEnterDegraded(SafetyTriggerKind kind, string reason) => _isolator.TryEnterDegraded(kind, reason);
 
+        /// <summary>
+        /// 尝试从降级状态恢复。
+        /// </summary>
+        /// <param name="reason">恢复原因。</param>
+        /// <returns>是否成功恢复。</returns>
         public bool TryRecoverFromDegraded(string reason) => _isolator.TryRecoverFromDegraded(reason);
 
+        /// <summary>
+        /// 尝试重置隔离状态。
+        /// </summary>
+        /// <param name="reason">重置原因。</param>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>是否成功重置。</returns>
         public bool TryResetIsolation(string reason, CancellationToken ct = default) => _isolator.TryResetIsolation(reason, ct);
 
+        /// <summary>
+        /// 请求启动操作。
+        /// </summary>
+        /// <param name="kind">触发类型。</param>
+        /// <param name="reason">触发原因（可选）。</param>
+        /// <param name="triggeredByIo">是否由 IO 触发（默认为 false）。</param>
         public void RequestStart(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
             => Enqueue(SafetyOperation.Trigger(SafetyCommand.Start, kind, reason, triggeredByIo));
 
+        /// <summary>
+        /// 请求停止操作。
+        /// </summary>
+        /// <param name="kind">触发类型。</param>
+        /// <param name="reason">触发原因（可选）。</param>
+        /// <param name="triggeredByIo">是否由 IO 触发（默认为 false）。</param>
         public void RequestStop(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
             => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, kind, reason, triggeredByIo));
 
+        /// <summary>
+        /// 请求复位操作。
+        /// </summary>
+        /// <param name="kind">触发类型。</param>
+        /// <param name="reason">触发原因（可选）。</param>
+        /// <param name="triggeredByIo">是否由 IO 触发（默认为 false）。</param>
         public void RequestReset(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
             => Enqueue(SafetyOperation.Trigger(SafetyCommand.Reset, kind, reason, triggeredByIo));
 
+        /// <summary>
+        /// 执行安全管线的后台任务。
+        /// </summary>
+        /// <param name="stoppingToken">停止令牌。</param>
+        /// <returns>表示异步操作的任务。</returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             var startTasks = _ioModules
                 .Select(module => module.StartAsync(stoppingToken))
@@ -126,11 +246,21 @@ namespace ZakYip.Singulation.Host.Safety {
             }
         }
 
+        /// <summary>
+        /// 将安全操作加入队列。
+        /// </summary>
+        /// <param name="op">安全操作。</param>
         private void Enqueue(SafetyOperation op) {
             var ok = _operations.Writer.TryWrite(op);
             if (!ok) _log.LogWarning("安全管线繁忙，已丢弃操作 {Operation}", op.Kind);
         }
 
+        /// <summary>
+        /// 处理安全操作。
+        /// </summary>
+        /// <param name="op">安全操作。</param>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>表示异步操作的任务。</returns>
         private async Task HandleOperationAsync(SafetyOperation op, CancellationToken ct) {
             switch (op.Kind) {
                 case SafetyOperationKind.StateChanged:
@@ -148,6 +278,12 @@ namespace ZakYip.Singulation.Host.Safety {
             }
         }
 
+        /// <summary>
+        /// 处理安全状态变化事件。
+        /// </summary>
+        /// <param name="ev">安全状态变化事件参数。</param>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>表示异步操作的任务。</returns>
         private async Task HandleStateChangedAsync(SafetyStateChangedEventArgs ev, CancellationToken ct) {
             StateChanged?.Invoke(this, ev);
             switch (ev.Current) {
@@ -163,6 +299,12 @@ namespace ZakYip.Singulation.Host.Safety {
             }
         }
 
+        /// <summary>
+        /// 处理安全命令。
+        /// </summary>
+        /// <param name="operation">安全操作。</param>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>表示异步操作的任务。</returns>
         private async Task HandleCommandAsync(SafetyOperation operation, CancellationToken ct) {
             var args = new SafetyTriggerEventArgs(operation.CommandKind, operation.CommandReason);
             
@@ -315,6 +457,12 @@ namespace ZakYip.Singulation.Host.Safety {
             }
         }
 
+        /// <summary>
+        /// 处理轴健康状态事件。
+        /// </summary>
+        /// <param name="kind">触发类型。</param>
+        /// <param name="axisName">轴名称（可选）。</param>
+        /// <param name="reason">原因（可选）。</param>
         private void HandleAxisHealth(SafetyTriggerKind kind, string? axisName, string? reason) {
             var text = string.IsNullOrWhiteSpace(reason) ? "轴状态异常" : reason;
             switch (kind) {
@@ -335,6 +483,13 @@ namespace ZakYip.Singulation.Host.Safety {
             }
         }
 
+        /// <summary>
+        /// 执行紧急停机操作。
+        /// </summary>
+        /// <param name="source">停机来源。</param>
+        /// <param name="reason">停机原因（可选）。</param>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>表示异步操作的任务。</returns>
         private async Task StopAllAsync(string source, string? reason, CancellationToken ct) {
             try {
                 var text = string.IsNullOrWhiteSpace(reason) ? "未知原因" : reason;
