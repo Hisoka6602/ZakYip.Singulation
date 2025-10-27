@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -68,25 +70,29 @@ namespace ZakYip.Singulation.Host.Controllers {
                 return BadRequest(ApiResponse<object>.Invalid("请求体不能为空"));
             }
 
+            // 获取调用堆栈信息
+            var stackTrace = new StackTrace(true);
+            var callerInfo = GetCallerInfo(stackTrace);
+
             var reason = request.Reason;
             switch (request.Command) {
                 case SafetyCommand.Start:
-                    _logger.LogInformation("收到远程启动指令：{Reason}", reason);
+                    _logger.LogInformation("【API调用】收到远程启动指令 - 原因：{Reason}，调用方：{Caller}", reason, callerInfo);
                     _safety.RequestStart(SafetyTriggerKind.RemoteStartCommand, reason);
                     break;
 
                 case SafetyCommand.Stop:
-                    _logger.LogInformation("收到远程停止指令：{Reason}", reason);
+                    _logger.LogInformation("【API调用】收到远程停止指令 - 原因：{Reason}，调用方：{Caller}", reason, callerInfo);
                     _safety.RequestStop(SafetyTriggerKind.RemoteStopCommand, reason);
                     break;
 
                 case SafetyCommand.Reset:
-                    _logger.LogInformation("收到远程复位指令：{Reason}", reason);
+                    _logger.LogInformation("【API调用】收到远程复位指令 - 原因：{Reason}，调用方：{Caller}", reason, callerInfo);
                     _safety.RequestReset(SafetyTriggerKind.RemoteResetCommand, reason);
                     break;
 
                 case SafetyCommand.EmergencyStop:
-                    _logger.LogWarning("收到远程急停指令：{Reason}", reason);
+                    _logger.LogWarning("【API调用】收到远程急停指令 - 原因：{Reason}，调用方：{Caller}", reason, callerInfo);
                     _safety.RequestStop(SafetyTriggerKind.EmergencyStop, reason);
                     break;
 
@@ -96,6 +102,36 @@ namespace ZakYip.Singulation.Host.Controllers {
             }
 
             return Accepted(ApiResponse<object>.Success(new { Accepted = true }, "安全命令已受理"));
+        }
+
+        /// <summary>
+        /// 获取调用方信息（用于审计日志）
+        /// </summary>
+        private static string GetCallerInfo(StackTrace stackTrace) {
+            // 跳过当前方法和 ExecuteCommand，查找实际调用者
+            for (int i = 2; i < Math.Min(stackTrace.FrameCount, 10); i++) {
+                var frame = stackTrace.GetFrame(i);
+                if (frame == null) continue;
+
+                var method = frame.GetMethod();
+                if (method == null) continue;
+
+                var typeName = method.DeclaringType?.Name ?? "Unknown";
+                var methodName = method.Name;
+                var fileName = frame.GetFileName();
+                var lineNumber = frame.GetFileLineNumber();
+
+                // 跳过框架内部方法
+                if (typeName.StartsWith("Microsoft.") || typeName.StartsWith("System.")) {
+                    continue;
+                }
+
+                if (!string.IsNullOrEmpty(fileName)) {
+                    return $"{typeName}.{methodName} (文件: {System.IO.Path.GetFileName(fileName)}, 行: {lineNumber})";
+                }
+                return $"{typeName}.{methodName}";
+            }
+            return "API端点";
         }
 
         /// <summary>

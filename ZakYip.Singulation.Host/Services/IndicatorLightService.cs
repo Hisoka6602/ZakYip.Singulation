@@ -67,6 +67,7 @@ namespace ZakYip.Singulation.Host.Services {
 
         /// <summary>
         /// 根据系统状态更新三色灯。
+        /// 重要规则：红灯和其他颜色灯禁止同时亮，红灯亮时只能红灯亮。
         /// </summary>
         private async Task UpdateTriColorLightsAsync(SystemState state, CancellationToken ct) {
             bool redOn = false, yellowOn = false, greenOn = false;
@@ -86,9 +87,18 @@ namespace ZakYip.Singulation.Host.Services {
                     greenOn = true;
                     break;
                 case SystemState.Alarm:
-                    // 报警 → 红色
+                    // 报警 → 红色（此时黄灯和绿灯必须关闭）
                     redOn = true;
+                    yellowOn = false;  // 强制关闭黄灯
+                    greenOn = false;   // 强制关闭绿灯
+                    _logger.LogInformation("三色灯控制：红灯独占模式 - 红灯亮，黄灯和绿灯强制关闭");
                     break;
+            }
+
+            // 安全检查：确保红灯亮时，黄灯和绿灯必须关闭
+            if (redOn) {
+                yellowOn = false;
+                greenOn = false;
             }
 
             await Task.WhenAll(
