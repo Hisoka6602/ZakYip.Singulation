@@ -173,4 +173,13 @@ public static class ByteUtils {
         BinaryPrimitives.WriteUInt16BigEndian(destination, value);
     }
 
+    /// <summary>
+    /// 将 Int32 的位模式转换为 Float（单精度浮点数）。
+    /// 这是一个无损转换，直接重新解释位模式。
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static float Int32BitsToSingle(int value) {
+        return BitConverter.Int32BitsToSingle(value);
+    }
+
 }
