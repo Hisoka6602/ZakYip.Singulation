@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
+namespace ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities {
 
     /// <summary>
     /// 雷赛安全 IO 配置的 LiteDB 文档实体。

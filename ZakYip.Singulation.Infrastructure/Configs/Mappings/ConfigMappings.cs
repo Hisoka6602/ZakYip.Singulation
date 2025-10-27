@@ -9,6 +9,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
+using ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities;
 
 namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
 
