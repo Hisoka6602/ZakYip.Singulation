@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine;
 
 namespace ZakYip.Singulation.Infrastructure.Persistence {
 

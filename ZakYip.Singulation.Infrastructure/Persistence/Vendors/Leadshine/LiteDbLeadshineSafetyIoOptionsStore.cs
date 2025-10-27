@@ -7,10 +7,10 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Abstractions.Safety;
-using ZakYip.Singulation.Infrastructure.Configs.Entities;
+using ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
-namespace ZakYip.Singulation.Infrastructure.Persistence {
+namespace ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine {
 
     /// <summary>基于 LiteDB 的 LeadshineSafetyIoOptions 单文档存储实现。</summary>
     public sealed class LiteDbLeadshineSafetyIoOptionsStore : ILeadshineSafetyIoOptionsStore {
