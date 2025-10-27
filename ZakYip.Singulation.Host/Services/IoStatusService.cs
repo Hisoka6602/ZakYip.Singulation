@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -57,37 +58,20 @@ namespace ZakYip.Singulation.Host.Services {
             await InitializeAsync(ct);
 
             var response = new IoStatusResponseDto();
-            int validCount = 0;
-            int errorCount = 0;
 
             // 读取输入 IO
-            for (int i = 0; i < inputCount; i++) {
-                int bitNo = inputStart + i;
-                var ioStatus = ReadInputBit(bitNo);
-                response.InputIos.Add(ioStatus);
-                
-                if (ioStatus.IsValid) {
-                    validCount++;
-                } else {
-                    errorCount++;
-                }
-            }
+            response.InputIos.AddRange(
+                Enumerable.Range(inputStart, inputCount)
+                    .Select(ReadInputBit));
 
             // 读取输出 IO
-            for (int i = 0; i < outputCount; i++) {
-                int bitNo = outputStart + i;
-                var ioStatus = ReadOutputBit(bitNo);
-                response.OutputIos.Add(ioStatus);
-                
-                if (ioStatus.IsValid) {
-                    validCount++;
-                } else {
-                    errorCount++;
-                }
-            }
+            response.OutputIos.AddRange(
+                Enumerable.Range(outputStart, outputCount)
+                    .Select(ReadOutputBit));
 
-            response.ValidCount = validCount;
-            response.ErrorCount = errorCount;
+            var allIos = response.InputIos.Concat(response.OutputIos);
+            response.ValidCount = allIos.Count(io => io.IsValid);
+            response.ErrorCount = allIos.Count(io => !io.IsValid);
 
             return response;
         }

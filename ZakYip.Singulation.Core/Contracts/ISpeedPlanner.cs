@@ -11,7 +11,7 @@ namespace ZakYip.Singulation.Core.Contracts {
 
     /// <summary>
     /// 速度规划器接口：
-    /// 接收上游视觉给出的速度集合（<see cref="SpeedSet"/>），结合输送机拓扑（<see cref="ConveyorTopology"/>），
+    /// 接收上游视觉给出的速度集合（<see cref="SpeedSet"/>），
     /// 输出各轴的目标转速序列（单位：RPM）。
     ///
     /// 规划器的实现应负责：
