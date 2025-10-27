@@ -738,7 +738,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetErrorFromRet(string action, int ret) { LastErrorCode = ret; LastErrorMessage = $"{action} failed, ret={ret}"; }
 
-        private Task<bool> WriteTargetVelocityFromRpmAsync(decimal rpm, CancellationToken ct) {
+        private ValueTask<bool> WriteTargetVelocityFromRpmAsync(decimal rpm, CancellationToken ct) {
             var max = Math.Abs(_opts.MaxRpm);
             var targetRpm = Math.Max(-max, Math.Min(max, rpm));
 
@@ -748,10 +748,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             if (_opts.IsReverse) deviceVal = -deviceVal;
 
             var ret = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, deviceVal);
-            if (ret != 0) { SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return Task.FromResult(false); }
+            if (ret != 0) { SetErrorFromRet("write 0x60FF (TargetVelocity)", ret); OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return ValueTask.FromResult(false); }
 
             _status = DriverStatus.Connected;
-            return Task.FromResult(true);
+            return ValueTask.FromResult(true);
         }
 
         /// <summary>获取至少 len 字节的线程本地缓冲。</summary>
