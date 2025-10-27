@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 
+
+// æŠ‘åˆ¶å‚å•†SDKç»“æ„ä½“çš„æœªä½¿ç”¨å­—æ®µè­¦å‘Š
+#pragma warning disable CS0169
+
 namespace csLTDMC //ÃüÃû¿Õ¼ä¸ù¾İÓ¦ÓÃ³ÌĞòĞŞ¸Ä
 {
 
