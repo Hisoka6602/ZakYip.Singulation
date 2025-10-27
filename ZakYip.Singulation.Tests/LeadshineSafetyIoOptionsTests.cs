@@ -22,6 +22,13 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(null, options.InvertStopLogic, "停止反转逻辑默认应为 null");
             MiniAssert.Equal(null, options.InvertStartLogic, "启动反转逻辑默认应为 null");
             MiniAssert.Equal(null, options.InvertResetLogic, "复位反转逻辑默认应为 null");
+            
+            // 新增三色灯和按钮灯默认值测试
+            MiniAssert.Equal(-1, options.RedLightBit, "红灯默认应禁用");
+            MiniAssert.Equal(-1, options.YellowLightBit, "黄灯默认应禁用");
+            MiniAssert.Equal(-1, options.GreenLightBit, "绿灯默认应禁用");
+            MiniAssert.Equal(-1, options.StartButtonLightBit, "启动按钮灯默认应禁用");
+            MiniAssert.Equal(-1, options.StopButtonLightBit, "停止按钮灯默认应禁用");
         }
 
         [MiniFact]
@@ -96,6 +103,24 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(false, stopInvert, "停止不应反转（常开）");
             MiniAssert.Equal(true, startInvert, "启动应反转（常闭）");
             MiniAssert.Equal(false, resetInvert, "复位不应反转（常开）");
+        }
+
+        [MiniFact]
+        public void TriColorLightConfiguration() {
+            // 场景：配置三色灯和按钮灯的输出端口
+            var options = new LeadshineSafetyIoOptions {
+                RedLightBit = 10,
+                YellowLightBit = 11,
+                GreenLightBit = 12,
+                StartButtonLightBit = 13,
+                StopButtonLightBit = 14
+            };
+            
+            MiniAssert.Equal(10, options.RedLightBit, "红灯应配置到端口 10");
+            MiniAssert.Equal(11, options.YellowLightBit, "黄灯应配置到端口 11");
+            MiniAssert.Equal(12, options.GreenLightBit, "绿灯应配置到端口 12");
+            MiniAssert.Equal(13, options.StartButtonLightBit, "启动按钮灯应配置到端口 13");
+            MiniAssert.Equal(14, options.StopButtonLightBit, "停止按钮灯应配置到端口 14");
         }
     }
 }

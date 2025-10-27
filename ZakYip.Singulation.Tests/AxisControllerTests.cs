@@ -132,6 +132,8 @@ namespace ZakYip.Singulation.Tests {
 
         public Task EnableAsync(CancellationToken ct = default) => Task.CompletedTask;
 
+        public ValueTask DisableAsync(CancellationToken ct = default) => ValueTask.CompletedTask;
+
         public Task UpdateLinearLimitsAsync(decimal maxLinearMmps, decimal maxAccelMmps2, decimal maxDecelMmps2, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task UpdateMechanicsAsync(decimal rollerDiameterMm, decimal gearRatio, int ppr, CancellationToken ct = default) => Task.CompletedTask;

@@ -51,5 +51,20 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
 
         /// <summary>远程/本地模式高电平对应的模式：true=高电平为远程模式，false=高电平为本地模式。</summary>
         public bool RemoteLocalActiveHigh { get; set; } = true;
+
+        /// <summary>红灯输出位编号，-1 表示禁用。</summary>
+        public int RedLightBit { get; set; } = -1;
+
+        /// <summary>黄灯输出位编号，-1 表示禁用。</summary>
+        public int YellowLightBit { get; set; } = -1;
+
+        /// <summary>绿灯输出位编号，-1 表示禁用。</summary>
+        public int GreenLightBit { get; set; } = -1;
+
+        /// <summary>启动按钮灯输出位编号，-1 表示禁用。</summary>
+        public int StartButtonLightBit { get; set; } = -1;
+
+        /// <summary>停止按钮灯输出位编号，-1 表示禁用。</summary>
+        public int StopButtonLightBit { get; set; } = -1;
     }
 }

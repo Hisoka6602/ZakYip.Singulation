@@ -12,6 +12,7 @@ using ZakYip.Singulation.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Contracts;
 using System.Collections.Generic;
+using ZakYip.Singulation.Host.Services;
 
 namespace ZakYip.Singulation.Host.Safety {
 
@@ -26,6 +27,7 @@ namespace ZakYip.Singulation.Host.Safety {
         private readonly IAxisEventAggregator _axisEvents;
         private readonly IRealtimeNotifier _realtime;
         private readonly IControllerOptionsStore _controllerOptionsStore;
+        private readonly IndicatorLightService? _indicatorLightService;
         private readonly Channel<SafetyOperation> _operations;
 
         // 当前远程/本地模式状态：true=远程模式，false=本地模式
@@ -39,7 +41,8 @@ namespace ZakYip.Singulation.Host.Safety {
             IAxisController axisController,
             IAxisEventAggregator axisEvents,
             IRealtimeNotifier realtime,
-            IControllerOptionsStore controllerOptionsStore) {
+            IControllerOptionsStore controllerOptionsStore,
+            IndicatorLightService? indicatorLightService = null) {
             _log = log;
             _isolator = isolator;
             _ioModules = ioModules.ToArray();
@@ -47,6 +50,7 @@ namespace ZakYip.Singulation.Host.Safety {
             _axisEvents = axisEvents;
             _realtime = realtime;
             _controllerOptionsStore = controllerOptionsStore;
+            _indicatorLightService = indicatorLightService;
             _operations = Channel.CreateUnbounded<SafetyOperation>(new UnboundedChannelOptions {
                 SingleReader = true,
                 SingleWriter = false,
@@ -190,6 +194,11 @@ namespace ZakYip.Singulation.Host.Safety {
                             _log.LogInformation("设置本地固定速度：{Speed} mm/s", fixedSpeed);
                             await _axisController.WriteSpeedAllAsync(fixedSpeed, ct).ConfigureAwait(false);
                         }
+                        
+                        // 更新系统状态为运行中
+                        if (_indicatorLightService != null) {
+                            await _indicatorLightService.UpdateStateAsync(SystemState.Running, ct).ConfigureAwait(false);
+                        }
                     } catch (Exception ex) {
                         _log.LogError(ex, "启动流程执行失败");
                     }
@@ -202,6 +211,15 @@ namespace ZakYip.Singulation.Host.Safety {
                     StopRequested?.Invoke(this, args);
                     if (operation.CommandKind == SafetyTriggerKind.EmergencyStop) {
                         await StopAllAsync("emergency-stop", operation.CommandReason, ct).ConfigureAwait(false);
+                        // 更新系统状态为报警
+                        if (_indicatorLightService != null) {
+                            await _indicatorLightService.UpdateStateAsync(SystemState.Alarm, ct).ConfigureAwait(false);
+                        }
+                    } else {
+                        // 更新系统状态为已停止
+                        if (_indicatorLightService != null) {
+                            await _indicatorLightService.UpdateStateAsync(SystemState.Stopped, ct).ConfigureAwait(false);
+                        }
                     }
                     _ = _isolator.TryEnterDegraded(operation.CommandKind, operation.CommandReason ?? "stop");
                     break;
@@ -223,6 +241,11 @@ namespace ZakYip.Singulation.Host.Safety {
                     else if (_isolator.IsDegraded) {
                         var ok = _isolator.TryRecoverFromDegraded(operation.CommandReason ?? "reset");
                         _log.LogInformation("降级恢复结果={Result}", ok);
+                    }
+                    
+                    // 更新系统状态为准备中
+                    if (_indicatorLightService != null) {
+                        await _indicatorLightService.UpdateStateAsync(SystemState.Ready, ct).ConfigureAwait(false);
                     }
                     break;
             }
