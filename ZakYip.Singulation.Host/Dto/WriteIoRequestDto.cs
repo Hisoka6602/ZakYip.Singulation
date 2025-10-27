@@ -10,7 +10,8 @@ namespace ZakYip.Singulation.Host.Dto {
         /// IO 端口编号。
         /// </summary>
         /// <remarks>
-        /// 指定要写入的输出 IO 端口编号，编号从 0 开始。
+        /// 指定要写入的输出 IO 端口编号，编号从 0 开始。仅支持输出端口编号，尝试写入输入端口将会在硬件 API 层面失败并返回错误。
+        /// 有关哪些端口为输出端口，请参考硬件文档或配置。
         /// </remarks>
         [Required(ErrorMessage = "IO 端口编号不能为空")]
         [Range(0, 1023, ErrorMessage = "IO 端口编号必须在 0-1023 之间")]
