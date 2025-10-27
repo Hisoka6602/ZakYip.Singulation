@@ -176,18 +176,18 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
         services.AddSingleton<IAxisController, AxisController>();
-        
+
         // ---------- IO 状态服务 ----------
         services.AddSingleton<IoStatusService>();
         services.AddHostedService<IoStatusWorker>();
-        
+
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
         services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
-        
+
         // 注册 LoopbackSafetyIoModule
         services.AddSingleton<LoopbackSafetyIoModule>();
-        
+
         // 注册 LeadshineSafetyIoModule（可能不会被使用，取决于配置）
         services.AddSingleton<LeadshineSafetyIoModule>(sp => {
             var logger = sp.GetRequiredService<ILogger<LeadshineSafetyIoModule>>();
@@ -198,21 +198,22 @@ var host = Host.CreateDefaultBuilder(args)
             var cardNo = (ushort)busDto.Template.Card;
             return new LeadshineSafetyIoModule(logger, cardNo, options);
         });
-        
+
         // 根据数据库配置选择安全 IO 模块实现
         services.AddSingleton<ISafetyIoModule>(sp => {
             var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
             var options = safetyStore.GetAsync().GetAwaiter().GetResult();
-            
+
             if (options.Enabled) {
                 // 使用硬件安全 IO 模块（雷赛控制器物理按键）
                 return sp.GetRequiredService<LeadshineSafetyIoModule>();
-            } else {
+            }
+            else {
                 // 使用回环测试模块（仅用于开发测试）
                 return sp.GetRequiredService<LoopbackSafetyIoModule>();
             }
         });
-        
+
         // 注册指示灯服务
         services.AddSingleton<IndicatorLightService>(sp => {
             var logger = sp.GetRequiredService<ILogger<IndicatorLightService>>();
@@ -223,14 +224,14 @@ var host = Host.CreateDefaultBuilder(args)
             var cardNo = (ushort)busDto.Template.Card;
             return new IndicatorLightService(logger, cardNo, options);
         });
-        
-        services.AddSingleton<ICommissioningSequence, DefaultCommissioningSequence>();
+
+        //services.AddSingleton<ICommissioningSequence, DefaultCommissioningSequence>();
         services.AddSingleton<FrameGuard>();
         services.AddSingleton<IFrameGuard>(sp => sp.GetRequiredService<FrameGuard>());
         services.AddSingleton<SafetyPipeline>();
         services.AddSingleton<ISafetyPipeline>(sp => sp.GetRequiredService<SafetyPipeline>());
         services.AddHostedService(sp => sp.GetRequiredService<SafetyPipeline>());
-        services.AddHostedService<CommissioningWorker>();
+        //services.AddHostedService<CommissioningWorker>();
         // ---------- 上游数据连接Tcp相关注入 ----------
         services.AddUpstreamTcpFromLiteDb();
         // ---------- 解码器相关注入 ----------
