@@ -158,33 +158,6 @@ namespace ZakYip.Singulation.Core.Planning {
         }
 
         /// <summary>
-        /// 将线速度（mm/s）按轴的皮带直径与齿轮比换算为 RPM。
-        /// 公式：rpm = ((v_mmps / 1000) / (π * D_m)) * gearRatio * 60
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private decimal MmpsToRpm(decimal vMmps, int axisIndex) {
-            var d_m = _cfg.BeltDiameter[axisIndex]; // 皮带/滚筒直径（米）
-            var gr = _cfg.GearRatio[axisIndex];    // 齿轮比（电机:滚筒）
-            if (d_m <= 0 || gr <= 0) return 0m;
-
-            var v_mps = vMmps / 1000m;
-            var revPerSec = (v_mps / ((decimal)Math.PI * d_m)) * gr;
-            return revPerSec * 60m;
-        }
-
-        /// <summary>
-        /// 叠加硬件线速度上/下限（mm/s）的二次限幅。
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private decimal ClampByHardwareSpeedLimitMmps(decimal vMmps, int axisIndex) {
-            var maxV = _cfg.MaxBeltSpeed;
-            var minV = Math.Max(0m, _cfg.MinBeltSpeed);
-            if (maxV > 0 && vMmps > maxV) vMmps = maxV;
-            if (vMmps < minV) vMmps = minV;
-            return vMmps;
-        }
-
-        /// <summary>
         /// 用帧序更新运行状态（Running/Degraded），处理丢帧/乱序。
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -98,17 +98,12 @@ namespace ZakYip.Singulation.Host.Controllers {
                     return BadRequest(ApiResponse<object>.Invalid("输出 IO 参数无效：起始位号必须 >= 0，数量必须在 1-1024 之间"));
                 }
 
-                _logger.LogInformation(
-                    "开始查询 IO 状态：输入 IO [{InputStart}-{InputEnd}]，输出 IO [{OutputStart}-{OutputEnd}]",
-                    inputStart, inputStart + inputCount - 1,
-                    outputStart, outputStart + outputCount - 1);
-
                 var result = await _ioStatusService.GetAllIoStatusAsync(
                     inputStart, inputCount,
                     outputStart, outputCount,
                     ct);
 
-                return Ok(ApiResponse<IoStatusResponseDto>.Success(result, "查询 IO 状态成功"));
+                return Ok(ApiResponse<IoStatusResponseDto>.Success(result));
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "查询 IO 状态时发生异常");

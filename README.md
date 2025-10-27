@@ -1,6 +1,70 @@
 # ZakYip.Singulation 项目总览
 
-## 本次更新（2025-10-27 晚间）
+## 本次更新（2025-10-27 代码重构与优化）
+
+### ✅ 代码重构与性能优化
+
+**核心改进**：移除冗余代码、优化性能、统一代码风格，提升代码质量和可维护性
+
+#### 1. 移除冗余功能和代码 ✅
+- **删除 CommissioningWorker 及相关代码**：
+  - 删除 `CommissioningWorker.cs` - 与 SafetyPipeline 功能重复的后台服务
+  - 删除 `CommissioningCommand.cs`, `CommissioningCommandKind.cs`, `CommissioningState.cs` - 相关命令和状态枚举
+  - 删除 `ICommissioningSequence.cs` 和 `DefaultCommissioningSequence.cs` - 仅被 CommissioningWorker 使用的接口和实现
+  - 更新 `Program.cs` 和 `RegressionRunner.cs` - 移除相关注册代码
+  - **原因**：CommissioningWorker 的触发事件和调用方法与 SafetyPipeline 完全重叠，导致反复调用可能发生异常
+- **移除未使用的方法**：
+  - 删除 `DefaultSpeedPlanner.MmpsToRpm()` - 从未被调用的重复实现
+  - 删除 `DefaultSpeedPlanner.ClampByHardwareSpeedLimitMmps()` - 未使用的限幅方法
+- **移除 IO 查询日志**：
+  - 从 `IoStatusService.cs` 移除查询完成日志
+  - 从 `IoController.cs` 移除查询开始和成功日志
+  - 减少日志噪音，提升系统性能
+
+#### 2. 代码优化与 LINQ 应用 ✅
+- **IoStatusService 优化**：
+  - 使用 `Enumerable.Range()` 和 LINQ `Select()` 替代传统 for 循环
+  - 使用 `Count()` 替代手动计数
+  - 代码更简洁、可读性更强
+  ```csharp
+  // 优化前：传统 for 循环
+  for (int i = 0; i < inputCount; i++) {
+      int bitNo = inputStart + i;
+      var ioStatus = ReadInputBit(bitNo);
+      response.InputIos.Add(ioStatus);
+      if (ioStatus.IsValid) validCount++; else errorCount++;
+  }
+  
+  // 优化后：LINQ 表达式
+  response.InputIos.AddRange(
+      Enumerable.Range(inputStart, inputCount).Select(ReadInputBit));
+  response.ValidCount = allIos.Count(io => io.IsValid);
+  ```
+
+#### 3. 修复编译警告 ✅
+- **修复 XML 文档引用警告**：
+  - 修复 `ISpeedPlanner.cs` 中不存在的 `ConveyorTopology` 引用
+  - 编译输出从 4 个警告降至 0 个
+  - 所有代码编译通过，无错误无警告
+
+#### 4. 速度转换标准化 ✅
+- **保持 LeadshineLtdmcAxisDrive.MmpsToLoadPps 为标准**：
+  - 该方法用于 mm/s 到负载侧 PPS 的转换
+  - 公式：`ppsLoad = (mmps / lprMm) * ppr / gearRatio`
+  - 其他速度转换方法（如 AxisKinematics）用于不同场景（电机侧转换）
+  - 移除了重复的未使用实现
+
+#### 5. 技术亮点
+
+- ✅ **代码瘦身**：删除约 400 行冗余代码
+- ✅ **性能优化**：减少日志输出，使用 LINQ 优化集合操作
+- ✅ **代码质量**：0 编译警告，代码更简洁清晰
+- ✅ **可维护性**：移除重复代码，统一实现标准
+- ✅ **LINQ 风格**：在合适的地方使用 LINQ，提升代码可读性
+
+---
+
+## 之前的更新（2025-10-27 晚间）
 
 ### ✅ 远程/本地模式自动使能功能
 

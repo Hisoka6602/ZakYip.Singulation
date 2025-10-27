@@ -16,7 +16,6 @@ using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Host.Runtime;
 using ZakYip.Singulation.Host.Safety;
-using ZakYip.Singulation.Host.Workers;
 using ZakYip.Singulation.Infrastructure.Safety;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 
@@ -46,13 +45,11 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
                     services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
                     services.AddSingleton<LoopbackSafetyIoModule>();
                     services.AddSingleton<ISafetyIoModule>(sp => sp.GetRequiredService<LoopbackSafetyIoModule>());
-                    services.AddSingleton<ICommissioningSequence, DefaultCommissioningSequence>();
                     services.AddSingleton<FrameGuard>();
                     services.AddSingleton<IFrameGuard>(sp => sp.GetRequiredService<FrameGuard>());
                     services.AddSingleton<SafetyPipeline>();
                     services.AddSingleton<ISafetyPipeline>(sp => sp.GetRequiredService<SafetyPipeline>());
                     services.AddHostedService(sp => sp.GetRequiredService<SafetyPipeline>());
-                    services.AddHostedService<CommissioningWorker>();
                 })
                 .Build();
 
