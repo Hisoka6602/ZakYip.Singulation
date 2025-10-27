@@ -120,7 +120,7 @@ namespace ZakYip.Singulation.Drivers.Common {
             ForEachDriveAsync(d => d.DisableAsync(ct).AsTask(), ct);
 
         public Task SetAccelDecelAllAsync(decimal accelMmPerSec2, decimal decelMmPerSec2, CancellationToken ct = default) =>
-            ForEachDriveAsync(d => d.SetAccelDecelByLinearAsync(accelMmPerSec2, decelMmPerSec2, ct).AsTask(), ct);
+            ForEachDriveAsync(d => d.SetAccelDecelByLinearAsync(accelMmPerSec2, decelMmPerSec2, ct), ct);
 
         public Task WriteSpeedAllAsync(decimal mmPerSec, CancellationToken ct = default) =>
             ForEachDriveAsync(d => d.WriteSpeedAsync(mmPerSec, ct), ct);

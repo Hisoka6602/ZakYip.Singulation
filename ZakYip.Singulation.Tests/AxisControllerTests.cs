@@ -1,14 +1,14 @@
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using ZakYip.Singulation.Core.Contracts.Dto;
-using ZakYip.Singulation.Core.Contracts.Events;
-using ZakYip.Singulation.Core.Contracts.ValueObjects;
-using ZakYip.Singulation.Drivers.Abstractions;
-using ZakYip.Singulation.Drivers.Abstractions.Ports;
-using ZakYip.Singulation.Drivers.Common;
+using System.Collections.Generic;
 using ZakYip.Singulation.Drivers.Enums;
+using ZakYip.Singulation.Drivers.Common;
+using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Drivers.Abstractions;
+using ZakYip.Singulation.Core.Contracts.Events;
+using ZakYip.Singulation.Drivers.Abstractions.Ports;
+using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -39,7 +39,8 @@ namespace ZakYip.Singulation.Tests {
     internal sealed class FakeDriveRegistry : IDriveRegistry {
         public List<FakeAxisDrive> Created { get; } = new();
 
-        public void Register(string vendor, Func<AxisId, IAxisPort, DriverOptions, IAxisDrive> factory) { }
+        public void Register(string vendor, Func<AxisId, IAxisPort, DriverOptions, IAxisDrive> factory) {
+        }
 
         public IAxisDrive Create(string vendor, AxisId axisId, IAxisPort port, DriverOptions opts) {
             var drive = new FakeAxisDrive(axisId);
@@ -49,13 +50,22 @@ namespace ZakYip.Singulation.Tests {
     }
 
     internal sealed class FakeAxisEventAggregator : IAxisEventAggregator {
+
         public event EventHandler<AxisSpeedFeedbackEventArgs>? SpeedFeedback;
+
         public event EventHandler<AxisCommandIssuedEventArgs>? CommandIssued;
+
         public event EventHandler<AxisErrorEventArgs>? AxisFaulted;
+
         public event EventHandler<AxisDisconnectedEventArgs>? AxisDisconnected;
+
         public event EventHandler<DriverNotLoadedEventArgs>? DriverNotLoaded;
-        public void Attach(IAxisDrive drive) { }
-        public void Detach(IAxisDrive drive) { }
+
+        public void Attach(IAxisDrive drive) {
+        }
+
+        public void Detach(IAxisDrive drive) {
+        }
     }
 
     internal sealed class FakeBusAdapter : IBusAdapter {
@@ -90,14 +100,19 @@ namespace ZakYip.Singulation.Tests {
     }
 
     internal sealed class FakeAxisDrive : IAxisDrive {
+
         public FakeAxisDrive(AxisId axis) => Axis = axis;
 
         public int StopCalls { get; private set; }
 
         public event EventHandler<AxisErrorEventArgs>? AxisFaulted;
+
         public event EventHandler<DriverNotLoadedEventArgs>? DriverNotLoaded;
+
         public event EventHandler<AxisDisconnectedEventArgs>? AxisDisconnected;
+
         public event EventHandler<AxisSpeedFeedbackEventArgs>? SpeedFeedback;
+
         public event EventHandler<AxisCommandIssuedEventArgs>? CommandIssued;
 
         public AxisId Axis { get; }
@@ -123,7 +138,8 @@ namespace ZakYip.Singulation.Tests {
 
         public Task SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default) => Task.CompletedTask;
 
-        public ValueTask SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec, CancellationToken ct = default) => ValueTask.CompletedTask;
+        public Task SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec,
+            CancellationToken ct = default) => ValueTask.CompletedTask;
 
         public ValueTask StopAsync(CancellationToken ct = default) {
             StopCalls++;

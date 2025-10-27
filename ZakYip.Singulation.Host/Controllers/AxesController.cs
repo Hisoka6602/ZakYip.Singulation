@@ -12,11 +12,11 @@ using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Common;
+using Swashbuckle.AspNetCore.Annotations;
 using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -594,7 +594,7 @@ namespace ZakYip.Singulation.Host.Controllers {
             var ok = true;
 
             if (req is { AccelMmps2: not null, DecelMmps2: not null }) {
-                ok &= await Safe(() => d.SetAccelDecelAsync(req.AccelMmps2.Value, req.DecelMmps2.Value, ct));
+                ok &= await Safe(() => d.SetAccelDecelByLinearAsync(req.AccelMmps2.Value, req.DecelMmps2.Value, ct));
             }
             if (req.Limits is { MaxLinearMmps: not null, MaxAccelMmps2: not null, MaxDecelMmps2: not null }) {
                 ok &= await Safe(() => d.UpdateLinearLimitsAsync(req.Limits.MaxLinearMmps.Value,
