@@ -24,13 +24,27 @@
 ```csharp
 private static void EnforceSafetyInterval() {
     lock (_sdkCallLock) {
-        long elapsed = _stopwatch.ElapsedTicks - _lastSdkCallTicks;
-        var elapsedMs = (elapsed * 1000.0) / Stopwatch.Frequency;
+        long elapsed;
+        long current;
+        do {
+            current = _stopwatch.ElapsedTicks;
+            elapsed = current - Volatile.Read(ref _lastSdkCallTicks);
+            
+            // 转换为毫秒
+            var elapsedMs = (elapsed * 1000.0) / Stopwatch.Frequency;
+            
+            if (elapsedMs >= SafetyIntervalMs) {
+                break;
+            }
+            
+            // 需要等待的时间
+            var waitMs = SafetyIntervalMs - elapsedMs;
+            if (waitMs > 0) {
+                Thread.Sleep((int)Math.Ceiling(waitMs));
+            }
+        } while (true);
         
-        if (elapsedMs < SafetyIntervalMs) {
-            Thread.Sleep((int)Math.Ceiling(SafetyIntervalMs - elapsedMs));
-        }
-        
+        // 更新最后调用时间
         Volatile.Write(ref _lastSdkCallTicks, _stopwatch.ElapsedTicks);
     }
 }
