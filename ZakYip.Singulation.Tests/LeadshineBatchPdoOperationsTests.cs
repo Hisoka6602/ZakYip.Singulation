@@ -65,7 +65,7 @@ namespace ZakYip.Singulation.Tests {
         }
 
         [MiniFact]
-        public void BatchStatistics_WritResults_CalculatesCorrectly() {
+        public void BatchStatistics_WriteResults_CalculatesCorrectly() {
             var results = new[] {
                 new LeadshineBatchPdoOperations.BatchWriteResult(0x60FF, 0),
                 new LeadshineBatchPdoOperations.BatchWriteResult(0x6040, 0),
