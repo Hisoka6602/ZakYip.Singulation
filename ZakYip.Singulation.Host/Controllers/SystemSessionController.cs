@@ -52,6 +52,8 @@ namespace ZakYip.Singulation.Host.Controllers {
 
             _logger.LogInformation("收到关闭请求，将在后台停止宿主应用。");
 
+            // 设置退出码为 1，以触发 Windows 服务的自动重启机制
+            Environment.ExitCode = 1;
             _ = Task.Run(() => {
                 try {
                     _logger.LogInformation("触发宿主停止。");

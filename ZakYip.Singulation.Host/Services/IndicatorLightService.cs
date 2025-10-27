@@ -15,7 +15,7 @@ namespace ZakYip.Singulation.Host.Services {
     public sealed class IndicatorLightService {
         private readonly ILogger<IndicatorLightService> _logger;
         private readonly ushort _cardNo;
-        private readonly LeadshineSafetyIoOptions _options;
+        private LeadshineSafetyIoOptions _options;
         private SystemState _currentState = SystemState.Stopped;
         private readonly object _stateLock = new();
 
