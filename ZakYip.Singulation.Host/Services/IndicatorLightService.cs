@@ -135,9 +135,15 @@ namespace ZakYip.Singulation.Host.Services {
 
             try {
                 // 根据 invertLogic 决定电平逻辑
-                // invertLogic = false: on=true → state=1 (高电平亮灯)
-                // invertLogic = true:  on=true → state=0 (低电平亮灯)
-                ushort state = (on != invertLogic) ? (ushort)1 : (ushort)0;
+                // XOR logic: state = on ^ invertLogic
+                // Truth table:
+                //   on | invertLogic | state
+                //  ----+-------------+------
+                //   T  |     F       |  1 (高电平亮灯)
+                //   F  |     F       |  0 (高电平灭灯)
+                //   T  |     T       |  0 (低电平亮灯)
+                //   F  |     T       |  1 (低电平灭灯)
+                ushort state = (on ^ invertLogic) ? (ushort)1 : (ushort)0;
                 short result = LTDMC.dmc_write_outbit(_cardNo, (ushort)bitNo, state);
 
                 if (result < 0) {
