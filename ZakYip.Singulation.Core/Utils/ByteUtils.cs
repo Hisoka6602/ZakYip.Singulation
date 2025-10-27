@@ -174,14 +174,6 @@ public static class ByteUtils {
     }
 
     /// <summary>
-    /// 将字节数组的 Int32 位转换为 Single（float）。
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static float Int32BitsToSingle(int value) {
-        return BitConverter.Int32BitsToSingle(value);
-    }
-
-    /// <summary>
     /// 将 Single（float）转换为字节数组的 Int32 位。
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
