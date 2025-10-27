@@ -23,15 +23,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
     /// <summary>
     /// 雷赛 LTDMC 实机轴驱动（EtherCAT）。
     /// - 通过 nmc_write_rxpdo / nmc_read_txpdo 直写/直读 PDO。
-    /// - 通过 nmc_set_axis_contrlword 走 402 状态机使能。
-    /// - 目标速度写 0x60FF（INT32，单位：pps，负载侧脉冲/秒）。
-    /// - 加减速度写 0x6083/0x6084（U32，单位：pps²，负载侧脉冲/秒²）。
-    /// - 状态字读 0x6041；实际速度读 0x606C（INT32，单位：pps，负载侧脉冲/秒）。
-    /// - 端口固定 2；从站 NodeID = 1000 + nodeIndex。
-    /// </summary>
-    /// <summary>
-    /// 雷赛 LTDMC 实机轴驱动（EtherCAT）。
-    /// - 通过 nmc_write_rxpdo / nmc_read_txpdo 直写/直读 PDO。
     /// - 通过 402 状态机使能。
     /// - 目标速度写 0x60FF（负载侧 pps，INT32），实际速度读 0x606C（负载侧 pps）。
     /// - 加减速度写 0x6083/0x6084（负载侧 pps²，UNSIGNED32）。
