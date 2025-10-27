@@ -204,11 +204,4 @@ public static class MathUtils {
 
 
 
-    /// <summary>
-    /// 向下舍入。
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-    public static decimal Floor(decimal value) {
-        return Math.Floor(value);
-    }
 }
