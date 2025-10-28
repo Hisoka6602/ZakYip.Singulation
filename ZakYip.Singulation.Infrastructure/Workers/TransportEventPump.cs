@@ -74,13 +74,6 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 SingleWriter = false,
                 FullMode = BoundedChannelFullMode.DropOldest
             });
-
-            // 通过 Keyed DI 聚合（speed/position/heartbeat）
-            var keys = new[] { "speed", "position", "heartbeat" };
-            foreach (var key in keys) {
-                var t = _sp.GetKeyedService<IByteTransport>(key);
-                if (t != null) _transports.Add((key, t));
-            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -94,6 +87,28 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 // 继续执行，因为传输可能稍后会被初始化
             }
 
+            // 在初始化后，通过 Keyed DI 聚合（speed/position/heartbeat）
+            var keys = new[] { "speed", "position", "heartbeat" };
+            foreach (var key in keys) {
+                try {
+                    var t = _sp.GetKeyedService<IByteTransport>(key);
+                    if (t != null) _transports.Add((key, t));
+                }
+                catch (InvalidOperationException ex) {
+                    _log.LogWarning(ex, "[TransportEventPump] Failed to resolve transport '{Key}' - initialization may have failed", key);
+                }
+            }
+
+            // Ensure essential transports are present
+            var essentialTransports = new[] { "speed" }; // Add more keys if needed
+            foreach (var essential in essentialTransports)
+            {
+                if (!_transports.Any(t => t.Item1 == essential))
+                {
+                    _log.LogError("[TransportEventPump] Essential transport '{Essential}' is missing after initialization", essential);
+                    throw new InvalidOperationException($"Essential transport '{essential}' is missing.");
+                }
+            }
             SubscribeAxisEventsOnce();
 
             // 订阅（只一次）
