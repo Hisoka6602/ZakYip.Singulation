@@ -337,16 +337,6 @@ public static partial class LogMessages
         string source);
 
     [LoggerMessage(
-        EventId = 8016,
-        Level = LogLevel.Warning,
-        Message = "[{source}] axis disconnected (axis={axisId}) reason={reason}")]
-    public static partial void AxisDisconnectedEvent(
-        this ILogger logger,
-        string source,
-        int axisId,
-        string reason);
-
-    [LoggerMessage(
         EventId = 8017,
         Level = LogLevel.Error,
         Message = "[{Source}] driver not loaded: {Reason}")]
