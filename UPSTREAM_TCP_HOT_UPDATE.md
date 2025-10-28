@@ -239,9 +239,28 @@ _ = Task.Run(async () => {
 ```
 
 ### 日志级别建议
-- **Information**: 正常的热更新操作
-- **Warning**: 停止旧连接时的非关键错误
-- **Error**: 热更新失败、回滚操作
+
+#### Information 级别
+用于记录正常的操作流程：
+```
+[UpstreamController] Upstream config saved to database: Host=192.168.1.100, Role=Client
+[UpstreamTransportManager] Reloading transports with new config
+[UpstreamTransportManager] Transport 'speed' started
+```
+
+#### Warning 级别
+用于记录非关键错误，不影响主要功能：
+```
+[UpstreamTransportManager] Error stopping transport 'old-speed': Connection already closed
+[UpstreamTransportManager] Error disposing transport: Object already disposed
+```
+
+#### Error 级别
+用于记录严重错误，需要人工介入：
+```
+[UpstreamController] Failed to update upstream config or reload transports: Connection timeout
+[UpstreamTransportManager] Failed to reload transports: Port 5001 already in use
+```
 
 ## 常见问题
 
@@ -301,10 +320,9 @@ _ = Task.Run(async () => {
 
 ## 相关文档
 
-- [API文档](docs/API.md) - 完整的REST API参考
-- [架构设计](docs/ARCHITECTURE.md) - 系统整体架构
-- [运维手册](ops/OPERATIONS_MANUAL.md) - 运维操作指南
-- [故障排查](docs/TROUBLESHOOTING.md) - 常见问题排查
+- REST API参考 - 参见Swagger文档 http://localhost:5000/swagger
+- 上游通信配置 - 参见本文档
+- 系统架构设计 - 参见项目README.md
 
 ## 版本历史
 
