@@ -336,12 +336,4 @@ public static partial class LogMessages
         Exception exception,
         string source);
 
-    [LoggerMessage(
-        EventId = 8018,
-        Level = LogLevel.Error,
-        Message = "[{Source}] controller fault: {Reason}")]
-    public static partial void ControllerFaulted(
-        this ILogger logger,
-        string source,
-        string reason);
 }
