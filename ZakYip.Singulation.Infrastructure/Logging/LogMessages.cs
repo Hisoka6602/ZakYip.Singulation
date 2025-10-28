@@ -339,7 +339,7 @@ public static partial class LogMessages
     [LoggerMessage(
         EventId = 8015,
         Level = LogLevel.Error,
-        Message = "[{source}] axis faulted (axis={axisId}), Reason({reason})")]
+        Message = "[{Source}] axis faulted (axis={axisId}), Reason({reason})")]
     public static partial void AxisFaulted(
         this ILogger logger,
         Exception exception,
