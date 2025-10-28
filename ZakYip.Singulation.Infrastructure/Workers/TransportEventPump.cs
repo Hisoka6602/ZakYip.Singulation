@@ -99,6 +99,16 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 }
             }
 
+            // Ensure essential transports are present
+            var essentialTransports = new[] { "speed" }; // Add more keys if needed
+            foreach (var essential in essentialTransports)
+            {
+                if (!_transports.Any(t => t.Item1 == essential))
+                {
+                    _log.LogError("[TransportEventPump] Essential transport '{Essential}' is missing after initialization", essential);
+                    throw new InvalidOperationException($"Essential transport '{essential}' is missing.");
+                }
+            }
             SubscribeAxisEventsOnce();
 
             // 订阅（只一次）
