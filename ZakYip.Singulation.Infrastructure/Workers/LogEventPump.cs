@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 ﻿using System;
 using System.Linq;
 using System.Text;
@@ -5,11 +7,11 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Host.Runtime;
+using ZakYip.Singulation.Infrastructure.Runtime;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 
-namespace ZakYip.Singulation.Host.Workers {
+namespace ZakYip.Singulation.Infrastructure.Workers {
 
     /// <summary>
     /// 日志泵：合并/节流非异常日志，统一落到 NLog（ILogger）与实时出口（SignalR）。

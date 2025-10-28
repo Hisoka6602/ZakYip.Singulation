@@ -6,9 +6,9 @@ using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
-using ZakYip.Singulation.Host.Services;
+using ZakYip.Singulation.Infrastructure.Services;
 
-namespace ZakYip.Singulation.Host.Workers {
+namespace ZakYip.Singulation.Infrastructure.Workers {
 
     /// <summary>
     /// IO 状态监控后台服务，定期轮询所有 IO 状态并通过 SignalR 广播。

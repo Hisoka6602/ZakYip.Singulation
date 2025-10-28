@@ -1,7 +1,9 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 ﻿using ZakYip.Singulation.Core.Utils;
 using System.Text.RegularExpressions;
 
-namespace ZakYip.Singulation.Host.Workers {
+namespace ZakYip.Singulation.Infrastructure.Workers {
 
     /// <summary>
     /// 日志清理服务

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 ﻿using System;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ using System.Collections.Concurrent;
 using ZakYip.Singulation.Host.SignalR;
 using ZakYip.Singulation.Host.SignalR.Hubs;
 
-namespace ZakYip.Singulation.Host.Runtime {
+namespace ZakYip.Singulation.Host.SignalR {
 
     public sealed class RealtimeDispatchService : BackgroundService {
         private readonly Channel<SignalRQueueItem> _chan;

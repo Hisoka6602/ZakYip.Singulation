@@ -1,10 +1,12 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 ﻿using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-namespace ZakYip.Singulation.Host.Workers {
+namespace ZakYip.Singulation.Infrastructure.Workers {
 
     public class SingulationWorker : BackgroundService {
         private readonly ILogger<SingulationWorker> _logger;

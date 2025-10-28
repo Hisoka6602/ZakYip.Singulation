@@ -12,7 +12,7 @@ using ZakYip.Singulation.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace ZakYip.Singulation.Host.Safety {
+namespace ZakYip.Singulation.Infrastructure.Safety {
 
     public sealed class FrameGuard : IFrameGuard {
         private readonly ILogger<FrameGuard> _log;

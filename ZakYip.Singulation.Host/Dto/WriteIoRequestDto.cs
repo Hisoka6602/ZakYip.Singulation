@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ZakYip.Singulation.Core.Contracts.Dto;
 
 namespace ZakYip.Singulation.Host.Dto {
 

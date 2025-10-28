@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 ﻿using System;
 using System.Linq;
 using System.Text;
@@ -5,7 +7,7 @@ using Newtonsoft.Json;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Diagnostics;
-using ZakYip.Singulation.Host.Runtime;
+using ZakYip.Singulation.Infrastructure.Runtime;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Protocol.Abstractions;
@@ -13,7 +15,7 @@ using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 
-namespace ZakYip.Singulation.Host.Workers {
+namespace ZakYip.Singulation.Infrastructure.Workers {
 
     /// <summary>
     /// 从 Hub 订阅速度帧：每个 Worker 都拿到“同一帧”的独立通道，不互相影响。

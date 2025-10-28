@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace ZakYip.Singulation.Host.Dto {
+namespace ZakYip.Singulation.Core.Contracts.Dto {
 
     /// <summary>
     /// IO 状态查询响应。

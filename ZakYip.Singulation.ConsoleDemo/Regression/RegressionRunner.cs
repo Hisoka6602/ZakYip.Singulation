@@ -14,8 +14,8 @@ using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Drivers.Common;
-using ZakYip.Singulation.Host.Runtime;
-using ZakYip.Singulation.Host.Safety;
+using ZakYip.Singulation.Infrastructure.Runtime;
+using ZakYip.Singulation.Infrastructure.Safety;
 using ZakYip.Singulation.Infrastructure.Safety;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 

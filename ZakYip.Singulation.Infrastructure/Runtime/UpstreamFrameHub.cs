@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 ﻿using System;
 using System.Linq;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Threading.Channels;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Contracts;
 
-namespace ZakYip.Singulation.Host.Runtime {
+namespace ZakYip.Singulation.Infrastructure.Runtime {
 
     /// <summary>
     /// UpstreamFrameHub：集中扇出上游帧（Speed/Heartbeat/Position）。

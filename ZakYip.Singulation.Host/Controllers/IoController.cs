@@ -4,7 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Host.Dto;
-using ZakYip.Singulation.Host.Services;
+using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Infrastructure.Services;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {

@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace ZakYip.Singulation.Host.Dto {
+namespace ZakYip.Singulation.Core.Contracts.Dto {
 
     /// <summary>
     /// 单个 IO 端口的状态信息。

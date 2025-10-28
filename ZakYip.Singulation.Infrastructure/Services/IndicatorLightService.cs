@@ -4,10 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Host.Dto;
+using ZakYip.Singulation.Core.Contracts.Dto;
 using csLTDMC;
 
-namespace ZakYip.Singulation.Host.Services {
+namespace ZakYip.Singulation.Infrastructure.Services {
 
     /// <summary>
     /// 指示灯服务：根据系统状态控制三色灯和按钮灯。
