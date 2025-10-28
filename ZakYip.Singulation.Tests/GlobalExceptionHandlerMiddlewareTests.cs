@@ -103,7 +103,11 @@ internal sealed class GlobalExceptionHandlerMiddlewareTests
         
         // Verify isRetryable flag in response
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var responseText = await new StreamReader(context.Response.Body).ReadToEndAsync();
+        string responseText;
+        using (var reader = new StreamReader(context.Response.Body))
+        {
+            responseText = await reader.ReadToEndAsync();
+        }
         MiniAssert.True(responseText.Contains("isRetryable"), "响应应包含 isRetryable 标志");
     }
 
