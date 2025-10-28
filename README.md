@@ -1,5 +1,72 @@
 # ZakYip.Singulation 项目总览
 
+## 最新更新（2025-10-28 上游TCP连接热更新）
+
+### ✅ 上游TCP连接热更新支持
+
+**核心改进**：上游TCP连接现在支持配置热更新，修改连接参数即刻生效，无需重启应用程序
+
+#### 1. 热更新功能 ✅
+- **功能特性**：
+  - 支持在运行时动态更新上游TCP连接配置
+  - 配置变更后自动停止旧连接、创建并启动新连接
+  - 零停机时间：新连接创建成功后才会释放旧连接
+  - 支持所有连接参数的热更新：Host、Port、Role（Client/Server模式）
+  - 三路连接（Speed/Position/Heartbeat）同时热更新
+  
+- **实现机制**：
+  - 新增 `UpstreamTransportManager` 统一管理传输层生命周期
+  - 配置更新API（`PUT /api/upstream/configs`）自动触发热更新
+  - 线程安全的连接切换机制，避免并发竞态问题
+  - 失败回滚：热更新失败时自动恢复到旧连接
+
+#### 2. 使用方法
+
+**通过API更新配置**：
+```bash
+# 更新上游TCP连接配置（自动触发热更新）
+curl -X PUT http://localhost:5000/api/upstream/configs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host": "192.168.1.100",
+    "speedPort": 5001,
+    "positionPort": 5002,
+    "heartbeatPort": 5003,
+    "role": "Client",
+    "validateCrc": true
+  }'
+```
+
+**配置参数说明**：
+- `host`: 远程主机地址（仅Client模式使用）
+- `speedPort`: 速度通道端口号
+- `positionPort`: 位置通道端口号
+- `heartbeatPort`: 心跳通道端口号
+- `role`: 连接角色，可选值：
+  - `Client`: 客户端模式，主动连接远程服务器
+  - `Server`: 服务器模式，本地监听等待连接
+- `validateCrc`: 是否校验CRC
+
+**热更新流程**：
+1. 调用API更新配置
+2. 配置保存到LiteDB数据库
+3. `UpstreamTransportManager` 自动检测配置变更
+4. 创建新的传输连接实例（使用新配置）
+5. 启动新连接
+6. 停止并释放旧连接
+7. 返回操作结果
+
+#### 3. 技术亮点
+
+- ✅ **零停机更新**：新连接建立后才释放旧连接，保证服务连续性
+- ✅ **线程安全**：使用锁机制保护并发访问
+- ✅ **异常处理**：热更新失败时自动回滚到旧配置
+- ✅ **自动化**：配置更新API自动触发热更新，无需手动重启
+- ✅ **灵活性**：支持Client/Server模式切换
+- ✅ **可观测性**：详细的日志记录，便于排查问题
+
+---
+
 ## 最新更新（2025-10-28 项目架构重组）
 
 ### ✅ Host层架构优化

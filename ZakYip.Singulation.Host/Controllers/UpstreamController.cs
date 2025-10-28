@@ -11,6 +11,7 @@ using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Abstractions;
 using System.ComponentModel.DataAnnotations;
 using ZakYip.Singulation.Transport.Abstractions;
+using ZakYip.Singulation.Infrastructure.Transport;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
@@ -29,15 +30,18 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly IUpstreamOptionsStore _store;
         private readonly IServiceProvider _serviceProvider;
         private readonly IEnumerable<IByteTransport> _transports;
+        private readonly UpstreamTransportManager _transportManager;
 
         public UpstreamController(ILogger<UpstreamController> logger,
             IUpstreamOptionsStore store,
             IServiceProvider serviceProvider,
-            IEnumerable<IByteTransport> transports) {
+            IEnumerable<IByteTransport> transports,
+            UpstreamTransportManager transportManager) {
             _logger = logger;
             _store = store;
             _serviceProvider = serviceProvider;
             _transports = transports;
+            _transportManager = transportManager;
         }
 
         /// <summary>
@@ -66,22 +70,38 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// </summary>
         /// <remarks>
         /// 保存或更新上游 TCP 连接的配置信息。
-        /// 配置更新后会持久化保存。
+        /// 配置更新后会持久化保存，并自动触发连接热更新（停止旧连接，使用新配置创建并启动新连接）。
         /// </remarks>
         /// <param name="dto">上游配置对象</param>
         /// <param name="ct">取消令牌</param>
         /// <returns>操作结果</returns>
-        /// <response code="200">配置已保存</response>
+        /// <response code="200">配置已保存并热更新成功</response>
+        /// <response code="500">配置保存或热更新失败</response>
         [HttpPut("configs")]
         [SwaggerOperation(
             Summary = "更新上游 TCP 配置",
-            Description = "保存或更新上游 TCP 连接的配置信息。配置更新后会持久化保存。")]
+            Description = "保存或更新上游 TCP 连接的配置信息。配置更新后会持久化保存，并自动触发连接热更新（停止旧连接，使用新配置创建并启动新连接）。")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 500)]
         [Consumes("application/json")]
         [Produces("application/json")]
         public async Task<ApiResponse<string>> UpsertAsync([FromBody] UpstreamOptions dto, CancellationToken ct) {
-            await _store.SaveAsync(dto, ct);
-            return ApiResponse<string>.Success("配置已保存");
+            try {
+                // 1. 保存配置到数据库
+                await _store.SaveAsync(dto, ct);
+                _logger.LogInformation("Upstream config saved to database: Host={Host}, Role={Role}, SpeedPort={SpeedPort}, PositionPort={PositionPort}, HeartbeatPort={HeartbeatPort}",
+                    dto.Host, dto.Role, dto.SpeedPort, dto.PositionPort, dto.HeartbeatPort);
+
+                // 2. 触发热更新：重新创建并启动传输连接
+                await _transportManager.ReloadTransportsAsync(dto, startImmediately: true, ct);
+                _logger.LogInformation("Upstream transports hot-reloaded successfully with new config");
+
+                return ApiResponse<string>.Success("配置已保存并热更新成功");
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "Failed to update upstream config or reload transports");
+                return ApiResponse<string>.Fail($"配置更新失败: {ex.Message}");
+            }
         }
 
         /// <summary>

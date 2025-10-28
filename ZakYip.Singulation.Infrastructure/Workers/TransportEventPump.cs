@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
-﻿using System.Text;
+using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Channels;
 using System.Collections.Concurrent;
@@ -12,6 +12,7 @@ using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
+using ZakYip.Singulation.Infrastructure.Transport;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
@@ -45,6 +46,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private readonly IServiceProvider _sp;
         private readonly IRealtimeNotifier _rt;
         private readonly IAxisController _axisController;
+        private readonly UpstreamTransportManager _transportManager;
 
         private bool _axisSubscribed;
         private long _axisDropped;
@@ -56,13 +58,15 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             IUpstreamFrameHub hub,
             IAxisEventAggregator axisEventAggregator,
             IRealtimeNotifier rt,
-            IAxisController axisController) {
+            IAxisController axisController,
+            UpstreamTransportManager transportManager) {
             _log = log;
             _sp = sp;
             _hub = hub;
             _axisEventAggregator = axisEventAggregator;
             _rt = rt;
             _axisController = axisController;
+            _transportManager = transportManager;
 
             // 传输侧慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(1024) {
@@ -80,6 +84,16 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            // 初始化传输管理器（读取配置并创建传输实例，但不启动）
+            try {
+                await _transportManager.InitializeAsync(stoppingToken).ConfigureAwait(false);
+                _log.LogInformation("[TransportEventPump] UpstreamTransportManager initialized");
+            }
+            catch (Exception ex) {
+                _log.LogError(ex, "[TransportEventPump] Failed to initialize UpstreamTransportManager");
+                // 继续执行，因为传输可能稍后会被初始化
+            }
+
             SubscribeAxisEventsOnce();
 
             // 订阅（只一次）
