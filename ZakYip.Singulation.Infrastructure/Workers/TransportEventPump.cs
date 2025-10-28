@@ -94,8 +94,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     var t = _sp.GetKeyedService<IByteTransport>(key);
                     if (t != null) _transports.Add((key, t));
                 }
-                catch (Exception ex) {
-                    _log.LogWarning(ex, "[TransportEventPump] Failed to resolve transport '{Key}', it may not be initialized yet", key);
+                catch (InvalidOperationException ex) {
+                    _log.LogWarning(ex, "[TransportEventPump] Transport '{Key}' not yet initialized or failed to resolve", key);
                 }
             }
 
