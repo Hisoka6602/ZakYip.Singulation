@@ -8,7 +8,6 @@ namespace ZakYip.Singulation.Core.Utils {
     /// 默认以“电机轴”为参考；齿轮比为“电机:负载”。
     /// </summary>
     public static class AxisKinematics {
-        private const decimal Pi = 3.1415926535897932384626433833m;
 
         /// <summary>
         /// 计算“电机轴每转”对应的线位移（mm）。
@@ -22,7 +21,7 @@ namespace ZakYip.Singulation.Core.Utils {
             }
 
             if (pulleyPitchDiameterMm > 0m) {
-                var circumference = Pi * pulleyPitchDiameterMm;
+                var circumference = (decimal)Math.PI * pulleyPitchDiameterMm;
                 return circumference / gearRatio;
             }
 
