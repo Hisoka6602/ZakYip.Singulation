@@ -74,13 +74,6 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 SingleWriter = false,
                 FullMode = BoundedChannelFullMode.DropOldest
             });
-
-            // 通过 Keyed DI 聚合（speed/position/heartbeat）
-            var keys = new[] { "speed", "position", "heartbeat" };
-            foreach (var key in keys) {
-                var t = _sp.GetKeyedService<IByteTransport>(key);
-                if (t != null) _transports.Add((key, t));
-            }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -92,6 +85,13 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             catch (Exception ex) {
                 _log.LogError(ex, "[TransportEventPump] Failed to initialize UpstreamTransportManager");
                 // 继续执行，因为传输可能稍后会被初始化
+            }
+
+            // 在初始化后，通过 Keyed DI 聚合（speed/position/heartbeat）
+            var keys = new[] { "speed", "position", "heartbeat" };
+            foreach (var key in keys) {
+                var t = _sp.GetKeyedService<IByteTransport>(key);
+                if (t != null) _transports.Add((key, t));
             }
 
             SubscribeAxisEventsOnce();
