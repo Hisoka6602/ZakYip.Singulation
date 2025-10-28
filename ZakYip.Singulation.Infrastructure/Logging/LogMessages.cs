@@ -337,15 +337,6 @@ public static partial class LogMessages
         string source);
 
     [LoggerMessage(
-        EventId = 8017,
-        Level = LogLevel.Error,
-        Message = "[{Source}] driver not loaded: {Reason}")]
-    public static partial void DriverNotLoaded(
-        this ILogger logger,
-        string source,
-        string reason);
-
-    [LoggerMessage(
         EventId = 8018,
         Level = LogLevel.Error,
         Message = "[{Source}] controller fault: {Reason}")]
