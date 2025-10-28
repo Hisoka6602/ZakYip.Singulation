@@ -364,24 +364,26 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         }
 
         // ========== 事件处理：轴侧 ==========
+        // Note: Axis event logging uses structured logging instead of LoggerMessage
+        // due to technical limitations with AxisId value object conversion in source generator
         private void ProcessAxisEvent(AxisEvent ev) {
             switch (ev.Type) {
                 case AxisEventType.Faulted:
                     _log.LogError(ev.Exception, "[{Source}] axis faulted (axis={Axis}), Reason({Reason}), Exception({Exception})", 
-                        ev.Source, ev.AxisId.Value, ev.Reason, ev.Exception);
+                        ev.Source, ev.AxisId.Value, ev.Reason ?? string.Empty, ev.Exception);
                     break;
 
                 case AxisEventType.Disconnected:
                     _log.LogWarning("[{Source}] axis disconnected (axis={Axis}) reason={Reason}", 
-                        ev.Source, ev.AxisId.Value, ev.Reason);
+                        ev.Source, ev.AxisId.Value, ev.Reason ?? string.Empty);
                     break;
 
                 case AxisEventType.DriverNotLoaded:
-                    _log.LogError("[{Source}] driver not loaded: {Reason}", ev.Source, ev.Reason);
+                    _log.LogError("[{Source}] driver not loaded: {Reason}", ev.Source, ev.Reason ?? string.Empty);
                     break;
 
                 case AxisEventType.ControllerFaulted:
-                    _log.LogError("[{Source}] controller fault: {Reason}", ev.Source, ev.Reason);
+                    _log.LogError("[{Source}] controller fault: {Reason}", ev.Source, ev.Reason ?? string.Empty);
                     break;
 
                 default:
