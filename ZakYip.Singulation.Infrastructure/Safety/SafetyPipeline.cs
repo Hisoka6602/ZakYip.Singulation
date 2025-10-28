@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Linq;
 using System.Threading;
@@ -12,9 +13,9 @@ using ZakYip.Singulation.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Contracts;
 using System.Collections.Generic;
-using ZakYip.Singulation.Host.Services;
+using ZakYip.Singulation.Infrastructure.Services;
 
-namespace ZakYip.Singulation.Host.Safety {
+namespace ZakYip.Singulation.Infrastructure.Safety {
 
     /// <summary>
     /// 安全联动管线：把 IO、驱动健康事件汇聚到安全隔离器，并触发 StopAll。

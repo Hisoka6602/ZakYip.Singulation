@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 ﻿using System;
 using System.Linq;
 using System.Text;
@@ -11,7 +13,7 @@ using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
-namespace ZakYip.Singulation.Host.Workers {
+namespace ZakYip.Singulation.Infrastructure.Workers {
 
     public sealed class AxisBootstrapper : BackgroundService {
         private readonly ILogger<AxisBootstrapper> _log;

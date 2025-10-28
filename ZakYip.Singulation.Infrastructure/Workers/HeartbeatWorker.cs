@@ -1,12 +1,14 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 ﻿using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Host.Runtime;
+using ZakYip.Singulation.Infrastructure.Runtime;
 using ZakYip.Singulation.Core.Contracts;
 
-namespace ZakYip.Singulation.Host.Workers {
+namespace ZakYip.Singulation.Infrastructure.Workers {
 
     /// <summary>
     /// 演示多订阅：心跳帧的独立消费者。

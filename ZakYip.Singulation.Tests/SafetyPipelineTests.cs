@@ -8,7 +8,7 @@ using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Core.Contracts.Events.Safety;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Abstractions;
-using ZakYip.Singulation.Host.Safety;
+using ZakYip.Singulation.Infrastructure.Safety;
 
 namespace ZakYip.Singulation.Tests {
 

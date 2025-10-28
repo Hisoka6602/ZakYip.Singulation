@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Contracts.Dto;
 
-namespace ZakYip.Singulation.Host.Runtime {
+namespace ZakYip.Singulation.Infrastructure.Runtime {
 
     public interface IRuntimeStatusProvider {
 

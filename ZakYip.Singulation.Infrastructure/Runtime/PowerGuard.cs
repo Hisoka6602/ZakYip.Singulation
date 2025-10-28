@@ -2,12 +2,12 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
-namespace ZakYip.Singulation.Host.Runtime {
+namespace ZakYip.Singulation.Infrastructure.Runtime {
 
     /// <summary>
     /// 电源防护工具类，防止系统休眠。
     /// </summary>
-    internal static class PowerGuard {
+    public static class PowerGuard {
 
         /// <summary>
         /// 线程执行状态标志（Windows API）。

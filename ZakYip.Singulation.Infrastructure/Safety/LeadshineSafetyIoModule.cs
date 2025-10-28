@@ -8,7 +8,7 @@ using ZakYip.Singulation.Core.Contracts.Events.Safety;
 using ZakYip.Singulation.Core.Enums;
 using csLTDMC;
 
-namespace ZakYip.Singulation.Host.Safety {
+namespace ZakYip.Singulation.Infrastructure.Safety {
 
     /// <summary>
     /// 雷赛硬件安全 IO 模块：通过控制器 IO 端口读取物理按键状态。

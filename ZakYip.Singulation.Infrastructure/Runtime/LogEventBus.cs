@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 
-namespace ZakYip.Singulation.Host.Runtime {
+namespace ZakYip.Singulation.Infrastructure.Runtime {
 
     /// <summary>
     /// 日志事件总线：封装一个有界通道，供写侧快速投递，读侧由 LogEventPump 消费。

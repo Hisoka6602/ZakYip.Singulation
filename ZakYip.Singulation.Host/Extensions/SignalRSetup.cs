@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Threading.Channels;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
-using ZakYip.Singulation.Host.Runtime;
+using ZakYip.Singulation.Infrastructure.Runtime;
 using ZakYip.Singulation.Host.SignalR;
 using ZakYip.Singulation.Host.SignalR.Hubs;
 using ZakYip.Singulation.Core.Abstractions.Realtime;

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Core.Contracts.Events.Safety;
 
-namespace ZakYip.Singulation.Host.Safety {
+namespace ZakYip.Singulation.Infrastructure.Safety {
 
     /// <summary>
     /// 纯内存安全 IO 模块：用于回归测试与 Console Demo。

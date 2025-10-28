@@ -4,11 +4,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
-using ZakYip.Singulation.Host.Dto;
+using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Contracts;
 using csLTDMC;
 
-namespace ZakYip.Singulation.Host.Services {
+namespace ZakYip.Singulation.Infrastructure.Services {
 
     /// <summary>
     /// IO 状态查询服务，提供读取和写入雷赛控制器 IO 端口状态的功能。

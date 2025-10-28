@@ -1,6 +1,6 @@
 using System;
 
-namespace ZakYip.Singulation.Host.Safety {
+namespace ZakYip.Singulation.Infrastructure.Safety {
 
     public sealed class FrameGuardOptions {
         public int SequenceWindow { get; set; } = 32;

@@ -1,7 +1,7 @@
 using ZakYip.Singulation.Core.Contracts.Events.Safety;
 using ZakYip.Singulation.Core.Enums;
 
-namespace ZakYip.Singulation.Host.Safety {
+namespace ZakYip.Singulation.Infrastructure.Safety {
     /// <summary>
     /// 安全管线内部使用的操作描述对象。
     /// </summary>

@@ -1,3 +1,6 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 ﻿using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Channels;
@@ -10,7 +13,7 @@ using ZakYip.Singulation.Transport.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
-namespace ZakYip.Singulation.Host.Workers {
+namespace ZakYip.Singulation.Infrastructure.Workers {
 
     /// <summary>
     /// 极简低延迟事件泵：

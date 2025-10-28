@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace ZakYip.Singulation.Host.Services;
+namespace ZakYip.Singulation.Infrastructure.Services;
 
 /// <summary>
 /// UDP 服务发现广播服务

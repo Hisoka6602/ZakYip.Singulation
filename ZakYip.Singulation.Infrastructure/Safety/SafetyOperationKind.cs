@@ -1,6 +1,6 @@
 using System.ComponentModel;
 
-namespace ZakYip.Singulation.Host.Safety {
+namespace ZakYip.Singulation.Infrastructure.Safety {
     /// <summary>安全操作的种类。</summary>
     internal enum SafetyOperationKind {
         /// <summary>安全状态变化。</summary>
