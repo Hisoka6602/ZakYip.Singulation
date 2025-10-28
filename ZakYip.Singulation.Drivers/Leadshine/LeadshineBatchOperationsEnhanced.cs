@@ -261,9 +261,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                             
                             if (ret == 0) {
                                 successCount++;
-                                return await ValueTask.FromResult(true);
+                                return true;
                             }
-                            return await ValueTask.FromResult(false);
+                            return false;
                         }, ct);
                     }
                     
