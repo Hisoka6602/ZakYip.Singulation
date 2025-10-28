@@ -9,7 +9,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Events.Safety;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Host.Safety;
+using ZakYip.Singulation.Infrastructure.Safety;
 
 namespace ZakYip.Singulation.Tests {
 

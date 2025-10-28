@@ -15,62 +15,53 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
 
         /// <summary>
         /// 从 LiteDB 读取单文档配置，按 Role 选择 Client/Server，
-        /// 并仅在端口 > 0 时注册对应的三路 IByteTransport（speed / position / heartbeat）。
-        /// 仅负责注册，不启动。
+        /// 并注册对应的三路 IByteTransport（speed / position / heartbeat）。
+        /// 仅负责注册，不启动。传输会在首次解析时根据配置创建。
         /// </summary>
         public static IServiceCollection AddUpstreamTcpFromLiteDb(this IServiceCollection services) {
             // 注意：确保在此之前已经调用了 AddUpstreamFromLiteDb(...) 注册 IUpstreamOptionsStore
-            using var temp = services.BuildServiceProvider();
-            var store = temp.GetRequiredService<IUpstreamOptionsStore>();
-            var dto = store.GetAsync().GetAwaiter().GetResult();
 
             // ---- speed ----
-            if (dto.SpeedPort > 0) {
-                services.AddKeyedSingleton<IByteTransport>("speed", (IServiceProvider sp, object key) => {
-                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
-                    return cur.Role == TransportRole.Server
-                        ? new TouchServerByteTransport(new TcpServerOptions {
-                            Address = IPAddress.Any,
-                            Port = cur.SpeedPort,
-                        })
-                        : new TouchClientByteTransport(new TcpClientOptions {
-                            Host = cur.Host,
-                            Port = cur.SpeedPort
-                        });
-                });
-            }
+            services.AddKeyedSingleton<IByteTransport>("speed", (IServiceProvider sp, object? key) => {
+                var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
+                return cur.Role == TransportRole.Server
+                    ? new TouchServerByteTransport(new TcpServerOptions {
+                        Address = IPAddress.Any,
+                        Port = cur.SpeedPort,
+                    })
+                    : new TouchClientByteTransport(new TcpClientOptions {
+                        Host = cur.Host,
+                        Port = cur.SpeedPort
+                    });
+            });
 
             // ---- position ----
-            if (dto.PositionPort > 0) {
-                services.AddKeyedSingleton<IByteTransport>("position", (IServiceProvider sp, object key) => {
-                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
-                    return cur.Role == TransportRole.Server
-                        ? new TouchServerByteTransport(new TcpServerOptions {
-                            Address = IPAddress.Any,
-                            Port = cur.PositionPort,
-                        })
-                        : new TouchClientByteTransport(new TcpClientOptions {
-                            Host = cur.Host,
-                            Port = cur.PositionPort
-                        });
-                });
-            }
+            services.AddKeyedSingleton<IByteTransport>("position", (IServiceProvider sp, object? key) => {
+                var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
+                return cur.Role == TransportRole.Server
+                    ? new TouchServerByteTransport(new TcpServerOptions {
+                        Address = IPAddress.Any,
+                        Port = cur.PositionPort,
+                    })
+                    : new TouchClientByteTransport(new TcpClientOptions {
+                        Host = cur.Host,
+                        Port = cur.PositionPort
+                    });
+            });
 
             // ---- heartbeat ----
-            if (dto.HeartbeatPort > 0) {
-                services.AddKeyedSingleton<IByteTransport>("heartbeat", (IServiceProvider sp, object key) => {
-                    var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
-                    return cur.Role == TransportRole.Server
-                        ? new TouchServerByteTransport(new TcpServerOptions {
-                            Address = IPAddress.Any,
-                            Port = cur.HeartbeatPort,
-                        })
-                        : new TouchClientByteTransport(new TcpClientOptions {
-                            Host = cur.Host,
-                            Port = cur.HeartbeatPort
-                        });
-                });
-            }
+            services.AddKeyedSingleton<IByteTransport>("heartbeat", (IServiceProvider sp, object? key) => {
+                var cur = sp.GetRequiredService<IUpstreamOptionsStore>().GetAsync().GetAwaiter().GetResult();
+                return cur.Role == TransportRole.Server
+                    ? new TouchServerByteTransport(new TcpServerOptions {
+                        Address = IPAddress.Any,
+                        Port = cur.HeartbeatPort,
+                    })
+                    : new TouchClientByteTransport(new TcpClientOptions {
+                        Host = cur.Host,
+                        Port = cur.HeartbeatPort
+                    });
+            });
 
             return services;
         }
