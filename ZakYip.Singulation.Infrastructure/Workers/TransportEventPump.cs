@@ -90,8 +90,13 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             // 在初始化后，通过 Keyed DI 聚合（speed/position/heartbeat）
             var keys = new[] { "speed", "position", "heartbeat" };
             foreach (var key in keys) {
-                var t = _sp.GetKeyedService<IByteTransport>(key);
-                if (t != null) _transports.Add((key, t));
+                try {
+                    var t = _sp.GetKeyedService<IByteTransport>(key);
+                    if (t != null) _transports.Add((key, t));
+                }
+                catch (Exception ex) {
+                    _log.LogWarning(ex, "[TransportEventPump] Failed to resolve transport '{Key}', it may not be initialized yet", key);
+                }
             }
 
             SubscribeAxisEventsOnce();
