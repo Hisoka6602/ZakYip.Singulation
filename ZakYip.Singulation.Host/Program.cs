@@ -33,8 +33,9 @@ using ZakYip.Singulation.Protocol.Vendors.Huarary;
 using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Persistence;
+using ZakYip.Singulation.Host.Configuration;
 
-ThreadPool.SetMinThreads(128, 128);
+ThreadPool.SetMinThreads(HostConstants.MinWorkerThreads, HostConstants.MinCompletionPortThreads);
 System.Runtime.GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -104,7 +105,7 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ---------- 表单上传（如有大文件场景） ----------
         services.Configure<FormOptions>(opt => {
-            opt.MultipartBodyLengthLimit = long.MaxValue;
+            opt.MultipartBodyLengthLimit = HostConstants.MaxFormUploadSizeBytes;
         });
 
         // ---------- Response Compression（零入侵性能增强） ----------
@@ -276,7 +277,7 @@ var host = Host.CreateDefaultBuilder(args)
             webBuilder.UseUrls(url);
 
             // 请求体上限（按需调整）
-            options.Limits.MaxRequestBodySize = 30L * 1024 * 1024 * 1024; // 30GB
+            options.Limits.MaxRequestBodySize = HostConstants.MaxRequestBodySizeBytes;
         });
 
         webBuilder.Configure((context, app) => {

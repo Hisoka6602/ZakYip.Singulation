@@ -13,6 +13,7 @@ using ZakYip.Singulation.Transport.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 using ZakYip.Singulation.Infrastructure.Transport;
+using ZakYip.Singulation.Infrastructure.Configuration;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
@@ -30,7 +31,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private readonly Channel<TransportEvent> _ctlChannel;
 
         // 轴侧事件：独立通道，避免把非字节数据塞进 TransportEvent
-        private readonly Channel<AxisEvent> _axisChannel = Channel.CreateBounded<AxisEvent>(new BoundedChannelOptions(512) {
+        private readonly Channel<AxisEvent> _axisChannel = Channel.CreateBounded<AxisEvent>(new BoundedChannelOptions(InfrastructureConstants.AxisEventChannelCapacity) {
             FullMode = BoundedChannelFullMode.DropOldest,
             SingleReader = true,
             SingleWriter = false
@@ -69,7 +70,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _transportManager = transportManager;
 
             // 传输侧慢路径：小容量即可；DropOldest 防抖
-            _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(1024) {
+            _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(InfrastructureConstants.TransportControlEventChannelCapacity) {
                 SingleReader = true,
                 SingleWriter = false,
                 FullMode = BoundedChannelFullMode.DropOldest
@@ -141,7 +142,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     }
                     // 3) 都空了，稍作等待
                     if (!ctlReader.TryPeek(out _) && !axisReader.TryPeek(out _)) {
-                        await Task.Delay(2, stoppingToken).ConfigureAwait(false);
+                        await Task.Delay(InfrastructureConstants.EventPumpIdleDelayMs, stoppingToken).ConfigureAwait(false);
                     }
                 }
                 catch (Exception ex) {
