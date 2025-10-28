@@ -157,7 +157,12 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             // 先停源，再收尾
             foreach (var (name, t) in _transports) {
                 try { await t.StopAsync(ct).ConfigureAwait(false); }
-                catch (Exception ex) { _log.TransportStopIgnored(ex, name); }
+                catch (OperationCanceledException ex) { _log.TransportStopIgnored(ex, name); }
+                catch (Exception ex)
+                {
+                    _log.TransportStopIgnored(ex, name);
+                    throw;
+                }
             }
             _ctlChannel.Writer.TryComplete();
             _axisChannel.Writer.TryComplete();
