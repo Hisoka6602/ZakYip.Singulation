@@ -213,4 +213,165 @@ public static partial class LogMessages
         Exception exception,
         string operation,
         string table);
+
+    // ==================== Event Pump Logs ====================
+
+    [LoggerMessage(
+        EventId = 8001,
+        Level = LogLevel.Information,
+        Message = "[TransportEventPump] UpstreamTransportManager initialized")]
+    public static partial void TransportManagerInitialized(this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 8002,
+        Level = LogLevel.Error,
+        Message = "[TransportEventPump] Failed to initialize UpstreamTransportManager")]
+    public static partial void TransportManagerInitializationFailed(
+        this ILogger logger,
+        Exception exception);
+
+    [LoggerMessage(
+        EventId = 8003,
+        Level = LogLevel.Warning,
+        Message = "[TransportEventPump] Failed to resolve transport '{Key}' - initialization may have failed")]
+    public static partial void TransportResolveFailed(
+        this ILogger logger,
+        Exception exception,
+        string key);
+
+    [LoggerMessage(
+        EventId = 8004,
+        Level = LogLevel.Error,
+        Message = "[TransportEventPump] Essential transport '{Essential}' is missing after initialization")]
+    public static partial void EssentialTransportMissing(
+        this ILogger logger,
+        string essential);
+
+    [LoggerMessage(
+        EventId = 8005,
+        Level = LogLevel.Information,
+        Message = "[transport:{Name}] started, status={Status}")]
+    public static partial void TransportStartedWithStatus(
+        this ILogger logger,
+        string name,
+        string status);
+
+    [LoggerMessage(
+        EventId = 8006,
+        Level = LogLevel.Error,
+        Message = "[transport:{Name}] start failed")]
+    public static partial void TransportStartFailed(
+        this ILogger logger,
+        Exception exception,
+        string name);
+
+    [LoggerMessage(
+        EventId = 8007,
+        Level = LogLevel.Error,
+        Message = "[event-pump] pipeline error")]
+    public static partial void EventPumpPipelineError(
+        this ILogger logger,
+        Exception exception);
+
+    [LoggerMessage(
+        EventId = 8008,
+        Level = LogLevel.Debug,
+        Message = "[transport:{Name}] stop ignored")]
+    public static partial void TransportStopIgnored(
+        this ILogger logger,
+        Exception exception,
+        string name);
+
+    [LoggerMessage(
+        EventId = 8009,
+        Level = LogLevel.Warning,
+        Message = "[transport:{Name}] dropped={Dropped} written={Written}")]
+    public static partial void TransportStatsWithDrops(
+        this ILogger logger,
+        string name,
+        long dropped,
+        long written);
+
+    [LoggerMessage(
+        EventId = 8010,
+        Level = LogLevel.Information,
+        Message = "[transport:{Name}] written={Written}")]
+    public static partial void TransportStatsNoDrops(
+        this ILogger logger,
+        string name,
+        long written);
+
+    [LoggerMessage(
+        EventId = 8011,
+        Level = LogLevel.Warning,
+        Message = "[axis] dropped={Dropped} written={Written}")]
+    public static partial void AxisStatsWithDrops(
+        this ILogger logger,
+        long dropped,
+        long written);
+
+    [LoggerMessage(
+        EventId = 8012,
+        Level = LogLevel.Information,
+        Message = "[axis] written={Written}")]
+    public static partial void AxisStatsNoDrops(
+        this ILogger logger,
+        long written);
+
+    [LoggerMessage(
+        EventId = 8013,
+        Level = LogLevel.Information,
+        Message = "[transport:{Source}] state={State}")]
+    public static partial void TransportStateChanged(
+        this ILogger logger,
+        string source,
+        string state);
+
+    [LoggerMessage(
+        EventId = 8014,
+        Level = LogLevel.Error,
+        Message = "[transport:{Source}] error")]
+    public static partial void TransportErrorOccurred(
+        this ILogger logger,
+        Exception exception,
+        string source);
+
+    [LoggerMessage(
+        EventId = 8015,
+        Level = LogLevel.Error,
+        Message = "[{source}] axis faulted (axis={axisId}), Reason({reason})")]
+    public static partial void AxisFaulted(
+        this ILogger logger,
+        Exception exception,
+        string source,
+        int axisId,
+        string reason);
+
+    [LoggerMessage(
+        EventId = 8016,
+        Level = LogLevel.Warning,
+        Message = "[{source}] axis disconnected (axis={axisId}) reason={reason}")]
+    public static partial void AxisDisconnectedEvent(
+        this ILogger logger,
+        string source,
+        int axisId,
+        string reason);
+
+    [LoggerMessage(
+        EventId = 8017,
+        Level = LogLevel.Error,
+        Message = "[{Source}] driver not loaded: {Reason}")]
+    public static partial void DriverNotLoaded(
+        this ILogger logger,
+        string source,
+        string reason);
+
+    [LoggerMessage(
+        EventId = 8018,
+        Level = LogLevel.Error,
+        Message = "[{Source}] controller fault: {Reason}")]
+    public static partial void ControllerFaulted(
+        this ILogger logger,
+        string source,
+        string reason);
 }

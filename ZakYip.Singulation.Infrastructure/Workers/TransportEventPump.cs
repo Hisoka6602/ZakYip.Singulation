@@ -14,6 +14,7 @@ using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Infrastructure.Configuration;
+using ZakYip.Singulation.Infrastructure.Logging;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
@@ -81,10 +82,10 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             // 初始化传输管理器（读取配置并创建传输实例，但不启动）
             try {
                 await _transportManager.InitializeAsync(stoppingToken).ConfigureAwait(false);
-                _log.LogInformation("[TransportEventPump] UpstreamTransportManager initialized");
+                _log.TransportManagerInitialized();
             }
             catch (Exception ex) {
-                _log.LogError(ex, "[TransportEventPump] Failed to initialize UpstreamTransportManager");
+                _log.TransportManagerInitializationFailed(ex);
                 // 继续执行，因为传输可能稍后会被初始化
             }
 
@@ -96,7 +97,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     if (t != null) _transports.Add((key, t));
                 }
                 catch (InvalidOperationException ex) {
-                    _log.LogWarning(ex, "[TransportEventPump] Failed to resolve transport '{Key}' - initialization may have failed", key);
+                    _log.TransportResolveFailed(ex, key);
                 }
             }
 
@@ -106,7 +107,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             {
                 if (!_transports.Any(t => t.Item1 == essential))
                 {
-                    _log.LogError("[TransportEventPump] Essential transport '{Essential}' is missing after initialization", essential);
+                    _log.EssentialTransportMissing(essential);
                     throw new InvalidOperationException($"Essential transport '{essential}' is missing.");
                 }
             }
@@ -119,10 +120,10 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             foreach (var (name, t) in _transports) {
                 try {
                     await t.StartAsync(stoppingToken).ConfigureAwait(false);
-                    _log.LogInformation("[transport:{Name}] started, status={Status}", name, t.Status);
+                    _log.TransportStartedWithStatus(name, t.Status.ToString());
                 }
                 catch (Exception ex) {
-                    _log.LogError(ex, "[transport:{Name}] start failed", name);
+                    _log.TransportStartFailed(ex, name);
                 }
             }
 
@@ -147,7 +148,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 }
                 catch (Exception ex) {
                     // 任意一侧处理异常都要兜底，避免吞事件
-                    _log.LogError(ex, "[event-pump] pipeline error");
+                    _log.EventPumpPipelineError(ex);
                 }
             }
         }
@@ -156,7 +157,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             // 先停源，再收尾
             foreach (var (name, t) in _transports) {
                 try { await t.StopAsync(ct).ConfigureAwait(false); }
-                catch (Exception ex) { _log.LogDebug(ex, "[transport:{Name}] stop ignored", name); }
+                catch (Exception ex) { _log.TransportStopIgnored(ex, name); }
             }
             _ctlChannel.Writer.TryComplete();
             _axisChannel.Writer.TryComplete();
@@ -166,16 +167,16 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 var dropped = _dropped.TryGetValue(name, out var d) ? d : 0;
                 var written = _written.TryGetValue(name, out var w) ? w : 0;
                 if (dropped > 0)
-                    _log.LogWarning("[transport:{Name}] dropped={Dropped} written={Written}", name, dropped, written);
+                    _log.TransportStatsWithDrops(name, dropped, written);
                 else
-                    _log.LogInformation("[transport:{Name}] written={Written}", name, written);
+                    _log.TransportStatsNoDrops(name, written);
             }
 
             // 补：轴侧总统计
             if (_axisDropped > 0)
-                _log.LogWarning("[axis] dropped={Dropped} written={Written}", _axisDropped, _axisWritten);
+                _log.AxisStatsWithDrops(_axisDropped, _axisWritten);
             else
-                _log.LogInformation("[axis] written={Written}", _axisWritten);
+                _log.AxisStatsNoDrops(_axisWritten);
 
             await base.StopAsync(ct).ConfigureAwait(false);
         }
@@ -345,11 +346,11 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     break;
 
                 case TransportEventType.StateChanged:
-                    _log.LogInformation("[transport:{Source}] state={State}", ev.Source, ev.Conn);
+                    _log.TransportStateChanged(ev.Source, ev.Conn.ToString());
                     break;
 
                 case TransportEventType.Error:
-                    _log.LogError(ev.Exception, "[transport:{Source}] error", ev.Source);
+                    _log.TransportErrorOccurred(ev.Exception!, ev.Source);
                     break;
 
                 case TransportEventType.Data:
@@ -366,11 +367,13 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private void ProcessAxisEvent(AxisEvent ev) {
             switch (ev.Type) {
                 case AxisEventType.Faulted:
-                    _log.LogError(ev.Exception, "[{Source}] axis faulted (axis={Axis}),Reason({Reason}),Exception({Exception})", ev.Source, ev.AxisId, ev.Reason, ev.Exception);
+                    _log.LogError(ev.Exception, "[{Source}] axis faulted (axis={Axis}), Reason({Reason}), Exception({Exception})", 
+                        ev.Source, ev.AxisId.Value, ev.Reason, ev.Exception);
                     break;
 
                 case AxisEventType.Disconnected:
-                    _log.LogWarning("[{Source}] axis disconnected (axis={Axis}) reason={Reason}", ev.Source, ev.AxisId, ev.Reason);
+                    _log.LogWarning("[{Source}] axis disconnected (axis={Axis}) reason={Reason}", 
+                        ev.Source, ev.AxisId.Value, ev.Reason);
                     break;
 
                 case AxisEventType.DriverNotLoaded:
