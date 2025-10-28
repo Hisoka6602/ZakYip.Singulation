@@ -35,6 +35,11 @@ public class GlobalExceptionHandlerMiddleware
         }
         catch (Exception ex)
         {
+            // Rethrow critical exceptions that should not be handled
+            if (ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException)
+            {
+                throw;
+            }
             await HandleExceptionAsync(context, ex);
         }
     }
