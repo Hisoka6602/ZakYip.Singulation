@@ -337,17 +337,6 @@ public static partial class LogMessages
         string source);
 
     [LoggerMessage(
-        EventId = 8015,
-        Level = LogLevel.Error,
-        Message = "[{Source}] axis faulted (axis={axisId}), Reason({reason})")]
-    public static partial void AxisFaulted(
-        this ILogger logger,
-        Exception exception,
-        string source,
-        int axisId,
-        string reason);
-
-    [LoggerMessage(
         EventId = 8016,
         Level = LogLevel.Warning,
         Message = "[{source}] axis disconnected (axis={axisId}) reason={reason}")]
