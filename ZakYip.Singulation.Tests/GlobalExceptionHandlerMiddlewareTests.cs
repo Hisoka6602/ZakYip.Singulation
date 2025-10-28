@@ -166,8 +166,11 @@ internal sealed class GlobalExceptionHandlerMiddlewareTests
         
         // Verify axisId in response
         context.Response.Body.Seek(0, SeekOrigin.Begin);
-        var responseText = await new StreamReader(context.Response.Body).ReadToEndAsync();
-        MiniAssert.True(responseText.Contains("AxisId"), "响应应包含轴ID");
+        using (var reader = new StreamReader(context.Response.Body))
+        {
+            var responseText = await reader.ReadToEndAsync();
+            MiniAssert.True(responseText.Contains("AxisId"), "响应应包含轴ID");
+        }
     }
 
     [MiniFact]
