@@ -19,6 +19,7 @@ using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Common;
 using Microsoft.AspNetCore.Http.Features;
 using ZakYip.Singulation.Host.Extensions;
+using ZakYip.Singulation.Host.Middleware;
 using ZakYip.Singulation.Drivers.Registry;
 using ZakYip.Singulation.Drivers.Leadshine;
 using ZakYip.Singulation.Host.SignalR.Hubs;
@@ -283,18 +284,7 @@ var host = Host.CreateDefaultBuilder(args)
             app.UseResponseCompression(); // 早启用，静态与 API 都受益
 
             // ---------- 全局异常处理 ----------
-            app.UseExceptionHandler(errorApp => {
-                errorApp.Run(async httpContext => {
-                    httpContext.Response.StatusCode = 500;
-                    httpContext.Response.ContentType = "application/json";
-                    var ex = httpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
-                    NLog.LogManager.GetCurrentClassLogger().Error($"系统异常 {ex}");
-                    await httpContext.Response.WriteAsJsonAsync(new {
-                        Result = false,
-                        Msg = "系统异常"
-                    });
-                });
-            });
+            app.UseGlobalExceptionHandler();
 
             // ---------- 常规中间件 ----------
             app.UseRouting();
