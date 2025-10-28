@@ -15,7 +15,7 @@ namespace ZakYip.Singulation.Transport.Tcp {
         public int Port { get; init; } = 5000;
 
         /// <summary>最大活动连接数，-1 表示无限制。</summary>
-        public int MaxActiveConnections { get; init; } = -1;
+        public int MaxActiveConnections { get; init; } = 100;
 
         /// <summary>接收缓冲区大小（字节）。</summary>
         public int ReceiveBufferSize { get; init; } = 64 * 1024;
