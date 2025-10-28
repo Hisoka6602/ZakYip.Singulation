@@ -1,0 +1,93 @@
+# ZakYip.Singulation 项目总览
+
+## 最新更新（2025-10-28 项目架构重组）
+
+### ✅ Host层架构优化
+
+**核心改进**：重新调整项目分层架构，将业务逻辑从表示层移至基础设施层，实现更清晰的职责分离
+
+#### 1. 架构重组 ✅
+- **重组内容**：
+  - 将 `Runtime/` 文件夹（6个文件）移至 `Infrastructure/Runtime`
+  - 将 `Safety/` 文件夹（7个文件）移至 `Infrastructure/Safety`
+  - 将 `Services/` 文件夹（3个文件）移至 `Infrastructure/Services`
+  - 将 `Workers/` 文件夹（8个文件）移至 `Infrastructure/Workers`
+  - 将领域DTO（IoStatusDto, IoStatusResponseDto）移至 `Core/Contracts/Dto`
+  - 将SignalR相关服务（RealtimeDispatchService）移至 `Host/SignalR`
+- **修复工作**：
+  - 更新所有命名空间引用（`Host.*` → `Infrastructure.*`）
+  - 添加必要的NuGet包到Infrastructure层（Microsoft.Extensions.Hosting.Abstractions等）
+  - 修复所有编译错误，项目成功构建 ✅
+
+#### 2. 新的项目结构
+
+```
+ZakYip.Singulation/
+├── Core/                          # 领域核心层
+│   ├── Abstractions/             # 抽象接口
+│   ├── Contracts/                # 契约和DTO
+│   │   └── Dto/                  # 领域数据传输对象
+│   ├── Enums/                    # 枚举定义
+│   ├── Utils/                    # 工具类
+│   └── Planning/                 # 规划算法
+│
+├── Drivers/                       # 设备驱动层
+│   └── Leadshine/                # 雷赛驱动实现
+│
+├── Infrastructure/                # 基础设施层 ⭐ 重组后
+│   ├── Runtime/                  # 运行时管理（从Host移入）
+│   ├── Safety/                   # 安全管道（从Host移入）
+│   ├── Services/                 # 业务服务（从Host移入）
+│   ├── Workers/                  # 后台工作器（从Host移入）
+│   ├── Configs/                  # 配置管理
+│   ├── Persistence/              # 数据持久化
+│   ├── Transport/                # 传输层
+│   └── Telemetry/                # 遥测服务
+│
+├── Host/                          # 表示层 ⭐ 精简后
+│   ├── Controllers/              # REST API控制器
+│   ├── Dto/                      # API数据传输对象
+│   ├── SignalR/                  # SignalR实时通信
+│   ├── Extensions/               # 扩展方法
+│   ├── Filters/                  # 过滤器
+│   ├── SwaggerOptions/           # Swagger配置
+│   └── Program.cs                # 应用入口
+│
+├── Protocol/                      # 协议解析层
+├── Transport/                     # 传输管线层
+├── Tests/                         # 单元测试
+├── MauiApp/                       # MAUI跨平台客户端
+├── ConsoleDemo/                   # 控制台演示
+└── Benchmarks/                    # 性能基准测试
+```
+
+#### 3. 架构改进成果
+
+**分层职责更加清晰**：
+- **Host层**：纯粹的表示层，只包含API入口、DTO、SignalR Hubs、Swagger配置
+  - 文件数量：从 41个 减少到 ~15个
+  - 代码职责：仅负责HTTP请求/响应、实时通信、API文档
+- **Infrastructure层**：基础设施实现，包含所有业务服务和后台工作器
+  - 新增：Runtime管理、Safety管道、业务Services、后台Workers
+  - 代码职责：业务逻辑实现、后台任务、运行时管理
+- **Core层**：领域核心，包含抽象、契约和共享DTO
+  - 新增：领域DTO（IoStatusDto等）
+  - 代码职责：定义领域模型、抽象接口、业务契约
+
+**依赖方向符合Clean Architecture**：
+```
+Host → Infrastructure → Core
+     ↘      ↓          ↓
+       Drivers → Core
+```
+
+#### 4. 技术亮点
+
+- ✅ **职责分离清晰**：表示层不再包含业务逻辑
+- ✅ **可测试性提升**：基础设施层代码更易于单元测试
+- ✅ **可维护性增强**：代码组织更加合理，易于定位和修改
+- ✅ **符合最佳实践**：遵循DDD和Clean Architecture原则
+- ✅ **编译零错误**：所有代码重构完成后成功编译
+
+---
+
