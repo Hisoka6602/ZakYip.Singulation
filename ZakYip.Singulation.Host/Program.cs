@@ -19,6 +19,7 @@ using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Common;
 using Microsoft.AspNetCore.Http.Features;
 using ZakYip.Singulation.Host.Extensions;
+using ZakYip.Singulation.Host.Middleware;
 using ZakYip.Singulation.Drivers.Registry;
 using ZakYip.Singulation.Drivers.Leadshine;
 using ZakYip.Singulation.Host.SignalR.Hubs;
@@ -32,8 +33,9 @@ using ZakYip.Singulation.Protocol.Vendors.Huarary;
 using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Persistence;
+using ZakYip.Singulation.Host.Configuration;
 
-ThreadPool.SetMinThreads(128, 128);
+ThreadPool.SetMinThreads(HostConstants.MinWorkerThreads, HostConstants.MinCompletionPortThreads);
 System.Runtime.GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -103,7 +105,7 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ---------- 表单上传（如有大文件场景） ----------
         services.Configure<FormOptions>(opt => {
-            opt.MultipartBodyLengthLimit = long.MaxValue;
+            opt.MultipartBodyLengthLimit = HostConstants.MaxFormUploadSizeBytes;
         });
 
         // ---------- Response Compression（零入侵性能增强） ----------
@@ -275,7 +277,7 @@ var host = Host.CreateDefaultBuilder(args)
             webBuilder.UseUrls(url);
 
             // 请求体上限（按需调整）
-            options.Limits.MaxRequestBodySize = 30L * 1024 * 1024 * 1024; // 30GB
+            options.Limits.MaxRequestBodySize = HostConstants.MaxRequestBodySizeBytes;
         });
 
         webBuilder.Configure((context, app) => {
@@ -283,18 +285,7 @@ var host = Host.CreateDefaultBuilder(args)
             app.UseResponseCompression(); // 早启用，静态与 API 都受益
 
             // ---------- 全局异常处理 ----------
-            app.UseExceptionHandler(errorApp => {
-                errorApp.Run(async httpContext => {
-                    httpContext.Response.StatusCode = 500;
-                    httpContext.Response.ContentType = "application/json";
-                    var ex = httpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
-                    NLog.LogManager.GetCurrentClassLogger().Error($"系统异常 {ex}");
-                    await httpContext.Response.WriteAsJsonAsync(new {
-                        Result = false,
-                        Msg = "系统异常"
-                    });
-                });
-            });
+            app.UseGlobalExceptionHandler();
 
             // ---------- 常规中间件 ----------
             app.UseRouting();
