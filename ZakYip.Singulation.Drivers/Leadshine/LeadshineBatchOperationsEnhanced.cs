@@ -105,7 +105,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private static ResiliencePipeline<bool> GetOrCreateCircuitBreaker(string key) {
             lock (_circuitBreakerLock) {
                 if (_circuitBreakerCache.TryGetValue(key, out var pipeline)) {
-                    return (ResiliencePipeline<bool>)pipeline;
+                    return pipeline;
                 }
                 
                 var shouldHandle = new PredicateBuilder<bool>()
