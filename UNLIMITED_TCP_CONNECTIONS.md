@@ -1,5 +1,19 @@
 # 上游 TCP 无限连接支持 / Unlimited TCP Connections Support
 
+## ⚠️ 安全警告 / Security Warning
+
+**中文**: 此变更将 TCP 服务器的默认最大连接数从 1 改为无限制（-1）。当前实现中 `MaxActiveConnections` 属性**未被强制执行**，这意味着系统容易受到连接耗尽型拒绝服务（DoS）攻击。强烈建议：
+1. 在生产环境中使用防火墙限制来源 IP
+2. 监控活动连接数和系统资源使用
+3. 考虑实现连接数限制的强制执行机制（参见"未来改进"部分）
+
+**English**: This change updates the TCP server's default maximum connections from 1 to unlimited (-1). The `MaxActiveConnections` property is **NOT enforced** in the current implementation, making the system vulnerable to connection exhaustion DoS attacks. Strongly recommended:
+1. Use firewall rules to restrict source IPs in production
+2. Monitor active connection count and system resources
+3. Consider implementing connection limit enforcement (see "Future Improvements" section)
+
+---
+
 ## 中文版本
 
 ### 变更说明
@@ -23,10 +37,14 @@ public int MaxActiveConnections { get; init; } = -1;
 ### 技术说明
 
 #### 实现现状
+
+⚠️ **重要提示：连接数限制未被强制执行**
+
 - `TouchServerByteTransport` 已经支持多个并发连接
 - 通过 `_connCount` 字段跟踪活动连接数
-- `MaxActiveConnections` 属性虽然存在，但在实现中**未被强制执行**
+- **关键问题**: `MaxActiveConnections` 属性虽然存在，但在实现中**未被强制执行**
 - 因此，即使之前默认值为 1，服务器实际上已经能够接受多个连接
+- **安全影响**: 这意味着当前系统容易受到连接耗尽型 DoS 攻击
 
 #### 本次修改的影响
 1. **配置默认值**: 从限制 1 个连接改为无限制（-1）
@@ -114,9 +132,11 @@ services.AddKeyedSingleton<IByteTransport>("speed", (sp, key) => {
        MaxActiveConnections = 10  // 限制为 10 个连接
    }
    ```
-   注意：需要在 `TouchServerByteTransport` 中实现此限制的强制执行
+   ⚠️ **重要**: 需要在 `TouchServerByteTransport` 中实现此限制的强制执行（高优先级安全需求）
 
-### 未来改进
+### 未来改进（高优先级安全需求）
+
+⚠️ **安全建议**: 强烈建议实现连接数限制的强制执行机制，以防止资源耗尽攻击。
 
 如果需要强制执行连接数限制，可以在 `TouchServerByteTransport.Connected` 回调中添加：
 
@@ -290,8 +310,9 @@ service.Connected = (client, e) => {
 - ✅ Changed default `MaxActiveConnections` from 1 to -1 (unlimited) / 将默认 `MaxActiveConnections` 从 1 改为 -1（无限制）
 - ✅ Documentation updated to clarify -1 means unlimited / 更新文档说明 -1 表示无限制
 - ✅ Aligns configuration with actual implementation behavior / 使配置与实际实现行为一致
-- ⚠️ Property is not enforced in current implementation / 当前实现中未强制执行此属性
-- ⚠️ Consider security implications for production use / 生产环境使用需考虑安全影响
+- ⚠️ **CRITICAL**: Property is not enforced in current implementation / **关键问题**：当前实现中未强制执行此属性
+- ⚠️ **SECURITY RISK**: Consider implementing enforcement before production use / **安全风险**：生产环境使用前应实现强制执行
+- 📋 **TODO**: Create issue to track connection limit enforcement implementation / **待办**：创建问题跟踪连接限制强制执行的实现
 
 ### Related Files / 相关文件
 - `ZakYip.Singulation.Transport/Tcp/TcpServerOptions.cs` - Modified
