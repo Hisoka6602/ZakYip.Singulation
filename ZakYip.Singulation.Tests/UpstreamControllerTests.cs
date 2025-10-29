@@ -52,12 +52,16 @@ namespace ZakYip.Singulation.Tests {
             };
             await store.SaveAsync(config);
 
+            // 初始化传输管理器
+            var manager = sp.GetRequiredService<UpstreamTransportManager>();
+            await manager.InitializeAsync();
+
             // 获取传输实例
-            var transports = sp.GetServices<IByteTransport>().Where(t => t != null);
+            var transports = sp.GetRequiredService<IEnumerable<IByteTransport>>();
 
             // 创建 UpstreamController
             var logger = sp.GetRequiredService<ILogger<UpstreamController>>();
-            var controller = new UpstreamController(logger, store, sp, transports);
+            var controller = new UpstreamController(logger, store, sp, transports, manager);
 
             // Act: 获取连接状态
             var response = await controller.GetConnectionsAsync(CancellationToken.None);
@@ -100,12 +104,16 @@ namespace ZakYip.Singulation.Tests {
             };
             await store.SaveAsync(config);
 
+            // 初始化传输管理器
+            var manager = sp.GetRequiredService<UpstreamTransportManager>();
+            await manager.InitializeAsync();
+
             // 获取传输实例
-            var transports = sp.GetServices<IByteTransport>().Where(t => t != null);
+            var transports = sp.GetRequiredService<IEnumerable<IByteTransport>>();
 
             // 创建 UpstreamController
             var logger = sp.GetRequiredService<ILogger<UpstreamController>>();
-            var controller = new UpstreamController(logger, store, sp, transports);
+            var controller = new UpstreamController(logger, store, sp, transports, manager);
 
             // Act: 重连第一个传输（索引 0）
             var response = await controller.Reconnect(0, CancellationToken.None);
@@ -141,12 +149,16 @@ namespace ZakYip.Singulation.Tests {
             };
             await store.SaveAsync(config);
 
+            // 初始化传输管理器
+            var manager = sp.GetRequiredService<UpstreamTransportManager>();
+            await manager.InitializeAsync();
+
             // 获取传输实例
-            var transports = sp.GetServices<IByteTransport>().Where(t => t != null);
+            var transports = sp.GetRequiredService<IEnumerable<IByteTransport>>();
 
             // 创建 UpstreamController
             var logger = sp.GetRequiredService<ILogger<UpstreamController>>();
-            var controller = new UpstreamController(logger, store, sp, transports);
+            var controller = new UpstreamController(logger, store, sp, transports, manager);
 
             // Act: 尝试重连无效的索引
             var response = await controller.Reconnect(999, CancellationToken.None);

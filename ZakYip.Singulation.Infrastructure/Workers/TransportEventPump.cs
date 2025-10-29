@@ -48,6 +48,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private readonly IServiceProvider _sp;
         private readonly IRealtimeNotifier _rt;
         private readonly IAxisController _axisController;
+        private readonly UpstreamTransportManager _transportManager;
 
         private bool _axisSubscribed;
         private long _axisDropped;
@@ -59,13 +60,15 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             IUpstreamFrameHub hub,
             IAxisEventAggregator axisEventAggregator,
             IRealtimeNotifier rt,
-            IAxisController axisController) {
+            IAxisController axisController,
+            UpstreamTransportManager transportManager) {
             _log = log;
             _sp = sp;
             _hub = hub;
             _axisEventAggregator = axisEventAggregator;
             _rt = rt;
             _axisController = axisController;
+            _transportManager = transportManager;
 
             // 传输侧慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(InfrastructureConstants.TransportControlEventChannelCapacity) {
@@ -76,10 +79,19 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-            // 通过非键控 DI 获取所有传输实例（speed/position/heartbeat）
-            // 传输实例按注册顺序依次是：speed, position, heartbeat
-            var allTransports = _sp.GetServices<IByteTransport>().Where(t => t != null).ToList();
+            // 初始化传输管理器（读取配置并创建传输实例，但不启动）
+            try {
+                await _transportManager.InitializeAsync(stoppingToken).ConfigureAwait(false);
+                _log.TransportManagerInitialized();
+            }
+            catch (Exception ex) {
+                _log.TransportManagerInitializationFailed(ex);
+                // 继续执行，因为传输可能稍后会被初始化
+            }
+
+            // 从传输管理器获取所有已创建的传输（跳过端口 <= 0 的传输）
             var transportNames = new[] { "speed", "position", "heartbeat" };
+            var allTransports = _transportManager.GetAllTransports().ToList();
             
             for (int i = 0; i < Math.Min(allTransports.Count, transportNames.Length); i++) {
                 _transports.Add((transportNames[i], allTransports[i]));

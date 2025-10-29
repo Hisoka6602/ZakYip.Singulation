@@ -21,64 +21,13 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
         public static IServiceCollection AddUpstreamTcpFromLiteDb(this IServiceCollection services) {
             // 注意：确保在此之前已经调用了 AddUpstreamFromLiteDb(...) 注册 IUpstreamOptionsStore
 
-            // ---- speed ----
-            services.AddSingleton<IByteTransport>(sp => {
-                var store = sp.GetRequiredService<IUpstreamOptionsStore>();
-                var options = store.GetAsync().GetAwaiter().GetResult();
-                
-                if (options.SpeedPort <= 0) {
-                    return null!;
-                }
-                
-                return options.Role == TransportRole.Server
-                    ? new TouchServerByteTransport(new TcpServerOptions {
-                        Address = IPAddress.Any,
-                        Port = options.SpeedPort,
-                    })
-                    : new TouchClientByteTransport(new TcpClientOptions {
-                        Host = options.Host,
-                        Port = options.SpeedPort
-                    });
-            });
+            // 注册传输管理器（单例）
+            services.AddSingleton<UpstreamTransportManager>();
 
-            // ---- position ----
-            services.AddSingleton<IByteTransport>(sp => {
-                var store = sp.GetRequiredService<IUpstreamOptionsStore>();
-                var options = store.GetAsync().GetAwaiter().GetResult();
-                
-                if (options.PositionPort <= 0) {
-                    return null!;
-                }
-                
-                return options.Role == TransportRole.Server
-                    ? new TouchServerByteTransport(new TcpServerOptions {
-                        Address = IPAddress.Any,
-                        Port = options.PositionPort,
-                    })
-                    : new TouchClientByteTransport(new TcpClientOptions {
-                        Host = options.Host,
-                        Port = options.PositionPort
-                    });
-            });
-
-            // ---- heartbeat ----
-            services.AddSingleton<IByteTransport>(sp => {
-                var store = sp.GetRequiredService<IUpstreamOptionsStore>();
-                var options = store.GetAsync().GetAwaiter().GetResult();
-                
-                if (options.HeartbeatPort <= 0) {
-                    return null!;
-                }
-                
-                return options.Role == TransportRole.Server
-                    ? new TouchServerByteTransport(new TcpServerOptions {
-                        Address = IPAddress.Any,
-                        Port = options.HeartbeatPort,
-                    })
-                    : new TouchClientByteTransport(new TcpClientOptions {
-                        Host = options.Host,
-                        Port = options.HeartbeatPort
-                    });
+            // 注册一个包装器，提供所有传输作为 IEnumerable
+            services.AddSingleton<IEnumerable<IByteTransport>>(sp => {
+                var manager = sp.GetRequiredService<UpstreamTransportManager>();
+                return manager.GetAllTransports().ToList();
             });
 
             return services;

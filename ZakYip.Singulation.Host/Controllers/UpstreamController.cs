@@ -30,15 +30,18 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly IUpstreamOptionsStore _store;
         private readonly IServiceProvider _serviceProvider;
         private readonly IEnumerable<IByteTransport> _transports;
+        private readonly UpstreamTransportManager _transportManager;
 
         public UpstreamController(ILogger<UpstreamController> logger,
             IUpstreamOptionsStore store,
             IServiceProvider serviceProvider,
-            IEnumerable<IByteTransport> transports) {
+            IEnumerable<IByteTransport> transports,
+            UpstreamTransportManager transportManager) {
             _logger = logger;
             _store = store;
             _serviceProvider = serviceProvider;
             _transports = transports;
+            _transportManager = transportManager;
         }
 
         /// <summary>
@@ -67,32 +70,37 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// </summary>
         /// <remarks>
         /// 保存或更新上游 TCP 连接的配置信息。
-        /// 配置更新后会持久化保存。注意：配置生效需要重启应用程序。
+        /// 配置更新后会持久化保存，并自动触发连接热更新（停止旧连接，使用新配置创建并启动新连接）。
+        /// 端口 <= 0 的传输将被跳过，不会创建连接。
         /// </remarks>
         /// <param name="dto">上游配置对象</param>
         /// <param name="ct">取消令牌</param>
         /// <returns>操作结果</returns>
-        /// <response code="200">配置已保存成功</response>
-        /// <response code="500">配置保存失败</response>
+        /// <response code="200">配置已保存并热更新成功</response>
+        /// <response code="500">配置保存或热更新失败</response>
         [HttpPut("configs")]
         [SwaggerOperation(
             Summary = "更新上游 TCP 配置",
-            Description = "保存或更新上游 TCP 连接的配置信息。配置更新后会持久化保存。注意：配置生效需要重启应用程序。")]
+            Description = "保存或更新上游 TCP 连接的配置信息。配置更新后会持久化保存，并自动触发连接热更新（停止旧连接，使用新配置创建并启动新连接）。端口 <= 0 的传输将被跳过，不会创建连接。")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         [ProducesResponseType(typeof(ApiResponse<string>), 500)]
         [Consumes("application/json")]
         [Produces("application/json")]
         public async Task<ApiResponse<string>> UpsertAsync([FromBody] UpstreamOptions dto, CancellationToken ct) {
             try {
-                // 保存配置到数据库
+                // 1. 保存配置到数据库
                 await _store.SaveAsync(dto, ct);
                 _logger.LogInformation("Upstream config saved to database: Host={Host}, Role={Role}, SpeedPort={SpeedPort}, PositionPort={PositionPort}, HeartbeatPort={HeartbeatPort}",
                     dto.Host, dto.Role, dto.SpeedPort, dto.PositionPort, dto.HeartbeatPort);
 
-                return ApiResponse<string>.Success("配置已保存成功，重启应用程序后生效");
+                // 2. 触发热更新：重新创建并启动传输连接（跳过端口 <= 0 的传输）
+                await _transportManager.ReloadTransportsAsync(dto, startImmediately: true, ct);
+                _logger.LogInformation("Upstream transports hot-reloaded successfully with new config");
+
+                return ApiResponse<string>.Success("配置已保存并热更新成功");
             }
             catch (Exception ex) {
-                _logger.LogError(ex, "Failed to update upstream config");
+                _logger.LogError(ex, "Failed to update upstream config or reload transports");
                 return ApiResponse<string>.Fail($"配置更新失败: {ex.Message}");
             }
         }
@@ -174,10 +182,10 @@ namespace ZakYip.Singulation.Host.Controllers {
         }
 
         /// <summary>
-        /// Get list of active transports from injected collection.
+        /// Get list of active transports from the transport manager.
         /// </summary>
         private List<IByteTransport> GetActiveTransports() {
-            return _transports.Where(t => t != null).ToList();
+            return _transportManager.GetAllTransports().ToList();
         }
     }
 }
