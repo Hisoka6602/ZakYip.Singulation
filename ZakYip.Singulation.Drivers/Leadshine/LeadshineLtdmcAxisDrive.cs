@@ -71,6 +71,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private readonly ConsecutiveFailCounter _fails = new(3); // 实际应由 _opts.ConsecutiveFailThreshold 覆盖
         private readonly AxisHealthMonitor _health;
         private readonly Polly.ResiliencePipeline<short> _pdoPipe;
+        private readonly Polly.ResiliencePipeline _retryPipe;
 
         // 内存池优化：使用 ArrayPool 减少 GC 压力
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
@@ -100,6 +101,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     _health.Stop();
                 }
             );
+            
+            // 雷赛使能/失能重试管线：最多重试3次，无等待时间
+            _retryPipe = LeadshineRetryPolicy.BuildEnableDisableRetryPipeline();
         }
 
         // ---------------- 事件 ----------------
@@ -354,79 +358,77 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             return true;
         }
 
-        /// <summary>上电/使能：状态机 + 强制读取 PPR（未就绪则禁止写入）。</summary>
+        /// <summary>上电/使能：状态机 + 强制读取 PPR（未就绪则禁止写入）。使用 Polly 重试策略，最多重试3次。</summary>
         public async Task EnableAsync(CancellationToken ct = default) {
-            await ThrottleAsync(ct);
+            await _retryPipe.ExecuteAsync(async (CancellationToken cancellationToken) => {
+                await ThrottleAsync(cancellationToken);
 
-            // 简化封装：写 ControlWord 并可选延时
-            async Task<bool> WriteCtrlAsync(ushort value, int delayMs) {
-                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, value);
-                if (ret != 0) {
-                    SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
-                    OnAxisFaulted(new InvalidOperationException(LastErrorMessage!));
-                    return false;
+                // 简化封装：写 ControlWord 并可选延时
+                async Task<bool> WriteCtrlAsync(ushort value, int delayMs) {
+                    var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, value);
+                    if (ret != 0) {
+                        SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
+                        throw new InvalidOperationException(LastErrorMessage!);
+                    }
+                    if (delayMs > 0) await Task.Delay(delayMs, cancellationToken);
+                    return true;
                 }
-                if (delayMs > 0) await Task.Delay(delayMs, ct);
-                return true;
-            }
 
-            // 0) 清除报警 → 清零
-            if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.FaultReset, LeadshineProtocolMap.DelayMs.AfterFaultReset)) return;
-            if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Clear, LeadshineProtocolMap.DelayMs.AfterClear)) return;
+                // 0) 清除报警 → 清零
+                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.FaultReset, LeadshineProtocolMap.DelayMs.AfterFaultReset);
+                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Clear, LeadshineProtocolMap.DelayMs.AfterClear);
 
-            // 1) 设置模式：速度模式 (PV=3)
-            var m = WriteRxPdo(LeadshineProtocolMap.Index.ModeOfOperation, LeadshineProtocolMap.Mode.ProfileVelocity);
-            if (m != 0) { OnAxisFaulted(new InvalidOperationException("Set Mode=PV failed")); return; }
-            await Task.Delay(LeadshineProtocolMap.DelayMs.AfterSetMode, ct);
+                // 1) 设置模式：速度模式 (PV=3)
+                var m = WriteRxPdo(LeadshineProtocolMap.Index.ModeOfOperation, LeadshineProtocolMap.Mode.ProfileVelocity);
+                if (m != 0) { throw new InvalidOperationException("Set Mode=PV failed"); }
+                await Task.Delay(LeadshineProtocolMap.DelayMs.AfterSetMode, cancellationToken);
 
-            // 2) 402 状态机三步
-            if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
-            if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
-            if (!await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds)) return;
+                // 2) 402 状态机三步
+                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
+                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
+                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
 
-            // 3) 强制读取 PPR（未取到禁止写速度）
-            if (!Volatile.Read(ref _sPprReady)) {
-                try {
-                    var ppr = await ReadAxisPulsesPerRevAsync(ct);
+                // 3) 强制读取 PPR（未取到禁止写速度）
+                if (!Volatile.Read(ref _sPprReady)) {
+                    var ppr = await ReadAxisPulsesPerRevAsync(cancellationToken);
                     if (ppr > 0) {
                         Volatile.Write(ref _sPpr, ppr);
                         Volatile.Write(ref _sPprReady, true);
                         Debug.WriteLine($"[PPR] 使能时初始化成功: {ppr}");
                     }
                     else {
-                        OnAxisFaulted(new InvalidOperationException("使能失败：未能读取到有效的 PPR（脉冲/转），禁止写入速度指令"));
-                        return;
+                        throw new InvalidOperationException("使能失败：未能读取到有效的 PPR（脉冲/转），禁止写入速度指令");
                     }
                 }
-                catch (Exception ex) {
-                    OnAxisFaulted(new InvalidOperationException($"使能失败：读取 PPR 时发生错误（{ex.Message}），禁止写入速度指令", ex));
-                    return;
-                }
-            }
-
+            }, ct).ConfigureAwait(false);
+            
+            // 状态更新仅在成功后执行一次
             _status = DriverStatus.Connected;
             IsEnabled = true;
         }
 
-        /// <summary>禁用（安全停机 + 状态回退 + 本地状态复位）。</summary>
+        /// <summary>禁用（安全停机 + 状态回退 + 本地状态复位）。使用 Polly 重试策略，最多重试3次。</summary>
         public async ValueTask DisableAsync(CancellationToken ct = default) {
-            await ThrottleAsync(ct);
+            await _retryPipe.ExecuteAsync(async (CancellationToken cancellationToken) => {
+                await ThrottleAsync(cancellationToken);
 
-            _ = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, 0, suppressLog: true);
-            var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0002);
-            if (ret != 0) {
-                SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
-                OnAxisFaulted(new InvalidOperationException(LastErrorMessage!)); return;
-            }
-            await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, ct);
+                _ = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, 0, suppressLog: true);
+                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0002);
+                if (ret != 0) {
+                    SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
+                    throw new InvalidOperationException(LastErrorMessage!);
+                }
+                await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
 
-            var cw = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.Shutdown);
-            if (cw != 0) {
-                SetErrorFromRet("write 0x6040 (ControlWord:<step>)", cw);
-                OnAxisFaulted(new InvalidOperationException($"Disable: write ControlWord=Shutdown(0x0006) failed, ret={cw}"));
-            }
-            await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, ct);
-
+                var cw = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.Shutdown);
+                if (cw != 0) {
+                    SetErrorFromRet("write 0x6040 (ControlWord:<step>)", cw);
+                    throw new InvalidOperationException($"Disable: write ControlWord=Shutdown(0x0006) failed, ret={cw}");
+                }
+                await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
+            }, ct).ConfigureAwait(false);
+            
+            // 状态清理仅在成功后执行一次
             _health.Stop();
             _fails.Reset();
 
