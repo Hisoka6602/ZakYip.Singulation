@@ -102,26 +102,40 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
-        public Task StartAsync(CancellationToken ct) {
+        public async Task StartAsync(CancellationToken ct) {
             if (_pollingTask is not null) {
                 _logger.LogWarning("安全 IO 模块已在运行中");
-                return Task.CompletedTask;
+                return;
             }
 
             // 启动时读取远程/本地模式 IO 状态并触发初始事件
+            // 使用超时保护，避免阻塞应用启动
             if (_options.RemoteLocalModeBit >= 0 && _options.RemoteLocalModeBit <= 99) {
                 try {
-                    // ReadInputBit 返回 true 表示触发状态（考虑了 InvertRemoteLocalLogic）
-                    bool rawState = ReadInputBit(_options.RemoteLocalModeBit, _options.InvertRemoteLocalLogic ?? _options.InvertLogic);
-                    // RemoteLocalActiveHigh 决定高电平对应哪个模式：true=高电平为远程，false=高电平为本地
-                    bool isRemoteMode = _options.RemoteLocalActiveHigh ? rawState : !rawState;
-                    _lastRemoteLocalModeState = isRemoteMode;
+                    // 使用 Task.Run 将同步 IO 调用放到线程池，并设置 2 秒超时
+                    var readTask = Task.Run(() => ReadInputBit(_options.RemoteLocalModeBit, _options.InvertRemoteLocalLogic ?? _options.InvertLogic), ct);
+                    var timeoutTask = Task.Delay(TimeSpan.FromSeconds(2), ct);
+                    var completedTask = await Task.WhenAny(readTask, timeoutTask).ConfigureAwait(false);
                     
-                    var modeText = isRemoteMode ? "远程模式" : "本地模式";
-                    _logger.LogInformation("启动时读取远程/本地模式 IO 状态：{Mode}", modeText);
-                    
-                    // 触发初始模式事件，让 SafetyPipeline 知道当前模式
-                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, $"启动时检测到{modeText}"));
+                    if (completedTask == readTask) {
+                        // ReadInputBit 返回 true 表示触发状态（考虑了 InvertRemoteLocalLogic）
+                        bool rawState = await readTask.ConfigureAwait(false);
+                        // RemoteLocalActiveHigh 决定高电平对应哪个模式：true=高电平为远程，false=高电平为本地
+                        bool isRemoteMode = _options.RemoteLocalActiveHigh ? rawState : !rawState;
+                        _lastRemoteLocalModeState = isRemoteMode;
+                        
+                        var modeText = isRemoteMode ? "远程模式" : "本地模式";
+                        _logger.LogInformation("启动时读取远程/本地模式 IO 状态：{Mode}", modeText);
+                        
+                        // 触发初始模式事件，让 SafetyPipeline 知道当前模式
+                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, $"启动时检测到{modeText}"));
+                    }
+                    else {
+                        // 超时，使用默认值
+                        _logger.LogWarning("启动时读取远程/本地模式 IO 超时（控制器可能未初始化），默认为本地模式");
+                        _lastRemoteLocalModeState = false; // 默认本地模式
+                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(false, "启动时读取超时，默认为本地模式"));
+                    }
                 }
                 catch (Exception ex) {
                     _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 失败，默认为本地模式");
@@ -141,8 +155,6 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             _logger.LogInformation(
                 "雷赛安全 IO 模块已启动：急停={EmergencyStopBit}, 停止={StopBit}, 启动={StartBit}, 复位={ResetBit}, 轮询间隔={PollingMs}ms",
                 _options.EmergencyStopBit, _options.StopBit, _options.StartBit, _options.ResetBit, _options.PollingIntervalMs);
-
-            return Task.CompletedTask;
         }
 
         /// <summary>
