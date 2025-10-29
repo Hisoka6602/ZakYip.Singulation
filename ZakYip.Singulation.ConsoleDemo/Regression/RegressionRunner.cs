@@ -16,7 +16,6 @@ using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Infrastructure.Runtime;
 using ZakYip.Singulation.Infrastructure.Safety;
-using ZakYip.Singulation.Infrastructure.Safety;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 
 namespace ZakYip.Singulation.ConsoleDemo.Regression {
@@ -31,11 +30,11 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
                         options.TimestampFormat = "HH:mm:ss ";
                     }));
 
-                    services.Configure<FrameGuardOptions>(opt => {
-                        opt.SequenceWindow = 8;
-                        opt.HeartbeatTimeout = TimeSpan.FromSeconds(2);
-                        opt.DegradeScale = 0.5m;
-                    });
+                    services.AddSingleton(Microsoft.Extensions.Options.Options.Create(new FrameGuardOptions {
+                        SequenceWindow = 8,
+                        HeartbeatTimeout = TimeSpan.FromSeconds(2),
+                        DegradeScale = 0.5m
+                    }));
 
                     services.AddSingleton<IRealtimeNotifier, ConsoleRealtimeNotifier>();
                     services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
@@ -157,6 +156,11 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
 
             public Task EnableAllAsync(CancellationToken ct = default) {
                 Console.WriteLine("[Axis] Enable all");
+                return Task.CompletedTask;
+            }
+
+            public Task DisableAllAsync(CancellationToken ct = default) {
+                Console.WriteLine("[Axis] Disable all");
                 return Task.CompletedTask;
             }
 

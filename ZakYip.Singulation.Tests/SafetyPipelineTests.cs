@@ -9,6 +9,7 @@ using ZakYip.Singulation.Core.Contracts.Events.Safety;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Infrastructure.Safety;
+using ZakYip.Singulation.Tests.TestHelpers;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -25,7 +26,8 @@ namespace ZakYip.Singulation.Tests {
                 Array.Empty<ISafetyIoModule>(),
                 axis,
                 new FakeAxisEventAggregator(),
-                notifier);
+                notifier,
+                new FakeControllerOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
             pipeline.RequestStop(SafetyTriggerKind.EmergencyStop, "测试急停", true);
@@ -46,7 +48,8 @@ namespace ZakYip.Singulation.Tests {
                 Array.Empty<ISafetyIoModule>(),
                 axis,
                 new FakeAxisEventAggregator(),
-                notifier);
+                notifier,
+                new FakeControllerOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
             pipeline.RequestReset(SafetyTriggerKind.ResetButton, "IO复位", true);
@@ -65,7 +68,8 @@ namespace ZakYip.Singulation.Tests {
                 Array.Empty<ISafetyIoModule>(),
                 axis,
                 new FakeAxisEventAggregator(),
-                notifier);
+                notifier,
+                new FakeControllerOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
             pipeline.RequestStart(SafetyTriggerKind.StartButton, "IO启动", true);

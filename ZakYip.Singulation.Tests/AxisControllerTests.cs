@@ -182,7 +182,7 @@ namespace ZakYip.Singulation.Tests {
         public event EventHandler<AxisCommandIssuedEventArgs>? CommandIssued;
 
         public AxisId Axis { get; }
-        public DriverStatus Status => DriverStatus.Online;
+        public DriverStatus Status => DriverStatus.Connected;
         public decimal? LastTargetMmps { get; private set; }
         public decimal? LastFeedbackMmps => LastTargetMmps;
         public bool IsEnabled => true;
@@ -207,7 +207,7 @@ namespace ZakYip.Singulation.Tests {
         public Task SetAccelDecelAsync(decimal accelRpmPerSec, decimal decelRpmPerSec, CancellationToken ct = default) => Task.CompletedTask;
 
         public Task SetAccelDecelByLinearAsync(decimal accelMmPerSec, decimal decelMmPerSec,
-            CancellationToken ct = default) => ValueTask.CompletedTask;
+            CancellationToken ct = default) => Task.CompletedTask;
 
         public ValueTask StopAsync(CancellationToken ct = default) {
             StopCalls++;
