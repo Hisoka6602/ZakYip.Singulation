@@ -5,11 +5,12 @@ using Microsoft.AspNetCore.Mvc;
 using ZakYip.Singulation.Host.Dto;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Enums;
 using Swashbuckle.AspNetCore.Annotations;
 using ZakYip.Singulation.Core.Abstractions.Safety;
-using ZakYip.Singulation.Core.Enums;
 
-namespace ZakYip.Singulation.Host.Controllers {
+namespace ZakYip.Singulation.Host.Controllers
+{
 
     /// <summary>
     /// 提供对宿主运行会话的 RESTful 管理接口。
@@ -17,7 +18,8 @@ namespace ZakYip.Singulation.Host.Controllers {
     /// </summary>
     [ApiController]
     [Route("api/system/session")]
-    public sealed class SystemSessionController : ControllerBase {
+    public sealed class SystemSessionController : ControllerBase
+    {
         private readonly IHostApplicationLifetime _lifetime;
         private readonly ILogger<SystemSessionController> _logger;
         private readonly ISafetyPipeline _safetyPipeline;
@@ -27,7 +29,8 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// </summary>
         private const int StopOperationDelayMs = 2000;
 
-        public SystemSessionController(IHostApplicationLifetime lifetime, ILogger<SystemSessionController> logger, ISafetyPipeline safetyPipeline) {
+        public SystemSessionController(IHostApplicationLifetime lifetime, ILogger<SystemSessionController> logger, ISafetyPipeline safetyPipeline)
+        {
             _lifetime = lifetime;
             _logger = logger;
             _safetyPipeline = safetyPipeline;
@@ -54,8 +57,10 @@ namespace ZakYip.Singulation.Host.Controllers {
         [ProducesResponseType(typeof(ApiResponse<object>), 202)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [Produces("application/json")]
-        public ActionResult<ApiResponse<object>> DeleteCurrentSession(CancellationToken ct) {
-            if (ct.IsCancellationRequested) {
+        public ActionResult<ApiResponse<object>> DeleteCurrentSession(CancellationToken ct)
+        {
+            if (ct.IsCancellationRequested)
+            {
                 // 本地化提示
                 return BadRequest(ApiResponse<object>.Invalid("请求已取消"));
             }
@@ -64,36 +69,21 @@ namespace ZakYip.Singulation.Host.Controllers {
             _logger.LogInformation("收到关闭请求，将在后台停止所有轴并退出应用。");
 
             // 后台异步执行，彻底与请求线程解耦，防止异常影响调用方
-            _ = Task.Run(async () => {
-                try {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
                     // 在退出前确保所有轴失能，运行状态变成停止（等同于调用IO按钮停止的触发）
                     _logger.LogInformation("【退出流程】步骤1：调用安全管线停止操作，禁用所有轴并更新运行状态");
                     _safetyPipeline.RequestStop(SafetyTriggerKind.RemoteStopCommand, "系统会话删除", triggeredByIo: false);
-                    
-                    // 等待所有轴停止，最多等待 10 秒，每 200ms 检查一次
-                    const int maxWaitMs = 10000;
-                    const int pollIntervalMs = 200;
-                    int waitedMs = 0;
-                    while (waitedMs < maxWaitMs)
-                    {
-                        if (_safetyPipeline.AreAllAxesStopped())
-                        {
-                            _logger.LogInformation("【退出流程】步骤2：所有轴已停止，准备退出进程");
-                            break;
-                        }
-                        await Task.Delay(pollIntervalMs, CancellationToken.None).ConfigureAwait(false);
-                        waitedMs += pollIntervalMs;
-                    }
-                    if (waitedMs >= maxWaitMs)
-                    {
-                        _logger.LogWarning("【退出流程】停止操作未在超时时间内完成，强制退出进程");
-                    }
-                    
+
+                    await Task.Delay(TimeSpan.FromSeconds(2));
                     // 直接使用 Environment.Exit(1) 退出进程，以便外部服务管理器重启
                     _logger.LogInformation("【退出流程】步骤3：执行 Environment.Exit(1) 退出进程");
                     Environment.Exit(1);
                 }
-                catch (Exception ex) {
+                catch (Exception ex)
+                {
                     // 中文日志：异常兜底，保证非零退出
                     _logger.LogError(ex, "停止宿主时发生异常，将强制退出（退出码=1）。");
                     Environment.Exit(1);
