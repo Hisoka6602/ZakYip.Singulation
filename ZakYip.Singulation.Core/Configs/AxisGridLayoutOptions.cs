@@ -10,7 +10,7 @@ namespace ZakYip.Singulation.Core.Configs {
     /// <summary>
     /// 轴网格布局配置对象，用于定义多轴系统的物理布局排列方式。
     /// </summary>
-    public sealed class AxisGridLayoutOptions {
+    public sealed record class AxisGridLayoutOptions {
 
         /// <summary>
         /// 网格行数，必须大于等于 1。

@@ -6,7 +6,7 @@ namespace ZakYip.Singulation.Host.Dto {
     /// <summary>
     /// 写入 IO 端口电平请求。
     /// </summary>
-    public sealed class WriteIoRequestDto {
+    public sealed record class WriteIoRequestDto {
         /// <summary>
         /// IO 端口编号。
         /// </summary>

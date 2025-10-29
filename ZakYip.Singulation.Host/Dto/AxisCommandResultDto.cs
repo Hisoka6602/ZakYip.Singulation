@@ -10,7 +10,7 @@ namespace ZakYip.Singulation.Host.Dto {
     /// <summary>
     /// 单轴命令执行结果数据传输对象。
     /// </summary>
-    public sealed class AxisCommandResultDto {
+    public sealed record class AxisCommandResultDto {
 
         /// <summary>
         /// 轴标识符，字符串形式的轴 ID。

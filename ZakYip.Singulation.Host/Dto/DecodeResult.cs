@@ -13,7 +13,7 @@ namespace ZakYip.Singulation.Host.Dto {
     /// 解码结果数据传输对象
     /// </summary>
     [SwaggerSchema(Description = "在线解码的结果对象，包含解码成功标志、帧类型和解析出的速度数据")]
-    public sealed class DecodeResult {
+    public sealed record class DecodeResult {
         /// <summary>解码是否成功</summary>
         [SwaggerSchema(Description = "解码是否成功，true 表示成功解析，false 表示无法识别")]
         [Required]

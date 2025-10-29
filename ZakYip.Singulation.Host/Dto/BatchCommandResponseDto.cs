@@ -10,7 +10,7 @@ namespace ZakYip.Singulation.Host.Dto {
     /// <summary>
     /// 批量命令执行的整体响应数据传输对象。
     /// </summary>
-    public sealed class BatchCommandResponseDto {
+    public sealed record class BatchCommandResponseDto {
 
         /// <summary>
         /// 各轴的执行结果集合。
