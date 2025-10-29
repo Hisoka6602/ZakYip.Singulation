@@ -91,17 +91,17 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
 
             // 从传输管理器获取所有已创建的传输（跳过端口 <= 0 的传输）
             // Explicitly map transport names to their instances to avoid index-based errors
-            var speedTransport = _transportManager.GetSpeedTransport();
+            var speedTransport = _transportManager.SpeedTransport;
             if (speedTransport != null) {
                 _transports.Add(("speed", speedTransport));
                 _log.LogInformation("Transport '{Name}' resolved successfully", "speed");
             }
-            var positionTransport = _transportManager.GetPositionTransport();
+            var positionTransport = _transportManager.PositionTransport;
             if (positionTransport != null) {
                 _transports.Add(("position", positionTransport));
                 _log.LogInformation("Transport '{Name}' resolved successfully", "position");
             }
-            var heartbeatTransport = _transportManager.GetHeartbeatTransport();
+            var heartbeatTransport = _transportManager.HeartbeatTransport;
             if (heartbeatTransport != null) {
                 _transports.Add(("heartbeat", heartbeatTransport));
                 _log.LogInformation("Transport '{Name}' resolved successfully", "heartbeat");
