@@ -16,7 +16,7 @@ namespace ZakYip.Singulation.Core.Contracts.ValueObjects {
         public int Numerator;
 
         /// <summary>
-        /// 原始分母（为 0 时按 1 处理）。
+        /// 脉冲数的分母部分，用于计算每转脉冲数比率（为 0 时按 1 处理）。
         /// </summary>
         public int Denominator;
 
