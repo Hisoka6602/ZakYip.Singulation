@@ -1,6 +1,57 @@
 # ZakYip.Singulation 项目总览
 
-## 🎯 最新更新（2025-10-28 命名规范分析）
+## 🎯 最新更新（2025-10-29 Swagger 可靠性、安全隔离器和健康检查）
+
+### ✅ Swagger 可靠性增强
+
+**核心改进**：确保 Swagger 文档在任何情况下都不会被阻塞，使用统一的安全隔离器模式处理可能的异常
+
+#### 1. 安全隔离器统一应用 ✅
+- **功能特性**：
+  - 新增 `SafeOperationHelper` 统一安全隔离器辅助类
+  - 所有 Swagger 配置操作使用安全隔离器包装
+  - XML 注释文件加载失败不会阻塞 Swagger 启动
+  - Schema 过滤器、操作过滤器异常被安全捕获
+  - 详细的日志记录帮助排查问题
+  
+- **应用范围**：
+  - `ConfigureSwaggerOptions`: XML 注释加载、Schema ID 配置
+  - `CustomOperationFilter`: 路由信息提取
+  - `EnumSchemaFilter`: 枚举类型描述生成
+  - `HideLongListSchemaFilter`: Schema 标题简化
+
+#### 2. 健康检查端点 ✅
+- **端点地址**：
+  - `GET /health` - 基础健康检查端点
+  - 返回 HTTP 200 表示服务健康
+  - 可用于 Kubernetes liveness/readiness 探针
+  - 可用于负载均衡器健康检查
+
+- **使用方法**：
+```bash
+# 检查服务健康状态
+curl http://localhost:5005/health
+
+# 预期响应：HTTP 200 OK
+# 响应体：Healthy
+```
+
+#### 3. Swagger 访问地址
+- **Swagger UI**：http://localhost:5005/swagger
+- **Swagger JSON**：http://localhost:5005/swagger/v1/swagger.json
+- **注意**：Swagger 现在在任何情况下都不会被阻塞，即使 XML 文档缺失或过滤器异常
+
+#### 4. 技术亮点
+
+- ✅ **可靠性保障**：任何异常都不会阻塞 Swagger 启动
+- ✅ **统一模式**：所有 Swagger 组件使用相同的安全隔离器
+- ✅ **详细日志**：异常被捕获并记录，便于排查问题
+- ✅ **健康检查**：支持容器编排和负载均衡
+- ✅ **向后兼容**：不影响现有功能
+
+---
+
+## 最新更新（2025-10-28 命名规范分析）
 
 ### ✅ 快递分拣行业命名规范分析完成
 
@@ -409,7 +460,12 @@ dotnet test
 cd ZakYip.Singulation.Host
 dotnet run
 ```
-服务将在 http://localhost:5000 启动，Swagger 文档位于 http://localhost:5000/swagger
+服务将在 http://localhost:5005 启动
+
+**访问地址**：
+- **Swagger 文档**：http://localhost:5005/swagger
+- **健康检查**：http://localhost:5005/health
+- **SignalR Hub**：ws://localhost:5005/hubs/events
 
 ---
 

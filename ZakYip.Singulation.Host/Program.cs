@@ -115,6 +115,9 @@ var host = Host.CreateDefaultBuilder(args)
             opt.Providers.Add<GzipCompressionProvider>();
         });
 
+        // ---------- Health Checks ----------
+        services.AddHealthChecks();
+
         // ---------- Swagger ----------
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
@@ -312,8 +315,8 @@ var host = Host.CreateDefaultBuilder(args)
                 endpoints.MapControllers();
                 endpoints.MapHub<EventsHub>("/hubs/events");
 
-                // 如需健康检查（若项目已添加 AddHealthChecks）
-                // endpoints.MapHealthChecks("/health");
+                // 健康检查端点
+                endpoints.MapHealthChecks("/health");
             });
         });
     })
