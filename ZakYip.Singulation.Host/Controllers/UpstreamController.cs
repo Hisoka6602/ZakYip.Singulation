@@ -120,27 +120,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         public Task<ApiResponse<UpstreamConnectionsDto>> GetConnectionsAsync(CancellationToken ct) {
             try {
                 var items = new List<UpstreamConnectionDto>();
-                
-                // Get transports directly from the manager
-                var transports = new[] {
-                    ("speed", _transportManager.SpeedTransport),
-                    ("position", _transportManager.PositionTransport),
-                    ("heartbeat", _transportManager.HeartbeatTransport)
-                };
+                var transports = GetActiveTransports();
 
                 int index = 0;
-                foreach (var (name, transport) in transports) {
-                    if (transport != null) {
-                        items.Add(new UpstreamConnectionDto {
-                            Ip = transport.RemoteIp,
-                            Port = transport.RemotePort,
-                            IsServer = transport.IsServer,
-                            State = transport.Status.ToString(),
-                            Impl = transport.GetType().Name,
-                            Index = index + 1
-                        });
-                        index++;
-                    }
+                foreach (var transport in transports) {
+                    items.Add(new UpstreamConnectionDto {
+                        Ip = transport.RemoteIp,
+                        Port = transport.RemotePort,
+                        IsServer = transport.IsServer,
+                        State = transport.Status.ToString(),
+                        Impl = transport.GetType().Name,
+                        Index = index + 1
+                    });
+                    index++;
                 }
 
                 var data = new UpstreamConnectionsDto {
@@ -176,19 +168,24 @@ namespace ZakYip.Singulation.Host.Controllers {
         [ProducesResponseType(typeof(ApiResponse<string>), 404)]
         [Produces("application/json")]
         public async Task<ApiResponse<string>> Reconnect(int index, CancellationToken ct) {
-            // Get transports directly from the manager
-            var transports = new[] {
-                _transportManager.SpeedTransport,
-                _transportManager.PositionTransport,
-                _transportManager.HeartbeatTransport
-            }.Where(t => t != null).ToList();
-
+            var transports = GetActiveTransports();
             var t = transports.ElementAtOrDefault(index);
             if (t is null)
                 return ApiResponse<string>.NotFound($"连接 {index} 不存在");
 
             await t.RestartAsync(ct);
             return ApiResponse<string>.Success("reconnect", "重启/重连请求已执行");
+        }
+
+        /// <summary>
+        /// Get list of active transports from the transport manager.
+        /// </summary>
+        private List<IByteTransport> GetActiveTransports() {
+            return new[] {
+                _transportManager.SpeedTransport,
+                _transportManager.PositionTransport,
+                _transportManager.HeartbeatTransport
+            }.Where(t => t != null).ToList()!;
         }
     }
 }
