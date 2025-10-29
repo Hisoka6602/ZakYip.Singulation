@@ -13,6 +13,9 @@ using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
 namespace ZakYip.Singulation.Infrastructure.Persistence {
 
+    /// <summary>
+    /// 基于 LiteDB 的控制器选项持久化存储。
+    /// </summary>
     public sealed class LiteDbControllerOptionsStore : IControllerOptionsStore {
         private const string Key = "default";
         private const string ErrorMessage = "读取DB配置异常：ControllerOptions";
@@ -21,6 +24,12 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
         private readonly ILogger<LiteDbControllerOptionsStore> _logger;
         private readonly ISafetyIsolator _safetyIsolator;
 
+        /// <summary>
+        /// 初始化 <see cref="LiteDbControllerOptionsStore"/> 类的新实例。
+        /// </summary>
+        /// <param name="db">LiteDB 数据库实例。</param>
+        /// <param name="logger">日志记录器。</param>
+        /// <param name="safetyIsolator">安全隔离器。</param>
         public LiteDbControllerOptionsStore(
             ILiteDatabase db,
             ILogger<LiteDbControllerOptionsStore> logger,
@@ -32,6 +41,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             _safetyIsolator = safetyIsolator;
         }
 
+        /// <inheritdoc />
         public Task<ControllerOptions> GetAsync(CancellationToken ct = default) {
             try {
                 return Task.FromResult(_coll.FindById(Key)?.ToDto() ?? ConfigDefaults.Controller());
@@ -43,11 +53,13 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             }
         }
 
+        /// <inheritdoc />
         public Task UpsertAsync(ControllerOptions dto, CancellationToken ct = default) {
             _coll.Upsert(dto.ToDoc(Key));
             return Task.CompletedTask;
         }
 
+        /// <inheritdoc />
         public Task DeleteAsync(CancellationToken ct = default) {
             _coll.Delete(Key);
             return Task.CompletedTask;
