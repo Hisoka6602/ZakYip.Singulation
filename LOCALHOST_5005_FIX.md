@@ -33,32 +33,34 @@ Modified `LeadshineSafetyIoModule.StartAsync` to use a timeout-protected asynchr
 
 ```csharp
 // Before: Synchronous blocking call
-bool rawState = ReadInputBit(_options.RemoteLocalModeBit, ...);
+bool rawState = ReadInputBit(
+    _options.RemoteLocalModeBit, 
+    _options.InvertRemoteLocalLogic ?? _options.InvertLogic);
 
 // After: Async with timeout protection
-var readTask = Task.Run(() => ReadInputBit(_options.RemoteLocalModeBit, ...), ct);
+var readTask = Task.Run(() => ReadInputBit(
+    _options.RemoteLocalModeBit, 
+    _options.InvertRemoteLocalLogic ?? _options.InvertLogic), ct);
 var timeoutTask = Task.Delay(TimeSpan.FromSeconds(2), ct);
 var completedTask = await Task.WhenAny(readTask, timeoutTask).ConfigureAwait(false);
 
 if (completedTask == readTask) {
     bool rawState = await readTask.ConfigureAwait(false);
-    // Process the value...
+    bool isRemoteMode = _options.RemoteLocalActiveHigh ? rawState : !rawState;
+    _lastRemoteLocalModeState = isRemoteMode;
+    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, ...));
 }
 else {
     // Timeout - use safe defaults
     _logger.LogWarning("启动时读取远程/本地模式 IO 超时（控制器可能未初始化），默认为本地模式");
     _lastRemoteLocalModeState = false;
+    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(false, "启动时读取超时，默认为本地模式"));
 }
 ```
 
 **File: ZakYip.Singulation.Host/Program.cs**
 
-Added clarifying comment to prevent future blocking initialization:
-
-```csharp
-// 注意：这里只创建 BusAdapter 实例，不调用 InitializeAsync
-// 初始化由 AxisBootstrapper 后台服务异步完成，避免阻塞 Kestrel 启动
-```
+Added clarifying comment to IBusAdapter registration to document that hardware initialization should be delegated to background services and not performed during DI container construction. This reinforces the pattern that prevents blocking startup.
 
 ## Verification
 
