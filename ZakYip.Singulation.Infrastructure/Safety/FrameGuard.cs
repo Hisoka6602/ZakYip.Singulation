@@ -14,6 +14,9 @@ using Microsoft.Extensions.Options;
 
 namespace ZakYip.Singulation.Infrastructure.Safety {
 
+    /// <summary>
+    /// 帧保护器，负责检测重复帧、监控心跳超时，并在降级模式下调整速度。
+    /// </summary>
     public sealed class FrameGuard : IFrameGuard {
         private readonly ILogger<FrameGuard> _log;
         private readonly ISafetyPipeline _safety;
@@ -21,6 +24,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         private readonly IUpstreamFrameHub _hub;
         private readonly IUpstreamOptionsStore _upstreamOptionsStore;
 
+        // 序列窗口：用于检测重复序列号
         private readonly Queue<int> _window = new();
         private readonly HashSet<int> _seen = new();
         private readonly object _gate = new();
@@ -32,6 +36,14 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         private CancellationTokenSource? _internalCts;
         private volatile bool _heartbeatDegraded;
 
+        /// <summary>
+        /// 初始化 <see cref="FrameGuard"/> 类的新实例。
+        /// </summary>
+        /// <param name="log">日志记录器。</param>
+        /// <param name="safety">安全管道。</param>
+        /// <param name="options">帧保护选项。</param>
+        /// <param name="hub">上游帧中心。</param>
+        /// <param name="upstreamOptionsStore">上游选项存储。</param>
         public FrameGuard(
             ILogger<FrameGuard> log,
             ISafetyPipeline safety,
@@ -46,6 +58,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             _safety.StateChanged += OnSafetyStateChanged;
         }
 
+        /// <inheritdoc />
         public async ValueTask<bool> InitializeAsync(CancellationToken ct) {
             if (_internalCts is not null) return false;
 
@@ -65,14 +78,17 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             return true;
         }
 
+        /// <inheritdoc />
         public FrameGuardDecision Evaluate(SpeedSet set) {
             var state = _safety.State;
+            // 如果系统处于隔离状态，直接拒绝所有帧
             if (state == SafetyIsolationState.Isolated) {
                 SingulationMetrics.Instance.FrameDroppedCounter.Add(1,
                     new KeyValuePair<string, object?>("reason", "isolated"));
                 return new FrameGuardDecision(false, set, false, "isolated");
             }
 
+            // 检查序列号，拒绝重复的帧
             var accepted = AcceptSequence(set.Sequence);
             if (!accepted) {
                 SingulationMetrics.Instance.FrameDroppedCounter.Add(1,
@@ -80,6 +96,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                 return new FrameGuardDecision(false, set, false, "duplicate");
             }
 
+            // 如果处于降级状态，缩放速度值
             if (state == SafetyIsolationState.Degraded) {
                 var scaled = Scale(set, _options.DegradeScale, out var delta);
                 if (delta > 0)
@@ -90,8 +107,10 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             return new FrameGuardDecision(true, set, false, null);
         }
 
+        /// <inheritdoc />
         public void ReportHeartbeat() => _lastHeartbeatUtc = DateTime.UtcNow;
 
+        /// <inheritdoc />
         public async ValueTask DisposeAsync() {
             try {
                 _internalCts?.Cancel();
@@ -106,6 +125,11 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             }
         }
 
+        /// <summary>
+        /// 检查并接受序列号，防止重复帧。使用滑动窗口维护最近的序列号。
+        /// </summary>
+        /// <param name="sequence">帧序列号。</param>
+        /// <returns>如果序列号可接受则返回 true，否则返回 false。</returns>
         private bool AcceptSequence(int sequence) {
             if (sequence <= 0) return true;
             lock (_gate) {
@@ -121,6 +145,13 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             return true;
         }
 
+        /// <summary>
+        /// 按指定系数缩放速度集合（用于降级模式）。
+        /// </summary>
+        /// <param name="set">原始速度集合。</param>
+        /// <param name="factor">缩放系数（0-1之间）。</param>
+        /// <param name="delta">输出平均速度差值。</param>
+        /// <returns>缩放后的速度集合。</returns>
         private SpeedSet Scale(SpeedSet set, decimal factor, out double delta) {
             if (factor <= 0m) factor = 0.1m;
             var main = set.MainMmps ?? Array.Empty<int>();
@@ -143,6 +174,9 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             return new SpeedSet(set.TimestampUtc, set.Sequence, scaledMain, scaledEject);
         }
 
+        /// <summary>
+        /// 运行心跳接收任务，持续监听心跳消息并更新心跳时间。
+        /// </summary>
         private async Task RunHeartbeatAsync(ChannelReader<ReadOnlyMemory<byte>> reader, CancellationToken ct) {
             await foreach (var _ in reader.ReadAllAsync(ct)) {
                 ReportHeartbeat();
@@ -153,6 +187,9 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             }
         }
 
+        /// <summary>
+        /// 运行心跳看门狗任务，定期检查心跳超时并触发降级。
+        /// </summary>
         private async Task RunHeartbeatWatchdogAsync(CancellationToken ct) {
             var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(200));
             while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false)) {
