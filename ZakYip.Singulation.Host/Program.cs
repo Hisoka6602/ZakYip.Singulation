@@ -34,6 +34,7 @@ using ZakYip.Singulation.Core.Abstractions.Safety;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Persistence;
 using ZakYip.Singulation.Host.Configuration;
+using System.Runtime.InteropServices;
 
 ThreadPool.SetMinThreads(HostConstants.MinWorkerThreads, HostConstants.MinCompletionPortThreads);
 System.Runtime.GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
@@ -271,18 +272,14 @@ var host = Host.CreateDefaultBuilder(args)
         logging.SetMinimumLevel(LogLevel.Warning);
     })
     .ConfigureWebHostDefaults(webBuilder => {
-        // Configure Kestrel URL - read early from a temp config build
-        var url = "http://localhost:5005";
-#if !DEBUG
-        var tempConfig = new ConfigurationBuilder()
-            .SetBasePath(Directory.GetCurrentDirectory())
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-            .Build();
-        url = tempConfig.GetValue<string>("KestrelUrl", "http://localhost:5005");
-#endif
-        webBuilder.UseUrls(url);
-        
         webBuilder.ConfigureKestrel((context, options) => {
+            // ---------- Kestrel ----------
+            var url = "http://localhost:5005";
+#if !DEBUG
+            url = context.Configuration.GetValue<string>("KestrelUrl", "http://localhost:5005");
+#endif
+            webBuilder.UseUrls(url);
+
             // 请求体上限（按需调整）
             options.Limits.MaxRequestBodySize = HostConstants.MaxRequestBodySizeBytes;
         });
@@ -334,16 +331,20 @@ var host = Host.CreateDefaultBuilder(args)
     .Build();
 
 try {
-    // 阻止电脑睡眠/熄屏
-    PowerGuard.SetThreadExecutionState(
-        PowerGuard.EXECUTION_STATE.ES_CONTINUOUS |
-        PowerGuard.EXECUTION_STATE.ES_SYSTEM_REQUIRED |
-        PowerGuard.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
+    // 阻止电脑睡眠/熄屏（仅限 Windows）
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+        PowerGuard.SetThreadExecutionState(
+            PowerGuard.EXECUTION_STATE.ES_CONTINUOUS |
+            PowerGuard.EXECUTION_STATE.ES_SYSTEM_REQUIRED |
+            PowerGuard.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
+    }
     host.Run();
 }
 catch (Exception e) {
     NLog.LogManager.GetCurrentClassLogger().Error(e, "运行异常");
 }
 finally {
-    PowerGuard.SetThreadExecutionState(PowerGuard.EXECUTION_STATE.ES_CONTINUOUS);
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+        PowerGuard.SetThreadExecutionState(PowerGuard.EXECUTION_STATE.ES_CONTINUOUS);
+    }
 }
