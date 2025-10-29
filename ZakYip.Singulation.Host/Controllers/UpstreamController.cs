@@ -29,18 +29,15 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly ILogger<UpstreamController> _logger;
         private readonly IUpstreamOptionsStore _store;
         private readonly IServiceProvider _serviceProvider;
-        private readonly IEnumerable<IByteTransport> _transports;
         private readonly UpstreamTransportManager _transportManager;
 
         public UpstreamController(ILogger<UpstreamController> logger,
             IUpstreamOptionsStore store,
             IServiceProvider serviceProvider,
-            IEnumerable<IByteTransport> transports,
             UpstreamTransportManager transportManager) {
             _logger = logger;
             _store = store;
             _serviceProvider = serviceProvider;
-            _transports = transports;
             _transportManager = transportManager;
         }
 
@@ -122,14 +119,21 @@ namespace ZakYip.Singulation.Host.Controllers {
         [Produces("application/json")]
         public Task<ApiResponse<UpstreamConnectionsDto>> GetConnectionsAsync(CancellationToken ct) {
             try {
-                var items = _transports.Select((t, i) => new UpstreamConnectionDto {
-                    Ip = t.RemoteIp,
-                    Port = t.RemotePort,
-                    IsServer = t.IsServer,
-                    State = t.Status.ToString(),
-                    Impl = t.GetType().Name,
-                    Index = i + 1
-                }).ToList();
+                var items = new List<UpstreamConnectionDto>();
+                var transports = GetActiveTransports();
+
+                int index = 0;
+                foreach (var transport in transports) {
+                    items.Add(new UpstreamConnectionDto {
+                        Ip = transport.RemoteIp,
+                        Port = transport.RemotePort,
+                        IsServer = transport.IsServer,
+                        State = transport.Status.ToString(),
+                        Impl = transport.GetType().Name,
+                        Index = index + 1
+                    });
+                    index++;
+                }
 
                 var data = new UpstreamConnectionsDto {
                     Enabled = items.Count > 0,
@@ -164,12 +168,24 @@ namespace ZakYip.Singulation.Host.Controllers {
         [ProducesResponseType(typeof(ApiResponse<string>), 404)]
         [Produces("application/json")]
         public async Task<ApiResponse<string>> Reconnect(int index, CancellationToken ct) {
-            var t = _transports?.ElementAtOrDefault(index);
+            var transports = GetActiveTransports();
+            var t = transports.ElementAtOrDefault(index);
             if (t is null)
                 return ApiResponse<string>.NotFound($"连接 {index} 不存在");
 
             await t.RestartAsync(ct);
             return ApiResponse<string>.Success("reconnect", "重启/重连请求已执行");
+        }
+
+        /// <summary>
+        /// Get list of active transports from the transport manager.
+        /// </summary>
+        private List<IByteTransport> GetActiveTransports() {
+            return new[] {
+                _transportManager.SpeedTransport,
+                _transportManager.PositionTransport,
+                _transportManager.HeartbeatTransport
+            }.Where(t => t != null).ToList()!;
         }
     }
 }
