@@ -22,6 +22,11 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly ILogger<SystemSessionController> _logger;
         private readonly ISafetyPipeline _safetyPipeline;
 
+        /// <summary>
+        /// 停止操作等待时间（毫秒）。
+        /// </summary>
+        private const int StopOperationDelayMs = 2000;
+
         public SystemSessionController(IHostApplicationLifetime lifetime, ILogger<SystemSessionController> logger, ISafetyPipeline safetyPipeline) {
             _lifetime = lifetime;
             _logger = logger;
@@ -66,7 +71,7 @@ namespace ZakYip.Singulation.Host.Controllers {
                     _safetyPipeline.RequestStop(SafetyTriggerKind.RemoteStopCommand, "系统会话删除", triggeredByIo: false);
                     
                     // 等待停止操作完成
-                    await Task.Delay(2000, CancellationToken.None).ConfigureAwait(false);
+                    await Task.Delay(StopOperationDelayMs, CancellationToken.None).ConfigureAwait(false);
                     _logger.LogInformation("【退出流程】步骤2：停止操作已完成，准备退出进程");
                     
                     // 直接使用 Environment.Exit(1) 退出进程，以便外部服务管理器重启
