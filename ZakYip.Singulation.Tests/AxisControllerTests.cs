@@ -34,6 +34,71 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.True(registry.Created.Count == 2, "应创建两根轴驱动");
             MiniAssert.True(registry.Created.TrueForAll(d => d.StopCalls > 0), "所有驱动均应执行停止");
         }
+
+        [MiniFact]
+        public async Task ApplySpeedSetOnlyWritesChangedSpeeds() {
+            // Arrange: Create controller with 4 axes
+            var bus = new FakeBusAdapter(4);
+            var registry = new FakeDriveRegistry();
+            var aggregator = new FakeAxisEventAggregator();
+            var controller = new AxisController(bus, registry, aggregator);
+            var options = new DriverOptions {
+                Card = 0,
+                Port = 0,
+                NodeId = 1,
+                GearRatio = 1m,
+                PulleyPitchDiameterMm = 1m
+            };
+
+            var result = await controller.InitializeAsync("fake", options, 4, CancellationToken.None).ConfigureAwait(false);
+            MiniAssert.True(result.Key, "初始化应成功");
+            MiniAssert.True(registry.Created.Count == 4, "应创建4根轴驱动");
+
+            // Act 1: First call - all speeds are 300, all axes should be written
+            var speedSet1 = new SpeedSet(
+                DateTime.UtcNow,
+                1,
+                new[] { 300, 300, 300, 300 },
+                Array.Empty<int>()
+            );
+            await controller.ApplySpeedSetAsync(speedSet1, CancellationToken.None).ConfigureAwait(false);
+
+            // Assert 1: All 4 axes should have been written to once
+            MiniAssert.True(registry.Created[0].WriteSpeedCalls == 1, "轴0应写入1次");
+            MiniAssert.True(registry.Created[1].WriteSpeedCalls == 1, "轴1应写入1次");
+            MiniAssert.True(registry.Created[2].WriteSpeedCalls == 1, "轴2应写入1次");
+            MiniAssert.True(registry.Created[3].WriteSpeedCalls == 1, "轴3应写入1次");
+
+            // Act 2: Second call - only axis 2 changes to 1500, only it should be written
+            var speedSet2 = new SpeedSet(
+                DateTime.UtcNow,
+                2,
+                new[] { 300, 300, 1500, 300 },
+                Array.Empty<int>()
+            );
+            await controller.ApplySpeedSetAsync(speedSet2, CancellationToken.None).ConfigureAwait(false);
+
+            // Assert 2: Only axis 2 should have been written to again (total 2 writes)
+            MiniAssert.True(registry.Created[0].WriteSpeedCalls == 1, "轴0不应再次写入");
+            MiniAssert.True(registry.Created[1].WriteSpeedCalls == 1, "轴1不应再次写入");
+            MiniAssert.True(registry.Created[2].WriteSpeedCalls == 2, "轴2应写入2次");
+            MiniAssert.True(registry.Created[3].WriteSpeedCalls == 1, "轴3不应再次写入");
+
+            // Act 3: Third call - all axes change to 500
+            var speedSet3 = new SpeedSet(
+                DateTime.UtcNow,
+                3,
+                new[] { 500, 500, 500, 500 },
+                Array.Empty<int>()
+            );
+            await controller.ApplySpeedSetAsync(speedSet3, CancellationToken.None).ConfigureAwait(false);
+
+            // Assert 3: All axes should have been written to again
+            MiniAssert.True(registry.Created[0].WriteSpeedCalls == 2, "轴0应写入2次");
+            MiniAssert.True(registry.Created[1].WriteSpeedCalls == 2, "轴1应写入2次");
+            MiniAssert.True(registry.Created[2].WriteSpeedCalls == 3, "轴2应写入3次");
+            MiniAssert.True(registry.Created[3].WriteSpeedCalls == 2, "轴3应写入2次");
+        }
     }
 
     internal sealed class FakeDriveRegistry : IDriveRegistry {
@@ -104,6 +169,7 @@ namespace ZakYip.Singulation.Tests {
         public FakeAxisDrive(AxisId axis) => Axis = axis;
 
         public int StopCalls { get; private set; }
+        public int WriteSpeedCalls { get; private set; }
 
         public event EventHandler<AxisErrorEventArgs>? AxisFaulted;
 
@@ -128,11 +194,13 @@ namespace ZakYip.Singulation.Tests {
 
         public ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default) {
             LastTargetMmps = rpm.Value;
+            WriteSpeedCalls++;
             return ValueTask.CompletedTask;
         }
 
         public Task WriteSpeedAsync(decimal mmPerSec, CancellationToken ct = default) {
             LastTargetMmps = mmPerSec;
+            WriteSpeedCalls++;
             return Task.CompletedTask;
         }
 
