@@ -176,7 +176,11 @@ namespace ZakYip.Singulation.Drivers.Common {
                 
                 // Write speed only if it's different from the last written speed
                 if (!lastSpeed.HasValue || lastSpeed.Value != newSpeed) {
-                    await _drives[i].WriteSpeedAsync(newSpeed, ct);
+                    try {
+                        await _drives[i].WriteSpeedAsync(newSpeed, ct);
+                    } catch (Exception ex) {
+                        OnControllerFaulted($"Failed to write speed for axis {i}: {ex.Message}");
+                    }
                     _lastSpeeds[i] = newSpeed;
                 }
             }
