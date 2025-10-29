@@ -18,6 +18,7 @@ namespace ZakYip.Singulation.Drivers.Common {
         private readonly IDriveRegistry _registry;
         private readonly IAxisEventAggregator _aggregator;
         private readonly List<IAxisDrive> _drives = new();
+        private readonly List<decimal?> _lastSpeeds = new();
 
         public event EventHandler<string>? ControllerFaulted;
 
@@ -72,12 +73,14 @@ namespace ZakYip.Singulation.Drivers.Common {
                     try {
                         var drive = _registry.Create(vendor, axisId, port: null!, opts);
                         _drives.Add(drive);
+                        _lastSpeeds.Add(null); // Initialize last speed as null for new axis
                         _aggregator.Attach(drive);
                     }
                     catch (Exception ex) {
                         var msg = $"Create axis {i} (node {axisId.Value}) failed: {ex.Message}";
                         OnControllerFaulted(msg);
                         _drives.Clear(); // 若需要可在此处补充逐个 Detach
+                        _lastSpeeds.Clear();
                         return new(false, msg);
                     }
                 }
@@ -94,6 +97,7 @@ namespace ZakYip.Singulation.Drivers.Common {
                 var msg = $"Unexpected error: {ex.Message}";
                 OnControllerFaulted(msg);
                 _drives.Clear();
+                _lastSpeeds.Clear();
                 return new(false, msg);
             }
         }
@@ -137,6 +141,7 @@ namespace ZakYip.Singulation.Drivers.Common {
             }
             finally {
                 _drives.Clear();
+                _lastSpeeds.Clear();
                 await Bus.CloseAsync(ct);
             }
         }
@@ -162,9 +167,18 @@ namespace ZakYip.Singulation.Drivers.Common {
             speeds.AddRange(eject.Select(x => (decimal)x));
             while (speeds.Count < totalAx) speeds.Add(0m);
 
+            // Only write speed if it has changed from the last known value
             for (var i = 0; i < totalAx; i++) {
                 if (ct.IsCancellationRequested) return;
-                await _drives[i].WriteSpeedAsync(speeds[i], ct);
+                
+                var newSpeed = speeds[i];
+                var lastSpeed = _lastSpeeds[i];
+                
+                // Write speed only if it's different from the last written speed
+                if (!lastSpeed.HasValue || lastSpeed.Value != newSpeed) {
+                    await _drives[i].WriteSpeedAsync(newSpeed, ct);
+                    _lastSpeeds[i] = newSpeed;
+                }
             }
         }
 
