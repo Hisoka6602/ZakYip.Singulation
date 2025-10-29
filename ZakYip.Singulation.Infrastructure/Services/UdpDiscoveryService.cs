@@ -1,7 +1,7 @@
 using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -34,7 +34,7 @@ public class UdpDiscoveryService : BackgroundService
             return;
         }
 
-        _logger.LogInformation("UDP 服务发现服务启动，端口: {Port}, 间隔: {Interval}秒", 
+        _logger.LogInformation("UDP 服务发现服务启动，端口: {Port}, 间隔: {Interval}秒",
             _options.BroadcastPort, _options.BroadcastIntervalSeconds);
 
         try
@@ -63,8 +63,8 @@ public class UdpDiscoveryService : BackgroundService
                     var data = Encoding.UTF8.GetBytes(json);
 
                     await _udpClient.SendAsync(data, data.Length, broadcastEndpoint);
-                    
-                    _logger.LogDebug("已发送 UDP 广播: {Json}", json);
+
+                    //_logger.LogDebug("已发送 UDP 广播: {Json}", json);
 
                     await Task.Delay(TimeSpan.FromSeconds(_options.BroadcastIntervalSeconds), stoppingToken);
                 }
