@@ -1,5 +1,35 @@
 # ZakYip.Singulation 项目总览
 
+## 🎯 最新更新（2025-10-28 命名规范分析）
+
+### ✅ 快递分拣行业命名规范分析完成
+
+**核心成果**：完成了项目命名规范的全面分析，生成了三份专业文档
+
+#### 📚 新增文档
+- **[命名规范快速指南](NAMING_GUIDE_README.md)** ⭐ **推荐先看这个**
+  - 10分钟快速了解项目命名质量
+  - 清晰的问题优先级和修改建议
+  - 详细的行业术语对照表
+  
+- **[命名问题分析与优化建议](NAMING_ANALYSIS_AND_RECOMMENDATIONS.md)**
+  - 深入分析5大类命名问题
+  - 按优先级分级的改进方案
+  - 具体实施计划和预期收益
+  
+- **[命名规范标准](NAMING_STANDARDS.md)**
+  - 快递分拣和机械控制行业术语标准
+  - 详细的命名模式和约定
+  - 代码审查清单
+
+#### 📊 主要发现
+- ✅ **整体质量良好**：机械控制术语规范，架构清晰
+- ⚠️ **2个高优先级问题**：Touch前缀暴露第三方库名称
+- 🎯 **建议优化**：Eject术语改为更精确的行业术语（Discharge/Outlet）
+- 📈 **项目评分**：⭐⭐⭐⭐ (4/5星)
+
+---
+
 ## 最新更新（2025-10-28 上游TCP连接热更新）
 
 ### ✅ 上游TCP连接热更新支持
@@ -406,6 +436,13 @@ dotnet run
 - [图标字体指南](docs/ICON_FONT_GUIDE.md)
 - [性能优化](docs/PERFORMANCE.md)
 - [完整更新历史](docs/CHANGELOG.md)
+
+### 代码规范
+- [命名规范快速指南](NAMING_GUIDE_README.md) ⭐ **推荐先看这个**
+- [命名问题分析与优化建议](NAMING_ANALYSIS_AND_RECOMMENDATIONS.md)
+- [命名规范标准](NAMING_STANDARDS.md)
+- [异常处理规范](EXCEPTION_HANDLING_GUIDELINES.md)
+- [日志规范](LOGGING_GUIDELINES.md)
 
 ---
 
