@@ -67,7 +67,7 @@ namespace ZakYip.Singulation.Infrastructure.Telemetry {
         public Histogram<double> FrameRtt { get; }
 
         /// <summary>
-        /// 调试周期时间直方图（单位：ms）。
+        /// 调试投运周期直方图（单位：ms）。
         /// </summary>
         public Histogram<double> CommissioningCycle { get; }
     }
