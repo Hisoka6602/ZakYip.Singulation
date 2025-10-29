@@ -99,7 +99,8 @@ namespace ZakYip.Singulation.Drivers.Common {
         }
 
         private async Task ForEachDriveAsync(Func<IAxisDrive, Task> action, CancellationToken ct) {
-            foreach (var d in _drives) {
+            // 并行执行所有轴的操作，提升性能
+            var tasks = _drives.Select(async d => {
                 ct.ThrowIfCancellationRequested();
                 try {
                     await action(d);
@@ -107,10 +108,9 @@ namespace ZakYip.Singulation.Drivers.Common {
                 catch (Exception ex) {
                     OnControllerFaulted($"Drive {d.Axis}: {ex.Message}");
                 }
-
-                // 间隔至少 2ms，避免指令过于密集
-                await Task.Delay(2, ct);
-            }
+            });
+            
+            await Task.WhenAll(tasks);
         }
 
         public Task EnableAllAsync(CancellationToken ct = default) =>
