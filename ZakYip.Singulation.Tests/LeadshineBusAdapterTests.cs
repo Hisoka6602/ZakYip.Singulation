@@ -26,7 +26,7 @@ namespace ZakYip.Singulation.Tests {
 
             MiniAssert.Equal(42, result, "Result should be 42");
             MiniAssert.True(error != null && error.Contains("test-operation", StringComparison.Ordinal), "Error should contain 'test-operation'");
-            MiniAssert.True(adapter.LastErrorMessage?.Contains("boom", StringComparison.OrdinalIgnoreCase), "LastErrorMessage should contain 'boom'");
+            MiniAssert.True(adapter.LastErrorMessage?.Contains("boom", StringComparison.OrdinalIgnoreCase) == true, "LastErrorMessage should contain 'boom'");
         }
 
         [MiniFact]
