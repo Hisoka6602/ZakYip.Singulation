@@ -271,6 +271,17 @@ var host = Host.CreateDefaultBuilder(args)
         logging.SetMinimumLevel(LogLevel.Warning);
     })
     .ConfigureWebHostDefaults(webBuilder => {
+        // Configure Kestrel URL - read early from a temp config build
+        var url = "http://localhost:5005";
+#if !DEBUG
+        var tempConfig = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+            .Build();
+        url = tempConfig.GetValue<string>("KestrelUrl", "http://localhost:5005");
+#endif
+        webBuilder.UseUrls(url);
+        
         webBuilder.ConfigureKestrel((context, options) => {
             // 请求体上限（按需调整）
             options.Limits.MaxRequestBodySize = HostConstants.MaxRequestBodySizeBytes;
