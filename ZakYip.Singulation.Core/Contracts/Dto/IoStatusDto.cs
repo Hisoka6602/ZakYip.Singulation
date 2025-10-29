@@ -5,31 +5,31 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
     /// <summary>
     /// 单个 IO 端口的状态信息。
     /// </summary>
-    public sealed class IoStatusDto {
+    public sealed record class IoStatusDto {
         /// <summary>
         /// IO 端口编号。
         /// </summary>
-        public int BitNumber { get; set; }
+        public int BitNumber { get; init; }
 
         /// <summary>
         /// IO 类型（Input 或 Output）。
         /// </summary>
-        public IoType Type { get; set; }
+        public IoType Type { get; init; }
 
         /// <summary>
         /// IO 状态（High=1 或 Low=0）。
         /// </summary>
-        public IoState State { get; set; }
+        public IoState State { get; init; }
 
         /// <summary>
         /// 读取是否成功。
         /// </summary>
-        public bool IsValid { get; set; }
+        public bool IsValid { get; init; }
 
         /// <summary>
         /// 错误信息（如果读取失败）。
         /// </summary>
-        public string? ErrorMessage { get; set; }
+        public string? ErrorMessage { get; init; }
     }
 
     /// <summary>

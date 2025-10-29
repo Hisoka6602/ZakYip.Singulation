@@ -11,7 +11,7 @@ namespace ZakYip.Singulation.Host.Dto {
     /// 解码请求数据传输对象
     /// </summary>
     [SwaggerSchema(Description = "在线解码请求对象，支持 HEX、Base64 和原始字节数组三种格式")]
-    public sealed class DecodeRequest {
+    public sealed record class DecodeRequest {
 
         /// <summary>HEX，如 "2A 81 82 00 E8 03 ..."（允许空格/破折号）</summary>
         [SwaggerSchema(Description = "十六进制字符串格式的数据，如 \"2A 81 82 00 E8 03\"，允许使用空格或破折号分隔", Nullable = true)]
