@@ -77,6 +77,7 @@ namespace ZakYip.Singulation.Host.SwaggerOptions {
                 if (File.Exists(xmlPath)) {
                     opt.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
                     _logger.LogInformation("已加载 Swagger XML 文档: {XmlPath}", xmlPath);
+                }
                 else {
                     _logger.LogWarning("未找到 Swagger XML 文档: {XmlPath}", xmlPath);
                 }
