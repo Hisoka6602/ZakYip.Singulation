@@ -72,11 +72,11 @@ namespace ZakYip.Singulation.Host.SwaggerOptions {
             SafeOperationHelper.SafeExecute(() => {
                 var assembly = Assembly.GetExecutingAssembly();
                 var xmlName = $"{assembly.GetName().Name}.xml";
-                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlName);
+                var xmlDirectory = Path.GetDirectoryName(assembly.Location);
+                var xmlPath = Path.Combine(xmlDirectory ?? string.Empty, xmlName);
                 if (File.Exists(xmlPath)) {
                     opt.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
                     _logger.LogInformation("已加载 Swagger XML 文档: {XmlPath}", xmlPath);
-                }
                 else {
                     _logger.LogWarning("未找到 Swagger XML 文档: {XmlPath}", xmlPath);
                 }
