@@ -172,7 +172,7 @@ namespace ZakYip.Singulation.Tests {
 
         [MiniFact]
         public static async Task GetConnectionsAsync_SkipsInvalidPorts() {
-            // Arrange: 构建服务容器
+            // Arrange: 构建服务容器并配置仅有一个有效端口
             var services = new ServiceCollection();
             services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
             services.AddLiteDbAxisSettings("test_upstream_controller_invalid_ports.db");
