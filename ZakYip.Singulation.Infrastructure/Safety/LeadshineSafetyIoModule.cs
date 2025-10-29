@@ -128,25 +128,25 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         _logger.LogInformation("启动时读取远程/本地模式 IO 状态：{Mode}", modeText);
                         
                         // 触发初始模式事件，让 SafetyPipeline 知道当前模式
-                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, $"启动时检测到{modeText}"));
+                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = isRemoteMode, Description = $"启动时检测到{modeText}" });
                     }
                     else {
                         // 超时，使用默认值
                         _logger.LogWarning("启动时读取远程/本地模式 IO 超时（控制器可能未初始化），默认为本地模式");
                         _lastRemoteLocalModeState = false; // 默认本地模式
-                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(false, "启动时读取超时，默认为本地模式"));
+                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取超时，默认为本地模式" });
                     }
                 }
                 catch (Exception ex) {
                     _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 失败，默认为本地模式");
                     _lastRemoteLocalModeState = false; // 默认本地模式
-                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(false, "启动时读取失败，默认为本地模式"));
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取失败，默认为本地模式" });
                 }
             }
             else {
                 _logger.LogInformation("远程/本地模式 IO 未配置，默认为本地模式");
                 _lastRemoteLocalModeState = false; // 默认本地模式
-                RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(false, "未配置 IO，默认为本地模式"));
+                RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "未配置 IO，默认为本地模式" });
             }
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -176,7 +176,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         bool currentState = ReadInputBit(currentOptions.EmergencyStopBit, currentOptions.InvertEmergencyStopLogic ?? currentOptions.InvertLogic);
                         if (currentState && !_lastEmergencyStopState) {
                             _logger.LogWarning("【IO端点调用】检测到急停按键按下 - IO端口：IN{Port}", currentOptions.EmergencyStopBit);
-                            EmergencyStop?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.EmergencyStop, "物理急停按键"));
+                            EmergencyStop?.Invoke(this, new SafetyTriggerEventArgs { Kind = SafetyTriggerKind.EmergencyStop, Description = "物理急停按键" });
                         }
                         _lastEmergencyStopState = currentState;
                     }
@@ -189,7 +189,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastStopState) {
                             _logger.LogInformation("【IO端点调用】检测到停止按键按下 - IO端口：IN{Port}", currentOptions.StopBit);
-                            StopRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StopButton, "物理停止按键"));
+                            StopRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = SafetyTriggerKind.StopButton, Description = "物理停止按键" });
                         }
                         _lastStopState = currentState;
                     }
@@ -202,7 +202,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastStartState) {
                             _logger.LogInformation("【IO端点调用】检测到启动按键按下 - IO端口：IN{Port}", currentOptions.StartBit);
-                            StartRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.StartButton, "物理启动按键"));
+                            StartRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = SafetyTriggerKind.StartButton, Description = "物理启动按键" });
                         }
                         _lastStartState = currentState;
                     }
@@ -215,7 +215,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastResetState) {
                             _logger.LogInformation("【IO端点调用】检测到复位按键按下 - IO端口：IN{Port}", currentOptions.ResetBit);
-                            ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(SafetyTriggerKind.ResetButton, "物理复位按键"));
+                            ResetRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = SafetyTriggerKind.ResetButton, Description = "物理复位按键" });
                         }
                         _lastResetState = currentState;
                     }
@@ -230,7 +230,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         if (isRemoteMode != _lastRemoteLocalModeState) {
                             var modeText = isRemoteMode ? "远程模式" : "本地模式";
                             _logger.LogInformation("检测到远程/本地模式切换：{Mode}", modeText);
-                            RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, $"切换到{modeText}"));
+                            RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = isRemoteMode, Description = $"切换到{modeText}" });
                             _lastRemoteLocalModeState = isRemoteMode;
                         }
                     }

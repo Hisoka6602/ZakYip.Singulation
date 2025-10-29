@@ -23,18 +23,18 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         public Task StartAsync(CancellationToken ct) => Task.CompletedTask;
 
         public void TriggerEmergencyStop(string? reason = null)
-            => EmergencyStop?.Invoke(this, new SafetyTriggerEventArgs(Core.Enums.SafetyTriggerKind.EmergencyStop, reason));
+            => EmergencyStop?.Invoke(this, new SafetyTriggerEventArgs { Kind = Core.Enums.SafetyTriggerKind.EmergencyStop, Description = reason });
 
         public void TriggerStop(string? reason = null)
-            => StopRequested?.Invoke(this, new SafetyTriggerEventArgs(Core.Enums.SafetyTriggerKind.StopButton, reason));
+            => StopRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = Core.Enums.SafetyTriggerKind.StopButton, Description = reason });
 
         public void TriggerStart(string? reason = null)
-            => StartRequested?.Invoke(this, new SafetyTriggerEventArgs(Core.Enums.SafetyTriggerKind.StartButton, reason));
+            => StartRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = Core.Enums.SafetyTriggerKind.StartButton, Description = reason });
 
         public void TriggerReset(string? reason = null)
-            => ResetRequested?.Invoke(this, new SafetyTriggerEventArgs(Core.Enums.SafetyTriggerKind.ResetButton, reason));
+            => ResetRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = Core.Enums.SafetyTriggerKind.ResetButton, Description = reason });
 
         public void TriggerRemoteLocalModeChange(bool isRemoteMode, string? reason = null)
-            => RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs(isRemoteMode, reason));
+            => RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = isRemoteMode, Description = reason });
     }
 }

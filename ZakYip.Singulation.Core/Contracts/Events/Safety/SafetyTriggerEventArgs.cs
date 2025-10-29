@@ -6,17 +6,11 @@ namespace ZakYip.Singulation.Core.Contracts.Events.Safety {
     /// <summary>
     /// 安全触发事件参数。
     /// </summary>
-    public sealed class SafetyTriggerEventArgs : EventArgs {
-        public SafetyTriggerEventArgs(SafetyTriggerKind kind, string? description) {
-            Kind = kind;
-            Description = description;
-            TimestampUtc = DateTime.UtcNow;
-        }
+    public sealed record class SafetyTriggerEventArgs {
+        public required SafetyTriggerKind Kind { get; init; }
 
-        public SafetyTriggerKind Kind { get; }
+        public string? Description { get; init; }
 
-        public string? Description { get; }
-
-        public DateTime TimestampUtc { get; }
+        public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
     }
 }

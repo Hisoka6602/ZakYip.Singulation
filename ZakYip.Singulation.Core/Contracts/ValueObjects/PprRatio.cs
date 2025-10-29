@@ -9,25 +9,34 @@ namespace ZakYip.Singulation.Core.Contracts.ValueObjects {
     /// <summary>
     /// 表示 PPR（每转脉冲数）比率的值对象。
     /// </summary>
-    public struct PprRatio {
+    public readonly struct PprRatio {
         /// <summary>
         /// 脉冲数的分子部分，用于计算每转脉冲数比率。
         /// </summary>
-        public int Numerator;
+        public int Numerator { get; init; }
 
         /// <summary>
         /// 脉冲数的分母部分，用于计算每转脉冲数比率（为 0 时按 1 处理）。
         /// </summary>
-        public int Denominator;
+        public int Denominator { get; init; }
 
         /// <summary>
         /// 实际用于换算的浮点数值。
         /// </summary>
-        public double Value;
+        public double Value { get; init; }
 
         /// <summary>
         /// 指示是否为精确整数比率（无余数）。
         /// </summary>
         public bool IsExact => Denominator != 0 && (Numerator % Denominator) == 0;
+
+        /// <summary>
+        /// 使用分子、分母构造 PPR 比率。
+        /// </summary>
+        public PprRatio(int numerator, int denominator) {
+            Numerator = numerator;
+            Denominator = denominator;
+            Value = denominator != 0 ? (double)numerator / denominator : numerator;
+        }
     }
 }

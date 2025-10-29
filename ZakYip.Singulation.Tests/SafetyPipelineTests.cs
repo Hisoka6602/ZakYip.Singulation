@@ -143,7 +143,7 @@ namespace ZakYip.Singulation.Tests {
                 if (_state == SafetyIsolationState.Isolated) return false;
                 var previous = _state;
                 _state = SafetyIsolationState.Isolated;
-                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs(previous, _state, kind, reason));
+                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = kind, ReasonText = reason });
                 _stateTcs.TrySetResult(_state);
                 return true;
             }
@@ -154,7 +154,7 @@ namespace ZakYip.Singulation.Tests {
                 if (_state == SafetyIsolationState.Isolated) return false;
                 var previous = _state;
                 _state = SafetyIsolationState.Degraded;
-                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs(previous, _state, kind, reason));
+                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = kind, ReasonText = reason });
                 _stateTcs.TrySetResult(_state);
                 return true;
             }
@@ -163,7 +163,7 @@ namespace ZakYip.Singulation.Tests {
                 if (_state != SafetyIsolationState.Degraded) return false;
                 var previous = _state;
                 _state = SafetyIsolationState.Normal;
-                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs(previous, _state, SafetyTriggerKind.HealthRecovered, reason));
+                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = SafetyTriggerKind.HealthRecovered, ReasonText = reason });
                 _stateTcs.TrySetResult(_state);
                 return true;
             }
@@ -172,7 +172,7 @@ namespace ZakYip.Singulation.Tests {
                 if (_state != SafetyIsolationState.Isolated) return false;
                 var previous = _state;
                 _state = SafetyIsolationState.Normal;
-                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs(previous, _state, SafetyTriggerKind.ResetButton, reason));
+                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = SafetyTriggerKind.ResetButton, ReasonText = reason });
                 _stateTcs.TrySetResult(_state);
                 return true;
             }

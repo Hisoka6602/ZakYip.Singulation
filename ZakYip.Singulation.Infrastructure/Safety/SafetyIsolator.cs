@@ -81,7 +81,12 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                 _state = (int)target;
                 _lastTriggerKind = (int)kind;
                 _lastTriggerReason = reason;
-                ev = new SafetyStateChangedEventArgs(current, target, kind, reason);
+                ev = new SafetyStateChangedEventArgs {
+                    Previous = current,
+                    Current = target,
+                    ReasonKind = kind,
+                    ReasonText = reason
+                };
             }
 
             if (ev is not null) {
