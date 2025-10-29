@@ -1,6 +1,105 @@
 # ZakYip.Singulation 项目总览
 
-## 🎯 最新更新（2025-10-29 Swagger 可靠性、安全隔离器和健康检查）
+## 🎯 最新更新（2025-10-29 类型系统优化 - Record Class 和 Struct）
+
+### ✅ 代码质量提升：引入不可变数据类型
+
+**核心改进**：将数据传输对象（DTO）和配置类从可变 class 转换为不可变 record class，提升代码安全性和可维护性
+
+#### 1. Record Class 转换 ✅
+- **转换范围**：
+  - **Host/Dto 层**（6 个文件）：
+    - `DecodeRequest` - 解码请求对象
+    - `DecodeResult` - 解码结果对象
+    - `ApiResponse<T>` - 统一 API 响应格式
+    - `AxisCommandResultDto` - 单轴命令执行结果
+    - `BatchCommandResponseDto` - 批量命令响应
+    - `WriteIoRequestDto` - IO 写入请求
+  
+  - **Core 层**（2 个文件）：
+    - `IoStatusDto` - IO 状态信息
+    - `AxisGridLayoutOptions` - 轴网格布局配置
+  
+  - **Infrastructure 层**（1 个文件）：
+    - `FrameGuardOptions` - 帧保护配置选项
+
+- **已存在的 Record Class**（之前版本已优化）：
+  - `TcpServerOptions`, `TcpClientOptions` - TCP 连接配置
+  - `SetSpeedRequestDto`, `AxisPatchRequestDto` - 轴操作请求
+  - `ControllerResetRequestDto`, `SafetyCommandRequestDto` - 控制器命令
+  - `UpstreamOptions`, `ControllerOptions` - 上游和控制器配置
+  - `UpstreamCodecOptions`, `DriverOptions` - 编解码和驱动配置
+  - `LogEvent` - 日志事件
+
+#### 2. Readonly Record Struct（值类型）✅
+- **已存在的值对象**（之前版本已优化）：
+  - `AxisEvent` - 轴事件（零分配事件传递）
+  - `AxisId` - 轴标识值对象
+  - `KinematicParams` - 运动学参数
+  - `AxisRpm` - 轴转速值对象
+  - `SpeedSet` - 速度集合
+  - `ParcelPose` - 包裹位姿信息
+  - `EvState`, `TransportEvent` - 状态和传输事件
+
+#### 3. 技术收益
+
+- ✅ **不可变性保证**：
+  - Record class 默认使用 `init` 访问器，对象创建后不可修改
+  - 消除了意外修改共享对象的风险
+  - 提高了并发场景下的安全性
+
+- ✅ **值语义增强**：
+  - 自动实现 `Equals`、`GetHashCode`、`ToString`
+  - 基于值的相等性比较，而非引用比较
+  - 支持 `with` 表达式进行非破坏性修改
+
+- ✅ **性能优化**：
+  - Readonly struct 避免了堆分配，减少 GC 压力
+  - 值类型传递更高效，特别是在高频事件场景
+  - 零分配事件模式（如 `AxisEvent`）显著降低内存开销
+
+- ✅ **代码简洁性**：
+  - 减少样板代码（无需手动实现 Equals 等方法）
+  - 提高代码可读性和可维护性
+  - 更好的模式匹配支持
+
+- ✅ **线程安全**：
+  - 不可变对象天然线程安全，无需额外同步
+  - 可安全地在多线程间共享
+  - 避免了竞态条件
+
+#### 4. 设计原则
+
+**何时使用 Record Class**：
+- ✅ 数据传输对象（DTO）
+- ✅ 配置对象（Options）
+- ✅ 请求/响应对象
+- ✅ 不需要可变性的数据模型
+
+**何时使用 Readonly Record Struct**：
+- ✅ 小型值对象（≤16 字节推荐）
+- ✅ 高频创建的对象（如事件）
+- ✅ 标识符类型（如 AxisId）
+- ✅ 不可变的数值组合
+
+**何时保持 Class**：
+- ⚠️ 需要继承的类型（record class 可继承）
+- ⚠️ 需要可变性的类型（如 LiteDB 实体）
+- ⚠️ 有复杂状态管理的服务类
+- ⚠️ EventArgs 派生类（必须是 class）
+
+#### 5. 构建验证
+
+- ✅ **Core 项目**：编译成功（2 个预存在警告）
+- ✅ **Infrastructure 项目**：编译成功（85 个预存在警告）
+- ✅ **Host 项目**：编译成功（17 个预存在警告）
+- ✅ **Protocol、Transport、Drivers、Benchmarks**：编译成功
+- ✅ **向后兼容**：API 签名保持不变，无破坏性变更
+- ⚠️ **Tests/ConsoleDemo**：存在预先存在的错误，与本次修改无关
+
+---
+
+## 🎯 上一次更新（2025-10-29 Swagger 可靠性、安全隔离器和健康检查）
 
 ### ✅ Swagger 可靠性增强
 
@@ -376,19 +475,28 @@ Host → Infrastructure → Core
 
 ### 🎯 短期目标（1-2周）
 
-#### 1. 完善文档体系
+#### 1. 类型系统继续优化
+- ✅ **已完成**：核心 DTO 和 Options 转换为 record class
+- [ ] 评估更多 DTO 类转换为 record class 的机会
+- [ ] 识别可以转换为 readonly struct 的小型值对象
+- [ ] 优化事件参数类型（考虑使用 record class）
+- [ ] 文档化类型选择指南（class vs record vs struct）
+
+#### 2. 完善文档体系
+- ✅ 类型系统优化文档完成
 - ✅ 架构重组文档完成
 - [ ] 更新开发者指南，说明新的项目结构
 - [ ] 补充架构决策记录（ADR）
 - [ ] 完善代码注释覆盖率
 
-#### 2. 测试覆盖率提升
+#### 3. 测试覆盖率提升
 - [ ] Infrastructure层单元测试（新移入的组件）
 - [ ] Controllers集成测试
 - [ ] Safety Pipeline端到端测试
 - [ ] 性能基准测试扩展
 
-#### 3. 代码质量优化
+#### 4. 代码质量优化
+- ✅ 引入不可变数据类型（record class）
 - [ ] 应用代码分析工具（SonarQube）
 - [ ] 统一异常处理策略
 - [ ] 优化日志记录规范
