@@ -70,9 +70,24 @@ namespace ZakYip.Singulation.Host.Controllers {
                     _logger.LogInformation("【退出流程】步骤1：调用安全管线停止操作，禁用所有轴并更新运行状态");
                     _safetyPipeline.RequestStop(SafetyTriggerKind.RemoteStopCommand, "系统会话删除", triggeredByIo: false);
                     
-                    // 等待停止操作完成
-                    await Task.Delay(StopOperationDelayMs, CancellationToken.None).ConfigureAwait(false);
-                    _logger.LogInformation("【退出流程】步骤2：停止操作已完成，准备退出进程");
+                    // 等待所有轴停止，最多等待 10 秒，每 200ms 检查一次
+                    const int maxWaitMs = 10000;
+                    const int pollIntervalMs = 200;
+                    int waitedMs = 0;
+                    while (waitedMs < maxWaitMs)
+                    {
+                        if (_safetyPipeline.AreAllAxesStopped())
+                        {
+                            _logger.LogInformation("【退出流程】步骤2：所有轴已停止，准备退出进程");
+                            break;
+                        }
+                        await Task.Delay(pollIntervalMs, CancellationToken.None).ConfigureAwait(false);
+                        waitedMs += pollIntervalMs;
+                    }
+                    if (waitedMs >= maxWaitMs)
+                    {
+                        _logger.LogWarning("【退出流程】停止操作未在超时时间内完成，强制退出进程");
+                    }
                     
                     // 直接使用 Environment.Exit(1) 退出进程，以便外部服务管理器重启
                     _logger.LogInformation("【退出流程】步骤3：执行 Environment.Exit(1) 退出进程");
