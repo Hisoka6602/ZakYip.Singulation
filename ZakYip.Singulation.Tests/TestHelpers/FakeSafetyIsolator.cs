@@ -28,7 +28,6 @@ namespace ZakYip.Singulation.Tests.TestHelpers {
             return true;
         }
 
-        public bool TryRecover() => true;
 
         public bool TryRecoverFromDegraded(string reason) => true;
 
