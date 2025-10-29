@@ -90,12 +90,21 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             }
 
             // 从传输管理器获取所有已创建的传输（跳过端口 <= 0 的传输）
-            var transportNames = new[] { "speed", "position", "heartbeat" };
-            var allTransports = _transportManager.GetAllTransports().ToList();
-            
-            for (int i = 0; i < Math.Min(allTransports.Count, transportNames.Length); i++) {
-                _transports.Add((transportNames[i], allTransports[i]));
-                _log.LogInformation("Transport '{Name}' resolved successfully", transportNames[i]);
+            // Explicitly map transport names to their instances to avoid index-based errors
+            var speedTransport = _transportManager.GetSpeedTransport();
+            if (speedTransport != null) {
+                _transports.Add(("speed", speedTransport));
+                _log.LogInformation("Transport '{Name}' resolved successfully", "speed");
+            }
+            var positionTransport = _transportManager.GetPositionTransport();
+            if (positionTransport != null) {
+                _transports.Add(("position", positionTransport));
+                _log.LogInformation("Transport '{Name}' resolved successfully", "position");
+            }
+            var heartbeatTransport = _transportManager.GetHeartbeatTransport();
+            if (heartbeatTransport != null) {
+                _transports.Add(("heartbeat", heartbeatTransport));
+                _log.LogInformation("Transport '{Name}' resolved successfully", "heartbeat");
             }
 
             // Ensure essential transports are present
