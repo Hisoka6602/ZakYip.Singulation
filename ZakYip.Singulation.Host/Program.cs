@@ -152,6 +152,8 @@ var host = Host.CreateDefaultBuilder(args)
         });
 
         // Program.cs / DI 注册处
+        // 注意：这里只创建 BusAdapter 实例，不调用 InitializeAsync
+        // 初始化由 AxisBootstrapper 后台服务异步完成，避免阻塞 Kestrel 启动
         services.AddSingleton<IBusAdapter>(sp => {
             var store = sp.GetRequiredService<IControllerOptionsStore>();
 
