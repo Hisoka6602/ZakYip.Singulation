@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
@@ -10,6 +11,7 @@ using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Infrastructure.Persistence;
 using ZakYip.Singulation.Infrastructure.Safety;
 using ZakYip.Singulation.Host.Controllers;
+using ZakYip.Singulation.Transport.Abstractions;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -50,13 +52,12 @@ namespace ZakYip.Singulation.Tests {
             };
             await store.SaveAsync(config);
 
-            // 初始化传输管理器
-            var manager = sp.GetRequiredService<UpstreamTransportManager>();
-            await manager.InitializeAsync();
+            // 获取传输实例
+            var transports = sp.GetServices<IByteTransport>().Where(t => t != null);
 
             // 创建 UpstreamController
             var logger = sp.GetRequiredService<ILogger<UpstreamController>>();
-            var controller = new UpstreamController(logger, store, sp, manager);
+            var controller = new UpstreamController(logger, store, sp, transports);
 
             // Act: 获取连接状态
             var response = await controller.GetConnectionsAsync(CancellationToken.None);
@@ -99,13 +100,12 @@ namespace ZakYip.Singulation.Tests {
             };
             await store.SaveAsync(config);
 
-            // 初始化传输管理器
-            var manager = sp.GetRequiredService<UpstreamTransportManager>();
-            await manager.InitializeAsync();
+            // 获取传输实例
+            var transports = sp.GetServices<IByteTransport>().Where(t => t != null);
 
             // 创建 UpstreamController
             var logger = sp.GetRequiredService<ILogger<UpstreamController>>();
-            var controller = new UpstreamController(logger, store, sp, manager);
+            var controller = new UpstreamController(logger, store, sp, transports);
 
             // Act: 重连第一个传输（索引 0）
             var response = await controller.Reconnect(0, CancellationToken.None);
@@ -141,13 +141,12 @@ namespace ZakYip.Singulation.Tests {
             };
             await store.SaveAsync(config);
 
-            // 初始化传输管理器
-            var manager = sp.GetRequiredService<UpstreamTransportManager>();
-            await manager.InitializeAsync();
+            // 获取传输实例
+            var transports = sp.GetServices<IByteTransport>().Where(t => t != null);
 
             // 创建 UpstreamController
             var logger = sp.GetRequiredService<ILogger<UpstreamController>>();
-            var controller = new UpstreamController(logger, store, sp, manager);
+            var controller = new UpstreamController(logger, store, sp, transports);
 
             // Act: 尝试重连无效的索引
             var response = await controller.Reconnect(999, CancellationToken.None);

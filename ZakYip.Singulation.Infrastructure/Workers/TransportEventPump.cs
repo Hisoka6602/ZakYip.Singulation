@@ -48,7 +48,6 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private readonly IServiceProvider _sp;
         private readonly IRealtimeNotifier _rt;
         private readonly IAxisController _axisController;
-        private readonly UpstreamTransportManager _transportManager;
 
         private bool _axisSubscribed;
         private long _axisDropped;
@@ -60,15 +59,13 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             IUpstreamFrameHub hub,
             IAxisEventAggregator axisEventAggregator,
             IRealtimeNotifier rt,
-            IAxisController axisController,
-            UpstreamTransportManager transportManager) {
+            IAxisController axisController) {
             _log = log;
             _sp = sp;
             _hub = hub;
             _axisEventAggregator = axisEventAggregator;
             _rt = rt;
             _axisController = axisController;
-            _transportManager = transportManager;
 
             // 传输侧慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(InfrastructureConstants.TransportControlEventChannelCapacity) {
@@ -79,26 +76,14 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
-            // 初始化传输管理器（读取配置并创建传输实例，但不启动）
-            try {
-                await _transportManager.InitializeAsync(stoppingToken).ConfigureAwait(false);
-                _log.TransportManagerInitialized();
-            }
-            catch (Exception ex) {
-                _log.TransportManagerInitializationFailed(ex);
-                // 继续执行，因为传输可能稍后会被初始化
-            }
-
-            // 在初始化后，通过 Keyed DI 聚合（speed/position/heartbeat）
-            var keys = new[] { "speed", "position", "heartbeat" };
-            foreach (var key in keys) {
-                try {
-                    var t = _sp.GetKeyedService<IByteTransport>(key);
-                    if (t != null) _transports.Add((key, t));
-                }
-                catch (InvalidOperationException ex) {
-                    _log.TransportResolveFailed(ex, key);
-                }
+            // 通过非键控 DI 获取所有传输实例（speed/position/heartbeat）
+            // 传输实例按注册顺序依次是：speed, position, heartbeat
+            var allTransports = _sp.GetServices<IByteTransport>().Where(t => t != null).ToList();
+            var transportNames = new[] { "speed", "position", "heartbeat" };
+            
+            for (int i = 0; i < Math.Min(allTransports.Count, transportNames.Length); i++) {
+                _transports.Add((transportNames[i], allTransports[i]));
+                _log.LogInformation("Transport '{Name}' resolved successfully", transportNames[i]);
             }
 
             // Ensure essential transports are present
