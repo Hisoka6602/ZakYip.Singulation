@@ -68,6 +68,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <remarks>
         /// 保存或更新上游 TCP 连接的配置信息。
         /// 配置更新后会持久化保存，并自动触发连接热更新（停止旧连接，使用新配置创建并启动新连接）。
+        /// 端口 <= 0 的传输将被跳过，不会创建连接。
         /// </remarks>
         /// <param name="dto">上游配置对象</param>
         /// <param name="ct">取消令牌</param>
@@ -77,7 +78,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpPut("configs")]
         [SwaggerOperation(
             Summary = "更新上游 TCP 配置",
-            Description = "保存或更新上游 TCP 连接的配置信息。配置更新后会持久化保存，并自动触发连接热更新（停止旧连接，使用新配置创建并启动新连接）。")]
+            Description = "保存或更新上游 TCP 连接的配置信息。配置更新后会持久化保存，并自动触发连接热更新（停止旧连接，使用新配置创建并启动新连接）。端口 <= 0 的传输将被跳过，不会创建连接。")]
         [ProducesResponseType(typeof(ApiResponse<string>), 200)]
         [ProducesResponseType(typeof(ApiResponse<string>), 500)]
         [Consumes("application/json")]
@@ -89,7 +90,7 @@ namespace ZakYip.Singulation.Host.Controllers {
                 _logger.LogInformation("Upstream config saved to database: Host={Host}, Role={Role}, SpeedPort={SpeedPort}, PositionPort={PositionPort}, HeartbeatPort={HeartbeatPort}",
                     dto.Host, dto.Role, dto.SpeedPort, dto.PositionPort, dto.HeartbeatPort);
 
-                // 2. 触发热更新：重新创建并启动传输连接
+                // 2. 触发热更新：重新创建并启动传输连接（跳过端口 <= 0 的传输）
                 await _transportManager.ReloadTransportsAsync(dto, startImmediately: true, ct);
                 _logger.LogInformation("Upstream transports hot-reloaded successfully with new config");
 
@@ -181,11 +182,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// Get list of active transports from the transport manager.
         /// </summary>
         private List<IByteTransport> GetActiveTransports() {
-            return new[] {
-                _transportManager.SpeedTransport,
-                _transportManager.PositionTransport,
-                _transportManager.HeartbeatTransport
-            }.Where(t => t != null).ToList()!;
+            return _transportManager.GetAllTransports().ToList();
         }
     }
 }

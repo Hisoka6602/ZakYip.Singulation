@@ -54,6 +54,15 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             }
         }
 
+        /// <summary>获取所有非空的传输实例</summary>
+        public IEnumerable<IByteTransport> GetAllTransports() {
+            lock (_gate) {
+                if (_speedTransport != null) yield return _speedTransport;
+                if (_positionTransport != null) yield return _positionTransport;
+                if (_heartbeatTransport != null) yield return _heartbeatTransport;
+            }
+        }
+
         /// <summary>初始化传输（读取配置并创建传输实例）</summary>
         public async Task InitializeAsync(CancellationToken ct = default) {
             var options = await _store.GetAsync(ct).ConfigureAwait(false);
@@ -171,8 +180,14 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             await StopTransportAsync(heartbeat, "heartbeat", ct).ConfigureAwait(false);
         }
 
-        /// <summary>根据配置创建传输实例</summary>
-        private IByteTransport CreateTransport(UpstreamOptions options, string name, int port) {
+        /// <summary>根据配置创建传输实例，如果端口 <= 0 则返回 null</summary>
+        private IByteTransport? CreateTransport(UpstreamOptions options, string name, int port) {
+            // 端口 <= 0 时不创建传输，避免无效连接尝试
+            if (port <= 0) {
+                _logger.LogInformation("[UpstreamTransportManager] Skipping transport '{Name}' creation (port={Port} is invalid)", name, port);
+                return null;
+            }
+            
             return options.Role == TransportRole.Server
                 ? new TouchServerByteTransport(new TcpServerOptions {
                     Address = IPAddress.Any,

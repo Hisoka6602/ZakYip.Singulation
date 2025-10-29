@@ -89,16 +89,22 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 // 继续执行，因为传输可能稍后会被初始化
             }
 
-            // 在初始化后，通过 Keyed DI 聚合（speed/position/heartbeat）
-            var keys = new[] { "speed", "position", "heartbeat" };
-            foreach (var key in keys) {
-                try {
-                    var t = _sp.GetKeyedService<IByteTransport>(key);
-                    if (t != null) _transports.Add((key, t));
-                }
-                catch (InvalidOperationException ex) {
-                    _log.TransportResolveFailed(ex, key);
-                }
+            // 从传输管理器获取所有已创建的传输（跳过端口 <= 0 的传输）
+            // Explicitly map transport names to their instances to avoid index-based errors
+            var speedTransport = _transportManager.GetSpeedTransport();
+            if (speedTransport != null) {
+                _transports.Add(("speed", speedTransport));
+                _log.LogInformation("Transport '{Name}' resolved successfully", "speed");
+            }
+            var positionTransport = _transportManager.GetPositionTransport();
+            if (positionTransport != null) {
+                _transports.Add(("position", positionTransport));
+                _log.LogInformation("Transport '{Name}' resolved successfully", "position");
+            }
+            var heartbeatTransport = _transportManager.GetHeartbeatTransport();
+            if (heartbeatTransport != null) {
+                _transports.Add(("heartbeat", heartbeatTransport));
+                _log.LogInformation("Transport '{Name}' resolved successfully", "heartbeat");
             }
 
             // Ensure essential transports are present

@@ -16,7 +16,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
         /// <summary>
         /// 从 LiteDB 读取单文档配置，按 Role 选择 Client/Server，
         /// 并注册对应的三路 IByteTransport（speed / position / heartbeat）。
-        /// 支持配置热更新：当配置变更时，自动重新创建连接。
+        /// 仅当端口 > 0 时才创建传输实例。
         /// </summary>
         public static IServiceCollection AddUpstreamTcpFromLiteDb(this IServiceCollection services) {
             // 注意：确保在此之前已经调用了 AddUpstreamFromLiteDb(...) 注册 IUpstreamOptionsStore
@@ -24,25 +24,10 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             // 注册传输管理器（单例）
             services.AddSingleton<UpstreamTransportManager>();
 
-            // ---- speed ----
-            services.AddKeyedSingleton<IByteTransport>("speed", (IServiceProvider sp, object? key) => {
+            // 注册一个包装器，提供所有传输作为 IEnumerable
+            services.AddSingleton<IEnumerable<IByteTransport>>(sp => {
                 var manager = sp.GetRequiredService<UpstreamTransportManager>();
-                return manager.SpeedTransport 
-                    ?? throw new InvalidOperationException("Speed transport not initialized. Call InitializeAsync on UpstreamTransportManager first.");
-            });
-
-            // ---- position ----
-            services.AddKeyedSingleton<IByteTransport>("position", (IServiceProvider sp, object? key) => {
-                var manager = sp.GetRequiredService<UpstreamTransportManager>();
-                return manager.PositionTransport 
-                    ?? throw new InvalidOperationException("Position transport not initialized. Call InitializeAsync on UpstreamTransportManager first.");
-            });
-
-            // ---- heartbeat ----
-            services.AddKeyedSingleton<IByteTransport>("heartbeat", (IServiceProvider sp, object? key) => {
-                var manager = sp.GetRequiredService<UpstreamTransportManager>();
-                return manager.HeartbeatTransport 
-                    ?? throw new InvalidOperationException("Heartbeat transport not initialized. Call InitializeAsync on UpstreamTransportManager first.");
+                return manager.GetAllTransports().ToList();
             });
 
             return services;
