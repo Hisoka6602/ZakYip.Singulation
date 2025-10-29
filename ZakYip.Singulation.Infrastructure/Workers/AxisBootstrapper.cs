@@ -36,7 +36,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         protected override Task ExecuteAsync(CancellationToken stoppingToken) {
             // 立即返回，让应用继续启动（包括 Kestrel）
             // 在后台任务中执行初始化，不阻塞应用启动
-            _ = InitializeInBackgroundAsync(stoppingToken);
+            // 使用 Task.Run 确保异常被正确隔离和处理
+            _ = Task.Run(() => InitializeInBackgroundAsync(stoppingToken), CancellationToken.None);
             return Task.CompletedTask;
         }
 
