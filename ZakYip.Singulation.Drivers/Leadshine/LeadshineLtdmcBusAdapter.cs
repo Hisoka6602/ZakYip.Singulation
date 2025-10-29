@@ -91,56 +91,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 return await policy.ExecuteAsync(async () => {
                     attempt++;
 
-                    // === 0) 总线健康检查（唯一判据：errcode） ===
-                    try {
-                        ushort errcode = 0;
-                        LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
-                        if (errcode != 0) {
-                            // 本次尝试仅做一次复位：偶数尝试→软复位；奇数尝试→冷复位
-                            var useSoftReset = (attempt % 2 == 0);
-
-                            try {
-                                if (useSoftReset) {
-                                    var rc = await Task.Run(() => LTDMC.dmc_soft_reset(_cardNo), ct);
-                                    if (rc != 0) {
-                                        var msg = $"软复位失败: rc={rc}";
-                                        SetError(msg);
-                                        return new(false, msg);
-                                    }
-                                    await Task.Delay(500, ct); // 恢复时间
-                                }
-                                else {
-                                    await ResetAsync(ct);      // 冷复位（无返回值）
-                                    await Task.Delay(200, ct); // 恢复时间
-                                }
-                            }
-                            catch (OperationCanceledException) {
-                                return new(false, "Canceled");
-                            }
-                            catch (Exception ex) {
-                                var msg = $"复位过程异常: {ex.Message}";
-                                SetError(msg);
-                                return new(false, msg);
-                            }
-
-                            // 复位后再读一次 errcode；若仍异常则失败，交给 Polly
-                            LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
-                            if (errcode != 0) {
-                                var msg = $"总线异常未恢复: err={errcode}";
-                                SetError(msg);
-                                return new(false, msg);
-                            }
-                        }
-                    }
-                    catch (OperationCanceledException) {
-                        return new(false, "Canceled");
-                    }
-                    catch (Exception ex) {
-                        var msg = $"总线检查异常: {ex.Message}";
-                        SetError(msg);
-                        return new(false, msg);
-                    }
-
                     // === 1) 可选 Ping 预检（仅当配置了 IP） ===
                     if (_controllerIp != null) {
                         try {
@@ -191,6 +141,56 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     }
                     catch (Exception ex) {
                         var msg = $"LTDMC init 异常: {ex.Message}";
+                        SetError(msg);
+                        return new(false, msg);
+                    }
+
+                    // === 3) 总线健康检查（在初始化之后：唯一判据：errcode） ===
+                    try {
+                        ushort errcode = 0;
+                        LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
+                        if (errcode != 0) {
+                            // 本次尝试仅做一次复位：偶数尝试→软复位；奇数尝试→冷复位
+                            var useSoftReset = (attempt % 2 == 0);
+
+                            try {
+                                if (useSoftReset) {
+                                    var rc = await Task.Run(() => LTDMC.dmc_soft_reset(_cardNo), ct);
+                                    if (rc != 0) {
+                                        var msg = $"软复位失败: rc={rc}";
+                                        SetError(msg);
+                                        return new(false, msg);
+                                    }
+                                    await Task.Delay(500, ct); // 恢复时间
+                                }
+                                else {
+                                    await ResetAsync(ct);      // 冷复位（无返回值）
+                                    await Task.Delay(200, ct); // 恢复时间
+                                }
+                            }
+                            catch (OperationCanceledException) {
+                                return new(false, "Canceled");
+                            }
+                            catch (Exception ex) {
+                                var msg = $"复位过程异常: {ex.Message}";
+                                SetError(msg);
+                                return new(false, msg);
+                            }
+
+                            // 复位后再读一次 errcode；若仍异常则失败，交给 Polly
+                            LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
+                            if (errcode != 0) {
+                                var msg = $"总线异常未恢复: err={errcode}";
+                                SetError(msg);
+                                return new(false, msg);
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException) {
+                        return new(false, "Canceled");
+                    }
+                    catch (Exception ex) {
+                        var msg = $"总线检查异常: {ex.Message}";
                         SetError(msg);
                         return new(false, msg);
                     }
