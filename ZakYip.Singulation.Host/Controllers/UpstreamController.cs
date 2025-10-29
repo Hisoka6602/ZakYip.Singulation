@@ -29,18 +29,15 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly ILogger<UpstreamController> _logger;
         private readonly IUpstreamOptionsStore _store;
         private readonly IServiceProvider _serviceProvider;
-        private readonly IEnumerable<IByteTransport> _transports;
         private readonly UpstreamTransportManager _transportManager;
 
         public UpstreamController(ILogger<UpstreamController> logger,
             IUpstreamOptionsStore store,
             IServiceProvider serviceProvider,
-            IEnumerable<IByteTransport> transports,
             UpstreamTransportManager transportManager) {
             _logger = logger;
             _store = store;
             _serviceProvider = serviceProvider;
-            _transports = transports;
             _transportManager = transportManager;
         }
 
