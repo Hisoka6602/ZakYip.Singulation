@@ -11,7 +11,7 @@ namespace ZakYip.Singulation.Core.Contracts.ValueObjects {
     /// </summary>
     public struct PprRatio {
         /// <summary>
-        /// 原始分子。
+        /// 脉冲数的分子部分，用于计算每转脉冲数比率。
         /// </summary>
         public int Numerator;
 
