@@ -169,5 +169,54 @@ namespace ZakYip.Singulation.Tests {
             // 清理
             await sp.DisposeAsync();
         }
+
+        [MiniFact]
+        public static async Task GetConnectionsAsync_SkipsInvalidPorts() {
+            // Arrange: 构建服务容器
+            var services = new ServiceCollection();
+            services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
+            services.AddLiteDbAxisSettings("test_upstream_controller_invalid_ports.db");
+            services.AddUpstreamFromLiteDb("test_upstream_controller_invalid_ports.db");
+            services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
+            services.AddUpstreamTcpFromLiteDb();
+
+            var sp = services.BuildServiceProvider();
+
+            // 设置配置：只有 SpeedPort 有效，其他端口 <= 0
+            var store = sp.GetRequiredService<IUpstreamOptionsStore>();
+            var config = new UpstreamOptions {
+                Host = "127.0.0.1",
+                SpeedPort = 5001,
+                PositionPort = 0,        // 无效端口
+                HeartbeatPort = -1,      // 无效端口
+                Role = TransportRole.Client
+            };
+            await store.SaveAsync(config);
+
+            // 初始化传输管理器
+            var manager = sp.GetRequiredService<UpstreamTransportManager>();
+            await manager.InitializeAsync();
+
+            // 获取传输实例
+            var transports = sp.GetRequiredService<IEnumerable<IByteTransport>>();
+
+            // 创建 UpstreamController
+            var logger = sp.GetRequiredService<ILogger<UpstreamController>>();
+            var controller = new UpstreamController(logger, store, sp, transports, manager);
+
+            // Act: 获取连接状态
+            var response = await controller.GetConnectionsAsync(CancellationToken.None);
+
+            // Assert: 验证只有一个传输（speed）
+            MiniAssert.True(response.Result, "GetConnectionsAsync should succeed");
+            MiniAssert.True(response.Data is not null, "Data should not be null");
+            MiniAssert.True(response.Data.Items.Count == 1, $"Should have only 1 transport (speed), but got {response.Data.Items.Count}");
+            MiniAssert.True(response.Data.Items.Any(t => t.Port == 5001), "Should have speed transport on port 5001");
+            MiniAssert.False(response.Data.Items.Any(t => t.Port == 0), "Should not have transport on port 0");
+            MiniAssert.False(response.Data.Items.Any(t => t.Port == -1), "Should not have transport on port -1");
+
+            // 清理
+            await sp.DisposeAsync();
+        }
     }
 }
