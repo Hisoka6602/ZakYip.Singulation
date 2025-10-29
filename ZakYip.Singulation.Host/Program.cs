@@ -272,13 +272,6 @@ var host = Host.CreateDefaultBuilder(args)
     })
     .ConfigureWebHostDefaults(webBuilder => {
         webBuilder.ConfigureKestrel((context, options) => {
-            // ---------- Kestrel ----------
-            var url = "http://localhost:5005";
-#if !DEBUG
-            url = context.Configuration.GetValue<string>("KestrelUrl", "http://localhost:5005");
-#endif
-            webBuilder.UseUrls(url);
-
             // 请求体上限（按需调整）
             options.Limits.MaxRequestBodySize = HostConstants.MaxRequestBodySizeBytes;
         });
