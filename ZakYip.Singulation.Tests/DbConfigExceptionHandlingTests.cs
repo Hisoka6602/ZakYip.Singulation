@@ -8,6 +8,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts.Events.Safety;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Infrastructure.Persistence;
+using ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine;
 using ZakYip.Singulation.Infrastructure.Transport;
 
 namespace ZakYip.Singulation.Tests {

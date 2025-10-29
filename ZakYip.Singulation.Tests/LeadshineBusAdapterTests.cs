@@ -24,9 +24,9 @@ namespace ZakYip.Singulation.Tests {
             var result = await task.ConfigureAwait(false);
             var error = await errorTcs.Task.ConfigureAwait(false);
 
-            MiniAssert.Equal(42, result);
-            MiniAssert.True(error != null && error.Contains("test-operation", StringComparison.Ordinal));
-            MiniAssert.True(adapter.LastErrorMessage?.Contains("boom", StringComparison.OrdinalIgnoreCase));
+            MiniAssert.Equal(42, result, "Result should be 42");
+            MiniAssert.True(error != null && error.Contains("test-operation", StringComparison.Ordinal), "Error should contain 'test-operation'");
+            MiniAssert.True(adapter.LastErrorMessage?.Contains("boom", StringComparison.OrdinalIgnoreCase), "LastErrorMessage should contain 'boom'");
         }
 
         [MiniFact]
@@ -41,7 +41,7 @@ namespace ZakYip.Singulation.Tests {
             var throwing = new Func<Task<int>>(() => Task.FromException<int>(new InvalidOperationException("boom")));
             var task = (Task<int>)genericSafe.Invoke(adapter, new object[] { throwing, "first", 7 })!;
             await task.ConfigureAwait(false);
-            MiniAssert.NotNull(adapter.LastErrorMessage);
+            MiniAssert.NotNull(adapter.LastErrorMessage, "LastErrorMessage should not be null");
 
             var actionSafe = typeof(LeadshineLtdmcBusAdapter)
                 .GetMethods(BindingFlags.NonPublic | BindingFlags.Instance)
@@ -51,8 +51,8 @@ namespace ZakYip.Singulation.Tests {
             var actionTask = (Task<bool>)actionSafe.Invoke(adapter, new object[] { successfulAction, "cleanup" })!;
             var success = await actionTask.ConfigureAwait(false);
 
-            MiniAssert.True(success);
-            MiniAssert.Null(adapter.LastErrorMessage);
+            MiniAssert.True(success, "Success should be true");
+            MiniAssert.Null(adapter.LastErrorMessage, "LastErrorMessage should be null after successful operation");
         }
     }
 }

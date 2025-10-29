@@ -1,7 +1,10 @@
 using System.Threading.Tasks;
 using LiteDB;
+using Microsoft.Extensions.Logging.Abstractions;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Infrastructure.Persistence;
+using ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine;
+using ZakYip.Singulation.Tests.TestHelpers;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -14,7 +17,10 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanSaveAndRetrieveConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
-            var store = new LiteDbLeadshineSafetyIoOptionsStore(db);
+            var store = new LiteDbLeadshineSafetyIoOptionsStore(
+                db,
+                NullLogger<LiteDbLeadshineSafetyIoOptionsStore>.Instance,
+                new FakeSafetyIsolator());
 
             // 创建测试配置
             var options = new LeadshineSafetyIoOptions {
@@ -55,7 +61,10 @@ namespace ZakYip.Singulation.Tests {
         public async Task ReturnsDefaultWhenNotFound() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
-            var store = new LiteDbLeadshineSafetyIoOptionsStore(db);
+            var store = new LiteDbLeadshineSafetyIoOptionsStore(
+                db,
+                NullLogger<LiteDbLeadshineSafetyIoOptionsStore>.Instance,
+                new FakeSafetyIsolator());
 
             // 读取配置（应返回默认值）
             var retrieved = await store.GetAsync();
@@ -74,7 +83,10 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanUpdateExistingConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
-            var store = new LiteDbLeadshineSafetyIoOptionsStore(db);
+            var store = new LiteDbLeadshineSafetyIoOptionsStore(
+                db,
+                NullLogger<LiteDbLeadshineSafetyIoOptionsStore>.Instance,
+                new FakeSafetyIsolator());
 
             // 创建初始配置
             var options1 = new LeadshineSafetyIoOptions {
@@ -104,7 +116,10 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanDeleteConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
-            var store = new LiteDbLeadshineSafetyIoOptionsStore(db);
+            var store = new LiteDbLeadshineSafetyIoOptionsStore(
+                db,
+                NullLogger<LiteDbLeadshineSafetyIoOptionsStore>.Instance,
+                new FakeSafetyIsolator());
 
             // 创建配置
             var options = new LeadshineSafetyIoOptions {
