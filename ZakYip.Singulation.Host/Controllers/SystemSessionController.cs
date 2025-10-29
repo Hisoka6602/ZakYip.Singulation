@@ -6,6 +6,8 @@ using ZakYip.Singulation.Host.Dto;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
+using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -18,10 +20,17 @@ namespace ZakYip.Singulation.Host.Controllers {
     public sealed class SystemSessionController : ControllerBase {
         private readonly IHostApplicationLifetime _lifetime;
         private readonly ILogger<SystemSessionController> _logger;
+        private readonly ISafetyPipeline _safetyPipeline;
 
-        public SystemSessionController(IHostApplicationLifetime lifetime, ILogger<SystemSessionController> logger) {
+        /// <summary>
+        /// 停止操作等待时间（毫秒）。
+        /// </summary>
+        private const int StopOperationDelayMs = 2000;
+
+        public SystemSessionController(IHostApplicationLifetime lifetime, ILogger<SystemSessionController> logger, ISafetyPipeline safetyPipeline) {
             _lifetime = lifetime;
             _logger = logger;
+            _safetyPipeline = safetyPipeline;
         }
 
         /// <summary>
@@ -29,7 +38,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// </summary>
         /// <remarks>
         /// 删除当前运行会话资源，触发宿主应用优雅退出。
-        /// 此操作会通知宿主停止运行并退出进程。
+        /// 此操作会先停止所有轴（失能）并将运行状态设置为停止，然后退出进程。
         /// 外部部署工具（如 Windows 服务管理器或 systemd）应配置为自动重启服务。
         ///
         /// 注意：此操作是异步执行的，API 会立即返回 202 状态码，实际退出会在后台进行。
@@ -41,7 +50,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         [HttpDelete]
         [SwaggerOperation(
             Summary = "删除当前运行会话",
-            Description = "删除当前运行会话资源，触发宿主应用优雅退出。此操作会通知宿主停止运行并退出进程。注意：此操作是异步执行的，API 会立即返回 202 状态码，实际退出会在后台进行。")]
+            Description = "删除当前运行会话资源，触发宿主应用优雅退出。此操作会先停止所有轴（失能）并将运行状态设置为停止，然后退出进程。注意：此操作是异步执行的，API 会立即返回 202 状态码，实际退出会在后台进行。")]
         [ProducesResponseType(typeof(ApiResponse<object>), 202)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [Produces("application/json")]
@@ -52,22 +61,36 @@ namespace ZakYip.Singulation.Host.Controllers {
             }
 
             // 中文日志：收到关闭请求
-            _logger.LogInformation("收到关闭请求，将在后台停止宿主应用。");
+            _logger.LogInformation("收到关闭请求，将在后台停止所有轴并退出应用。");
 
             // 后台异步执行，彻底与请求线程解耦，防止异常影响调用方
             _ = Task.Run(async () => {
                 try {
-                    // 中文日志：优雅停止
-                    _logger.LogInformation("触发宿主优雅停止，准备退出。");
-                    _lifetime.StopApplication();
-
-                    // 等待优雅退出完成（容忍时间，可按需调参）
-                    var gracefulWaitMs = 3000; // 3 秒容忍时间
-                    await Task.Delay(gracefulWaitMs, ct).ConfigureAwait(false);
-
-                    // ——兜底：若进程仍未退出，则以非零码强制结束以触发服务恢复——
-                    // 若项目已注册 ForceNonZeroExitHostedService，则可删除以下强制退出段
-                    _logger.LogWarning("优雅停止未在 {WaitMs}ms 内完成，执行强制退出，退出码=1。", gracefulWaitMs);
+                    // 在退出前确保所有轴失能，运行状态变成停止（等同于调用IO按钮停止的触发）
+                    _logger.LogInformation("【退出流程】步骤1：调用安全管线停止操作，禁用所有轴并更新运行状态");
+                    _safetyPipeline.RequestStop(SafetyTriggerKind.RemoteStopCommand, "系统会话删除", triggeredByIo: false);
+                    
+                    // 等待所有轴停止，最多等待 10 秒，每 200ms 检查一次
+                    const int maxWaitMs = 10000;
+                    const int pollIntervalMs = 200;
+                    int waitedMs = 0;
+                    while (waitedMs < maxWaitMs)
+                    {
+                        if (_safetyPipeline.AreAllAxesStopped())
+                        {
+                            _logger.LogInformation("【退出流程】步骤2：所有轴已停止，准备退出进程");
+                            break;
+                        }
+                        await Task.Delay(pollIntervalMs, CancellationToken.None).ConfigureAwait(false);
+                        waitedMs += pollIntervalMs;
+                    }
+                    if (waitedMs >= maxWaitMs)
+                    {
+                        _logger.LogWarning("【退出流程】停止操作未在超时时间内完成，强制退出进程");
+                    }
+                    
+                    // 直接使用 Environment.Exit(1) 退出进程，以便外部服务管理器重启
+                    _logger.LogInformation("【退出流程】步骤3：执行 Environment.Exit(1) 退出进程");
                     Environment.Exit(1);
                 }
                 catch (Exception ex) {
