@@ -33,10 +33,18 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _lifetime.ApplicationStopping.Register(OnStopping);
         }
 
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+        protected override Task ExecuteAsync(CancellationToken stoppingToken) {
+            // 立即返回，让应用继续启动（包括 Kestrel）
+            // 在后台任务中执行初始化，不阻塞应用启动
+            // 使用 Task.Run 确保异常被正确隔离和处理
+            _ = Task.Run(() => InitializeInBackgroundAsync(stoppingToken), CancellationToken.None);
+            return Task.CompletedTask;
+        }
+
+        private async Task InitializeInBackgroundAsync(CancellationToken stoppingToken) {
             try {
                 // 1) 从 LiteDB 读取控制器模板；若无则写入默认并继续使用默认
-                var opt = await _ctrlOpts.GetAsync(stoppingToken);
+                var opt = await _ctrlOpts.GetAsync(stoppingToken).ConfigureAwait(false);
                 // 2) 按模板初始化轴（这一步会调用 Bus.Initialize、GetAxisCount、并批量创建驱动）
                 var driverTemplate = opt.Template.ToDriverOptionsTemplate();
 
@@ -44,10 +52,10 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     vendor: opt.Vendor,
                     template: driverTemplate,           // ← 用集中映射后的模板
                     overrideAxisCount: opt.OverrideAxisCount,
-                    ct: stoppingToken);
+                    ct: stoppingToken).ConfigureAwait(false);
 
                 // 3) 如果需要，统一上电、设加减速、设目标速度
-                await _controller.EnableAllAsync(stoppingToken);
+                await _controller.EnableAllAsync(stoppingToken).ConfigureAwait(false);
 
                 var tpl = opt.Template;
                 var accelMmps2 = AxisRpm.RpmPerSecToMmPerSec2(tpl.MaxAccelRpmPerSec, tpl.PulleyPitchDiameterMm, tpl.GearRatio, tpl.ScrewPitchMm);
@@ -57,13 +65,16 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     await _controller.SetAccelDecelAllAsync(
                         accelMmPerSec2: accelMmps2,
                         decelMmPerSec2: decelMmps2,
-                        ct: stoppingToken);
+                        ct: stoppingToken).ConfigureAwait(false);
                 }
                 else {
                     _log.LogWarning("Axis bootstrap: skip accel/decel bootstrap due to invalid mechanical parameters or template limits.");
                 }
 
                 _log.LogInformation("Axis bootstrap done. Vendor={Vendor}", opt.Vendor);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
+                _log.LogInformation("Axis bootstrap canceled during shutdown.");
             }
             catch (Exception ex) {
                 _log.LogError(ex, "Axis bootstrap failed.");
