@@ -8,6 +8,9 @@ using ZakYip.Singulation.Core.Contracts.Dto;
 
 namespace ZakYip.Singulation.Infrastructure.Runtime {
 
+    /// <summary>
+    /// 运行时状态提供者的默认实现，负责收集和维护系统运行状态。
+    /// </summary>
     public class RuntimeStatusProvider : IRuntimeStatusProvider {
         private readonly ILogger<RuntimeStatusProvider> _log;
         private readonly object _gate = new();
@@ -23,8 +26,13 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
         private string? _ctrlIp;
         private int _axisCount;
 
+        /// <summary>
+        /// 初始化 <see cref="RuntimeStatusProvider"/> 类的新实例。
+        /// </summary>
+        /// <param name="log">日志记录器。</param>
         public RuntimeStatusProvider(ILogger<RuntimeStatusProvider> log) => _log = log;
 
+        /// <inheritdoc />
         public SystemRuntimeStatus Snapshot() {
             lock (_gate) {
                 return new SystemRuntimeStatus {
@@ -43,6 +51,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
             }
         }
 
+        /// <inheritdoc />
         public void OnTransportState(string name, string role, string status, string? remote) {
             lock (_gate) {
                 if (!_transports.TryGetValue(name, out var item)) {
@@ -61,6 +70,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
             }
         }
 
+        /// <inheritdoc />
         public void OnTransportBytes(string name, int bytes) {
             lock (_gate) {
                 if (!_transports.TryGetValue(name, out var item)) {
@@ -77,6 +87,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
             }
         }
 
+        /// <inheritdoc />
         public void OnUpstreamHeartbeat(DateTime utc, double? fps = null) {
             lock (_gate) {
                 _upHeartbeatUtc = utc;
@@ -84,6 +95,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
             }
         }
 
+        /// <inheritdoc />
         public void OnControllerInfo(bool online, string? vendor, string? ip, int axisCount) {
             lock (_gate) {
                 _ctrlOnline = online;
