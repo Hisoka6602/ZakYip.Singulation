@@ -400,10 +400,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                         throw new InvalidOperationException("使能失败：未能读取到有效的 PPR（脉冲/转），禁止写入速度指令");
                     }
                 }
-
-                _status = DriverStatus.Connected;
-                IsEnabled = true;
             }, ct).ConfigureAwait(false);
+            
+            // 状态更新仅在成功后执行一次
+            _status = DriverStatus.Connected;
+            IsEnabled = true;
         }
 
         /// <summary>禁用（安全停机 + 状态回退 + 本地状态复位）。使用 Polly 重试策略，最多重试3次。</summary>
@@ -425,15 +426,16 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     throw new InvalidOperationException($"Disable: write ControlWord=Shutdown(0x0006) failed, ret={cw}");
                 }
                 await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
-
-                _health.Stop();
-                _fails.Reset();
-
-                _status = DriverStatus.Disconnected;
-                Volatile.Write(ref _lastFbStamp, 0);
-                _lastFbMmps = 0;
-                IsEnabled = false;
             }, ct).ConfigureAwait(false);
+            
+            // 状态清理仅在成功后执行一次
+            _health.Stop();
+            _fails.Reset();
+
+            _status = DriverStatus.Disconnected;
+            Volatile.Write(ref _lastFbStamp, 0);
+            _lastFbMmps = 0;
+            IsEnabled = false;
         }
 
         /// <summary>
