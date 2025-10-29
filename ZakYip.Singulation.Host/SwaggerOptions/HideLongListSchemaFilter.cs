@@ -2,43 +2,51 @@
 using System.ComponentModel;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using Microsoft.Extensions.Logging;
 
 namespace ZakYip.Singulation.Host.SwaggerOptions {
 
     public class HideLongListSchemaFilter : ISchemaFilter {
+        private readonly ILogger<HideLongListSchemaFilter>? _logger;
+
+        public HideLongListSchemaFilter(ILogger<HideLongListSchemaFilter>? logger = null) {
+            _logger = logger;
+        }
 
         public void Apply(OpenApiSchema schema, SchemaFilterContext context) {
-            var type = context.Type;
+            SafeOperationHelper.SafeExecute(() => {
+                var type = context.Type;
 
-            // 检查类型名称是否包含 "ZakYip"，以确定是否需要处理
-            if (type.FullName != null && type.FullName.Contains("ZakYip")) {
-                // 获取简短类名
-                var shortName = GetFriendlyTypeName(type);
+                // 检查类型名称是否包含 "ZakYip"，以确定是否需要处理
+                if (type.FullName != null && type.FullName.Contains("ZakYip")) {
+                    // 获取简短类名
+                    var shortName = GetFriendlyTypeName(type);
 
-                // 设置 schema.Title
-                schema.Title = shortName;
-            }
+                    // 设置 schema.Title
+                    schema.Title = shortName;
+                }
 
-            if (context.Type.IsEnum) {
-                // 获取枚举值和名称
-                var enumValues = Enum.GetValues(context.Type).Cast<object>().ToArray();
-                var enumNames = enumValues.Select(v => v.ToString()).ToArray();
-                var enumValuesAsInt = enumValues.Select(v => (int)v).ToArray();
+                if (context.Type.IsEnum) {
+                    // 获取枚举值和名称
+                    var enumValues = Enum.GetValues(context.Type).Cast<object>().ToArray();
+                    var enumNames = enumValues.Select(v => v.ToString()).ToArray();
+                    var enumValuesAsInt = enumValues.Select(v => (int)v).ToArray();
 
-                // 获取枚举值的 Description 属性
-                var enumDescriptions = enumNames.Select(name => {
-                    if (name != null) {
-                        var field = context.Type.GetField(name);
-                        var attribute = field?.GetCustomAttribute<DescriptionAttribute>();
-                        return attribute?.Description ?? name;
-                    }
+                    // 获取枚举值的 Description 属性
+                    var enumDescriptions = enumNames.Select(name => {
+                        if (name != null) {
+                            var field = context.Type.GetField(name);
+                            var attribute = field?.GetCustomAttribute<DescriptionAttribute>();
+                            return attribute?.Description ?? name;
+                        }
 
-                    return null;
-                }).ToArray();
+                        return null;
+                    }).ToArray();
 
-                // 设置 schema 的描述
-                schema.Description = $"Enum values: {string.Join(", ", enumNames.Zip(enumValuesAsInt, (name, value) => $"{value}={name}[{enumDescriptions[Array.IndexOf(enumNames, name)]}]"))}";
-            }
+                    // 设置 schema 的描述
+                    schema.Description = $"Enum values: {string.Join(", ", enumNames.Zip(enumValuesAsInt, (name, value) => $"{value}={name}[{enumDescriptions[Array.IndexOf(enumNames, name)]}]"))}";
+                }
+            }, _logger, "HideLongListSchemaFilter.Apply");
         }
 
         private string GetFriendlyTypeName(Type type) {
