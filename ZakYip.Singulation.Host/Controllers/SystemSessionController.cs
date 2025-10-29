@@ -62,6 +62,7 @@ namespace ZakYip.Singulation.Host.Controllers {
                     _lifetime.StopApplication();
 
                     // 短暂延迟，确保日志输出，然后立即以非零码退出以触发服务重启
+                    // 使用 CancellationToken.None 确保延迟完成，即使 HTTP 请求被取消
                     await Task.Delay(500, CancellationToken.None).ConfigureAwait(false);
 
                     // 立即以非零码强制退出，触发 Windows 服务自动重启
