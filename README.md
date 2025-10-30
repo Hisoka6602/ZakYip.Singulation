@@ -713,6 +713,15 @@ dotnet run
 - [性能优化](docs/PERFORMANCE.md)
 - [完整更新历史](docs/CHANGELOG.md)
 
+### SignalR 实时通信文档
+- [SignalR 系统概览](SIGNALR_OVERVIEW.md) ⭐ **快速入门推荐**
+- [SignalR 覆盖内容与优化总结](SIGNALR覆盖内容与优化总结.md) 📖 **完整中文总结**
+- [SignalR 优化前后对比](SIGNALR_COMPARISON.md) 📊 **对比分析**
+- [SignalR 实现详细分析](SIGNALR_IMPLEMENTATION_ANALYSIS.md) 🔍 **详细技术分析（英文）**
+- [SignalR 优化实施总结](SIGNALR_OPTIMIZATION_SUMMARY.md) 📝 **实施总结（英文）**
+- [SignalR 优化建议摘要](SIGNALR优化建议摘要.md) 💡 **快速参考（中文）**
+- [SignalR 客户端重连策略指南](SIGNALR_CLIENT_RETRY_POLICY.md) 🔄 **客户端配置指南**
+
 ### 代码规范
 - [命名规范快速指南](NAMING_GUIDE_README.md) ⭐ **推荐先看这个**
 - [命名问题分析与优化建议](NAMING_ANALYSIS_AND_RECOMMENDATIONS.md)
