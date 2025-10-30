@@ -31,12 +31,12 @@ namespace ZakYip.Singulation.Core.Contracts.ValueObjects {
         public bool IsExact => Denominator != 0 && (Numerator % Denominator) == 0;
 
         /// <summary>
-        /// 使用分子、分母构造 PPR 比率。
+        /// 使用分子、分母构造 PPR 比率。若分母为 0，则按 1 处理。
         /// </summary>
         public PprRatio(int numerator, int denominator) {
             Numerator = numerator;
             Denominator = denominator;
-            Value = denominator != 0 ? (double)numerator / denominator : numerator;
+            Value = denominator != 0 ? (double)numerator / denominator : (double)numerator / 1.0;
         }
     }
 }
