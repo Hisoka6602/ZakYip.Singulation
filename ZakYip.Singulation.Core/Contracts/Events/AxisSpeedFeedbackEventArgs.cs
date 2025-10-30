@@ -5,8 +5,7 @@ namespace ZakYip.Singulation.Core.Contracts.Events {
     /// <summary>
     /// 轴实时速度反馈事件参数。
     /// </summary>
-    public sealed class AxisSpeedFeedbackEventArgs : EventArgs {
-
+    public sealed record class AxisSpeedFeedbackEventArgs {
         /// <summary>轴标识。</summary>
         public required AxisId Axis { get; init; }
 

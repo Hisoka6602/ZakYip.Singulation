@@ -307,7 +307,10 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="ct">取消令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
         private async Task HandleCommandAsync(SafetyOperation operation, CancellationToken ct) {
-            var args = new SafetyTriggerEventArgs(operation.CommandKind, operation.CommandReason);
+            var args = new SafetyTriggerEventArgs {
+                Kind = operation.CommandKind,
+                Description = operation.CommandReason
+            };
             
             // 记录安全命令调用来源
             var source = operation.TriggeredByIo ? "IO端点" : "API端点";

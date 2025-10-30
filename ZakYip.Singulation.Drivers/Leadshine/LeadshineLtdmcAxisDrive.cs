@@ -811,15 +811,15 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         // —— 便捷事件触发 ——
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnAxisFaulted(Exception ex) =>
-            FireEachNonBlocking(AxisFaulted, this, new AxisErrorEventArgs(Axis, ex));
+            FireEachNonBlocking(AxisFaulted, this, new AxisErrorEventArgs { Axis = Axis, Exception = ex });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnDriverNotLoaded(string lib, string msg) =>
-            FireEachNonBlocking(DriverNotLoaded, this, new DriverNotLoadedEventArgs(lib, msg));
+            FireEachNonBlocking(DriverNotLoaded, this, new DriverNotLoadedEventArgs { LibraryName = lib, Message = msg });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnAxisDisconnected(string reason) =>
-            FireEachNonBlocking(AxisDisconnected, this, new AxisDisconnectedEventArgs(Axis, reason));
+            FireEachNonBlocking(AxisDisconnected, this, new AxisDisconnectedEventArgs { Axis = Axis, Reason = reason });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnCommandIssued(AxisCommandIssuedEventArgs e) =>

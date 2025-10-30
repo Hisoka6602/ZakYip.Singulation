@@ -6,23 +6,15 @@ namespace ZakYip.Singulation.Core.Contracts.Events.Safety {
     /// <summary>
     /// 安全隔离状态变化事件参数。
     /// </summary>
-    public sealed class SafetyStateChangedEventArgs : EventArgs {
-        public SafetyStateChangedEventArgs(SafetyIsolationState previous, SafetyIsolationState current, SafetyTriggerKind reasonKind, string? reasonText) {
-            Previous = previous;
-            Current = current;
-            ReasonKind = reasonKind;
-            ReasonText = reasonText;
-            TimestampUtc = DateTime.UtcNow;
-        }
+    public sealed record class SafetyStateChangedEventArgs {
+        public required SafetyIsolationState Previous { get; init; }
 
-        public SafetyIsolationState Previous { get; }
+        public required SafetyIsolationState Current { get; init; }
 
-        public SafetyIsolationState Current { get; }
+        public required SafetyTriggerKind ReasonKind { get; init; }
 
-        public SafetyTriggerKind ReasonKind { get; }
+        public string? ReasonText { get; init; }
 
-        public string? ReasonText { get; }
-
-        public DateTime TimestampUtc { get; }
+        public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
     }
 }
