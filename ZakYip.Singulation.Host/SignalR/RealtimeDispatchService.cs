@@ -194,11 +194,7 @@ namespace ZakYip.Singulation.Host.SignalR {
             }
 
             public bool ShouldAttemptReset() {
-                if (!IsOpen) return false;
-                if ((DateTime.UtcNow - _openedTime).TotalSeconds >= TimeoutSeconds) {
-                    return true;
-                }
-                return false;
+                return IsOpen && (DateTime.UtcNow - _openedTime).TotalSeconds >= TimeoutSeconds;
             }
         }
     }
