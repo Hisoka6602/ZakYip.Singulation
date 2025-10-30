@@ -78,11 +78,6 @@ namespace ZakYip.Singulation.Tests {
                 action();
             }
             catch (TException) {
-            bool thrown = false;
-            try {
-                action();
-            }
-            catch (TException) {
                 // Expected exception
                 thrown = true;
             }
@@ -105,9 +100,6 @@ namespace ZakYip.Singulation.Tests {
             }
             catch (Exception ex) {
                 throw new InvalidOperationException($"{message} —— 期望异常类型 {typeof(TException).Name}，实际: {ex.GetType().Name}");
-            }
-            if (!thrown) {
-                throw new InvalidOperationException($"{message} —— 应抛出异常 {typeof(TException).Name}");
             }
             if (!thrown) {
                 throw new InvalidOperationException($"{message} —— 应抛出异常 {typeof(TException).Name}");
