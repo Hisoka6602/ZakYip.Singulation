@@ -29,5 +29,11 @@ namespace ZakYip.Singulation.Host.SignalR.Hubs {
         /// <returns>异步任务。</returns>
         public Task Leave(string channel)
             => Groups.RemoveFromGroupAsync(Context.ConnectionId, channel);
+
+        /// <summary>
+        /// 心跳检测方法，用于测量客户端延迟。
+        /// </summary>
+        /// <returns>异步任务。</returns>
+        public Task Ping() => Task.CompletedTask;
     }
 }
