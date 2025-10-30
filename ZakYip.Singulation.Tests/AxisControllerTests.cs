@@ -99,6 +99,55 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.True(registry.Created[2].WriteSpeedCalls == 3, "轴2应写入3次");
             MiniAssert.True(registry.Created[3].WriteSpeedCalls == 2, "轴3应写入2次");
         }
+
+        [MiniFact]
+        public async Task RealtimeSpeedsMmpsReflectsLastFeedbackFromDrives() {
+            // Arrange: Create controller with 3 axes
+            var bus = new FakeBusAdapter(3);
+            var registry = new FakeDriveRegistry();
+            var aggregator = new FakeAxisEventAggregator();
+            var controller = new AxisController(bus, registry, aggregator);
+            var options = new DriverOptions {
+                Card = 0,
+                Port = 0,
+                NodeId = 1,
+                GearRatio = 1m,
+                PulleyPitchDiameterMm = 1m
+            };
+
+            var result = await controller.InitializeAsync("fake", options, 3, CancellationToken.None).ConfigureAwait(false);
+            MiniAssert.True(result.Key, "初始化应成功");
+            MiniAssert.True(registry.Created.Count == 3, "应创建3根轴驱动");
+
+            // Act & Assert 1: Initially, all speeds should be null
+            var speeds = controller.RealtimeSpeedsMmps;
+            MiniAssert.True(speeds.Count == 3, "应有3个速度值");
+            MiniAssert.True(speeds[0] == null, "轴0初始速度应为null");
+            MiniAssert.True(speeds[1] == null, "轴1初始速度应为null");
+            MiniAssert.True(speeds[2] == null, "轴2初始速度应为null");
+
+            // Act 2: Simulate speed feedback for axis 0
+            registry.Created[0].SimulateSpeedFeedback(100m);
+            speeds = controller.RealtimeSpeedsMmps;
+            MiniAssert.True(speeds[0] == 100m, "轴0速度应为100");
+            MiniAssert.True(speeds[1] == null, "轴1速度应仍为null");
+            MiniAssert.True(speeds[2] == null, "轴2速度应仍为null");
+
+            // Act 3: Simulate speed feedback for axis 1 and 2
+            registry.Created[1].SimulateSpeedFeedback(200m);
+            registry.Created[2].SimulateSpeedFeedback(300m);
+            speeds = controller.RealtimeSpeedsMmps;
+            MiniAssert.True(speeds[0] == 100m, "轴0速度应为100");
+            MiniAssert.True(speeds[1] == 200m, "轴1速度应为200");
+            MiniAssert.True(speeds[2] == 300m, "轴2速度应为300");
+
+            // Act 4: Update speed for axis 0
+            registry.Created[0].SimulateSpeedFeedback(150m);
+            speeds = controller.RealtimeSpeedsMmps;
+            MiniAssert.True(speeds[0] == 150m, "轴0速度应更新为150");
+            MiniAssert.True(speeds[1] == 200m, "轴1速度应仍为200");
+            MiniAssert.True(speeds[2] == 300m, "轴2速度应仍为300");
+        }
     }
 
     internal sealed class FakeDriveRegistry : IDriveRegistry {
@@ -170,6 +219,7 @@ namespace ZakYip.Singulation.Tests {
 
         public int StopCalls { get; private set; }
         public int WriteSpeedCalls { get; private set; }
+        private decimal? _lastFeedbackMmps;
 
         public event EventHandler<AxisErrorEventArgs>? AxisFaulted;
 
@@ -184,7 +234,7 @@ namespace ZakYip.Singulation.Tests {
         public AxisId Axis { get; }
         public DriverStatus Status => DriverStatus.Connected;
         public decimal? LastTargetMmps { get; private set; }
-        public decimal? LastFeedbackMmps => LastTargetMmps;
+        public decimal? LastFeedbackMmps => _lastFeedbackMmps;
         public bool IsEnabled => true;
         public int LastErrorCode => 0;
         public string? LastErrorMessage => null;
@@ -223,5 +273,9 @@ namespace ZakYip.Singulation.Tests {
         public Task UpdateMechanicsAsync(decimal rollerDiameterMm, decimal gearRatio, int ppr, CancellationToken ct = default) => Task.CompletedTask;
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        public void SimulateSpeedFeedback(decimal speedMmps) {
+            _lastFeedbackMmps = speedMmps;
+        }
     }
 }

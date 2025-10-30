@@ -91,6 +91,8 @@ namespace ZakYip.Singulation.Tests {
 
             public IReadOnlyList<IAxisDrive> Drives => Array.Empty<IAxisDrive>();
 
+            public IReadOnlyList<decimal?> RealtimeSpeedsMmps => Array.Empty<decimal?>();
+
             public Task<KeyValuePair<bool, string>> InitializeAsync(string vendor, ZakYip.Singulation.Drivers.Common.DriverOptions template, int? overrideAxisCount = null, CancellationToken ct = default)
                 => Task.FromResult(new KeyValuePair<bool, string>(true, "stub"));
 

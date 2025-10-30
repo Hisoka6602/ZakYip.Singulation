@@ -39,6 +39,13 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         IReadOnlyList<IAxisDrive> Drives { get; }
 
         /// <summary>
+        /// 所有轴的实时速度反馈（mm/s）。
+        /// <para>索引与 <see cref="Drives"/> 一致，值对应各轴的 <see cref="IAxisDrive.LastFeedbackMmps"/>。</para>
+        /// <para>值为 null 表示该轴尚未收到反馈。</para>
+        /// </summary>
+        IReadOnlyList<decimal?> RealtimeSpeedsMmps { get; }
+
+        /// <summary>
         /// 初始化总线并按规则创建 N 根驱动（通过 <see cref="IDriveRegistry"/> 工厂）。
         /// <para>优先使用 <paramref name="overrideAxisCount"/> 指定数量；
         /// 否则尝试从总线查询；再不行则根据模板 NodeId 范围推算。</para>
