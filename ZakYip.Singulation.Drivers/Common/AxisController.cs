@@ -30,6 +30,7 @@ namespace ZakYip.Singulation.Drivers.Common {
 
         public IBusAdapter Bus { get; }
         public IReadOnlyList<IAxisDrive> Drives => _drives;
+        public IReadOnlyList<decimal?> RealtimeSpeedsMmps => _drives.Select(d => d.LastFeedbackMmps).ToArray();
 
         public async Task<KeyValuePair<bool, string>> InitializeAsync(string vendor,
             DriverOptions template,
