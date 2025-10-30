@@ -27,7 +27,8 @@ namespace ZakYip.Singulation.Host.Extensions {
                 .AddNewtonsoftJsonProtocol(); // 与全局 JSON 一致
 
             // 有界通道，防止堆积；策略：丢旧保新
-            var chan = Channel.CreateBounded<SignalRQueueItem>(new BoundedChannelOptions(10_000) {
+            // 增加容量到 50,000 以支持高并发场景
+            var chan = Channel.CreateBounded<SignalRQueueItem>(new BoundedChannelOptions(50_000) {
                 FullMode = BoundedChannelFullMode.DropOldest,
                 SingleReader = true,
                 SingleWriter = false
@@ -37,7 +38,13 @@ namespace ZakYip.Singulation.Host.Extensions {
             // 抽象 → 实现
             services.AddSingleton<IRealtimeNotifier, SignalRRealtimeNotifier>();
             // 后台出队广播
-            services.AddHostedService<RealtimeDispatchService>();
+            services.AddSingleton<RealtimeDispatchService>();
+            services.AddHostedService(sp => sp.GetRequiredService<RealtimeDispatchService>());
+
+            // 健康检查
+            services.AddHealthChecks()
+                .AddCheck<SignalRHealthCheck>("signalr", tags: new[] { "realtime", "signalr" });
+
             return services;
         }
 
