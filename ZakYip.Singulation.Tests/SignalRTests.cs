@@ -102,7 +102,7 @@ namespace ZakYip.Singulation.Tests {
             var service = new RealtimeDispatchService(channel, hub, logger);
             var healthCheck = new SignalRHealthCheck(hub, channel, service);
 
-            var result = await healthCheck.CheckHealthAsync(null!);
+            var result = await healthCheck.CheckHealthAsync(new Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext());
 
             MiniAssert.Equal(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Healthy, 
                 result.Status, "Health check should return Healthy when queue is low");
@@ -121,15 +121,14 @@ namespace ZakYip.Singulation.Tests {
             var service = new RealtimeDispatchService(channel, hub, logger);
             var healthCheck = new SignalRHealthCheck(hub, channel, service);
 
-            var result = await healthCheck.CheckHealthAsync(null!);
+            var result = await healthCheck.CheckHealthAsync(new Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext());
 
             MiniAssert.Equal(Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Degraded, 
                 result.Status, "Health check should return Degraded when queue is high");
         }
 
-        // Mock helpers
+        // Mock helpers - intentionally simple for these focused unit tests
         private static IHubContext<EventsHub> CreateMockHubContext() {
-            // Simple mock - in real tests you'd use a mocking framework
             return new MockHubContext();
         }
 
