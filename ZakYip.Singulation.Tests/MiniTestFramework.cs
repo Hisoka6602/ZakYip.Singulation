@@ -73,28 +73,36 @@ namespace ZakYip.Singulation.Tests {
         }
 
         public static void Throws<TException>(Action action, string message) where TException : Exception {
+            bool thrown = false;
             try {
                 action();
-                throw new InvalidOperationException($"{message} —— 应抛出异常 {typeof(TException).Name}");
             }
             catch (TException) {
                 // Expected exception
+                thrown = true;
             }
             catch (Exception ex) {
                 throw new InvalidOperationException($"{message} —— 期望异常类型 {typeof(TException).Name}，实际: {ex.GetType().Name}");
+            }
+            if (!thrown) {
+                throw new InvalidOperationException($"{message} —— 应抛出异常 {typeof(TException).Name}");
             }
         }
 
         public static async Task ThrowsAsync<TException>(Func<Task> action, string message) where TException : Exception {
+            bool thrown = false;
             try {
                 await action().ConfigureAwait(false);
-                throw new InvalidOperationException($"{message} —— 应抛出异常 {typeof(TException).Name}");
             }
             catch (TException) {
                 // Expected exception
+                thrown = true;
             }
             catch (Exception ex) {
                 throw new InvalidOperationException($"{message} —— 期望异常类型 {typeof(TException).Name}，实际: {ex.GetType().Name}");
+            }
+            if (!thrown) {
+                throw new InvalidOperationException($"{message} —— 应抛出异常 {typeof(TException).Name}");
             }
         }
 
