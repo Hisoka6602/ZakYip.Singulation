@@ -74,8 +74,8 @@ namespace ZakYip.Singulation.Core.Configs {
         [Range(-1, 1000, ErrorMessage = "输出位编号必须在 -1 到 1000 之间")]
         public int StopButtonLightBit { get; init; } = -1;
 
-        /// <summary>是否反转灯光输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。此属性作为默认值，可被各灯独立配置覆盖。默认为 true（低电平亮灯）。</summary>
-        public bool InvertLightLogic { get; init; } = true;
+        /// <summary>是否反转灯光输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。此属性作为默认值，可被各灯独立配置覆盖。默认为 false（高电平亮灯）。</summary>
+        public bool InvertLightLogic { get; init; } = false;
 
         /// <summary>红灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
         public bool? InvertRedLightLogic { get; init; } = null;
