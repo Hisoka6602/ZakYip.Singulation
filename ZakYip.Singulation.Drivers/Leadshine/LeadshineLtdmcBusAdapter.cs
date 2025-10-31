@@ -269,7 +269,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 
                 await CloseAsync(ct).ConfigureAwait(false);
                 await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
-                await InitializeAsync(ct).ConfigureAwait(false);
+                var initResult = await InitializeAsync(ct).ConfigureAwait(false);
+                if (!initResult.Key)
+                {
+                    throw new InvalidOperationException($"Initialization after reset failed: {initResult.Value}");
+                }
             }, "ResetAsync");
 
             if (!success) {
