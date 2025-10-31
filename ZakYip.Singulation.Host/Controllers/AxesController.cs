@@ -239,7 +239,10 @@ namespace ZakYip.Singulation.Host.Controllers {
 
                     case ControllerResetType.Soft:
                         await _axisController.Bus.CloseAsync(ct);
-                        await _axisController.InitializeAsync(vendor, tpl, opt.OverrideAxisCount, ct);
+                        var initResult = await _axisController.InitializeAsync(vendor, tpl, opt.OverrideAxisCount, ct);
+                        if (!initResult.Key) {
+                            throw new Exception($"控制器初始化失败: {initResult.Value}");
+                        }
                         break;
 
                     default:
