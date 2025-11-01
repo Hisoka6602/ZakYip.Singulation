@@ -233,25 +233,25 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
             
             // 轮询检查控制器是否初始化完成，最长等待60秒
             var maxWaitTime = TimeSpan.FromSeconds(60);
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var pollInterval = TimeSpan.FromMilliseconds(500);
+            using var timeoutCts = new CancellationTokenSource(maxWaitTime);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
             
-            while (!stoppingToken.IsCancellationRequested) {
+            while (!linkedCts.Token.IsCancellationRequested) {
                 if (_axisController.Bus.IsInitialized) {
                     _log.LogInformation("【CabinetPipeline】轴控制器已初始化，开始启动 IO 模块监控");
                     break;
                 }
                 
-                if (stopwatch.Elapsed > maxWaitTime) {
-                    _log.LogWarning("【CabinetPipeline】等待轴控制器初始化超时（{Timeout}秒），继续启动 IO 模块", maxWaitTime.TotalSeconds);
-                    break;
-                }
-                
                 try {
-                    await Task.Delay(pollInterval, stoppingToken).ConfigureAwait(false);
+                    await Task.Delay(pollInterval, linkedCts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
                     // Expected during shutdown
+                    break;
+                }
+                catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested) {
+                    _log.LogWarning("【CabinetPipeline】等待轴控制器初始化超时（{Timeout}秒），继续启动 IO 模块", maxWaitTime.TotalSeconds);
                     break;
                 }
             }
