@@ -390,8 +390,10 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                         }
                         
                         if (isRemote) {
-                            _log.LogInformation("【启动流程】步骤2：远程模式 - 等待 Upstream 推送速度参数");
-                            // 远程模式：速度由 Upstream 控制，不在这里设置
+                            _log.LogInformation("【启动流程】步骤2：远程模式 - 设置初始速度为0，等待 Upstream 推送速度参数");
+                            // 远程模式：先设置速度为0（安全起见），然后等待 Upstream 推送实际速度
+                            await _axisController.WriteSpeedAllAsync(0m, ct).ConfigureAwait(false);
+                            _log.LogInformation("【启动流程】步骤2完成：初始速度已设置为0，等待远程速度推送");
                         } else {
                             _log.LogInformation("【启动流程】步骤2：本地模式 - 设置固定速度");
                             // 本地模式：从配置中读取固定速度并设置
