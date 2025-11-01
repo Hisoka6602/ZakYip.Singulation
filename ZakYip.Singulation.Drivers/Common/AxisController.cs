@@ -169,9 +169,9 @@ namespace ZakYip.Singulation.Drivers.Common {
             while (speeds.Count < totalAx) speeds.Add(0m);
 
             // Parallel execution: write speed if it has changed from the last known value
+            ct.ThrowIfCancellationRequested();
+            
             var tasks = Enumerable.Range(0, totalAx).Select(async i => {
-                ct.ThrowIfCancellationRequested();
-                
                 var newSpeed = speeds[i];
                 var lastSpeed = _lastSpeeds[i];
                 
