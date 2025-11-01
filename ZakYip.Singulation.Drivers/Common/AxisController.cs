@@ -187,6 +187,12 @@ namespace ZakYip.Singulation.Drivers.Common {
             }
         }
 
+        public void ResetLastSpeeds() {
+            for (var i = 0; i < _lastSpeeds.Count; i++) {
+                _lastSpeeds[i] = null;
+            }
+        }
+
         private void OnControllerFaulted(string msg) {
             ControllerFaulted?.Invoke(this, msg);
         }

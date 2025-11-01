@@ -102,5 +102,11 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// 约定：Main 段在前，Eject 段在后，按拓扑顺序依次贴到轴 0..N-1。
         /// </summary>
         Task ApplySpeedSetAsync(SpeedSet set, CancellationToken ct = default);
+
+        /// <summary>
+        /// 重置所有轴的上次速度缓存。
+        /// <para>用于模式切换（如本地/远程模式）时清除缓存，确保下次速度设置能够正确写入。</para>
+        /// </summary>
+        void ResetLastSpeeds();
     }
 }
