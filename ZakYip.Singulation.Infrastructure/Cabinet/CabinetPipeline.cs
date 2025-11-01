@@ -113,6 +113,10 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                         _log.LogInformation("【远程/本地模式切换】设置所有轴速度为0");
                         await _axisController.WriteSpeedAllAsync(0m, CancellationToken.None).ConfigureAwait(false);
                         
+                        // 重置速度缓存，确保下次速度设置能够正确写入
+                        _log.LogInformation("【远程/本地模式切换】重置速度缓存");
+                        _axisController.ResetLastSpeeds();
+                        
                         if (!previousMode && e.IsRemoteMode) {
                             // [本地] -> [远程]：自动调用使能，不需要按启动按钮
                             _log.LogInformation("【远程/本地模式切换】检测到切换为远程模式，自动调用使能");

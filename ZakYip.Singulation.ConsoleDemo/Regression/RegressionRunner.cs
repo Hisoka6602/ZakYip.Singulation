@@ -149,6 +149,8 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
 
             public IReadOnlyList<IAxisDrive> Drives => Array.Empty<IAxisDrive>();
 
+            public IReadOnlyList<decimal?> RealtimeSpeedsMmps => Array.Empty<decimal?>();
+
             public event EventHandler<string>? ControllerFaulted;
 
             public Task<KeyValuePair<bool, string>> InitializeAsync(string vendor, DriverOptions template, int? overrideAxisCount = null, CancellationToken ct = default)
@@ -181,6 +183,10 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
             public Task ApplySpeedSetAsync(SpeedSet set, CancellationToken ct = default) {
                 Record(set, false);
                 return Task.CompletedTask;
+            }
+
+            public void ResetLastSpeeds() {
+                Console.WriteLine("[Axis] Reset last speeds cache");
             }
 
             public void Record(SpeedSet set, bool degraded) {

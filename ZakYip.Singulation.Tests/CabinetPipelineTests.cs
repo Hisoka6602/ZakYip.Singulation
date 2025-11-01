@@ -118,6 +118,10 @@ namespace ZakYip.Singulation.Tests {
 
             public Task ApplySpeedSetAsync(ZakYip.Singulation.Core.Contracts.Dto.SpeedSet set, CancellationToken ct = default) => Task.CompletedTask;
 
+            public void ResetLastSpeeds() {
+                Calls.Add("reset-speeds");
+            }
+
             public async Task WaitForEmergencyAsync() {
                 await Task.WhenAll(_writeZeroTcs.Task, _stopTcs.Task).ConfigureAwait(false);
             }
