@@ -423,8 +423,11 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 .Any(t => t.Status == TransportConnectionState.Connected);
 
             try {
-                _indicatorLightService.UpdateRemoteConnectionStateAsync(isAnyConnected, CancellationToken.None)
-                    .GetAwaiter().GetResult();
+                // 使用 Task.Run 避免潜在的死锁问题
+                _ = Task.Run(async () => {
+                    await _indicatorLightService.UpdateRemoteConnectionStateAsync(isAnyConnected, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }, CancellationToken.None);
             }
             catch (Exception ex) {
                 _log.LogWarning(ex, "更新远程连接指示灯状态失败");

@@ -188,8 +188,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             _logger.LogInformation("远程连接状态变更：{OldState} → {NewState}", oldState ? "已连接" : "未连接", isConnected ? "已连接" : "未连接");
 
             // 控制远程连接指示灯
-            await SetLightAsync("远程连接指示灯", _options.RemoteConnectionLightBit, isConnected, 
-                _options.InvertRemoteConnectionLightLogic ?? _options.InvertLightLogic, ct).ConfigureAwait(false);
+            var invertLogic = _options.InvertRemoteConnectionLightLogic ?? _options.InvertLightLogic;
+            await SetLightAsync("远程连接指示灯", _options.RemoteConnectionLightBit, isConnected, invertLogic, ct).ConfigureAwait(false);
         }
     }
 }
