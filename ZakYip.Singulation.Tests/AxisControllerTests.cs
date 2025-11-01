@@ -148,6 +148,51 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.True(speeds[1] == 200m, "轴1速度应仍为200");
             MiniAssert.True(speeds[2] == 300m, "轴2速度应仍为300");
         }
+
+        [MiniFact]
+        public async Task ApplySpeedSetHandles48AxesInParallel() {
+            // Arrange: Create controller with 48 axes
+            var bus = new FakeBusAdapter(48);
+            var registry = new FakeDriveRegistry();
+            var aggregator = new FakeAxisEventAggregator();
+            var controller = new AxisController(bus, registry, aggregator);
+            var options = new DriverOptions {
+                Card = 0,
+                Port = 0,
+                NodeId = 1,
+                GearRatio = 1m,
+                PulleyPitchDiameterMm = 1m
+            };
+
+            var result = await controller.InitializeAsync("fake", options, 48, CancellationToken.None).ConfigureAwait(false);
+            MiniAssert.True(result.Key, "初始化应成功");
+            MiniAssert.True(registry.Created.Count == 48, "应创建48根轴驱动");
+
+            // Act: Apply speeds to all 48 axes
+            var speeds = new int[48];
+            for (int i = 0; i < 48; i++) {
+                speeds[i] = 100 + i * 10; // Different speed for each axis
+            }
+            var speedSet = new SpeedSet(
+                DateTime.UtcNow,
+                1,
+                speeds,
+                Array.Empty<int>()
+            );
+            
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            await controller.ApplySpeedSetAsync(speedSet, CancellationToken.None).ConfigureAwait(false);
+            sw.Stop();
+
+            // Assert: All 48 axes should have been written to once
+            for (int i = 0; i < 48; i++) {
+                MiniAssert.True(registry.Created[i].WriteSpeedCalls == 1, $"轴{i}应写入1次");
+                MiniAssert.True(registry.Created[i].LastTargetMmps == speeds[i], $"轴{i}速度应为{speeds[i]}");
+            }
+            
+            // Verify parallel execution completed quickly (should be much less than 48 * 5ms = 240ms)
+            MiniAssert.True(sw.ElapsedMilliseconds < 100, $"并行执行应在100ms内完成，实际用时{sw.ElapsedMilliseconds}ms");
+        }
     }
 
     internal sealed class FakeDriveRegistry : IDriveRegistry {
