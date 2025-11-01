@@ -179,10 +179,12 @@ namespace ZakYip.Singulation.Drivers.Common {
                 if (!lastSpeed.HasValue || lastSpeed.Value != newSpeed) {
                     try {
                         await _drives[i].WriteSpeedAsync(newSpeed, ct);
-                        _lastSpeeds[i] = newSpeed;
                     } catch (Exception ex) {
                         OnControllerFaulted($"Failed to write speed for axis {i}: {ex.Message}");
                     }
+                    // Update last speed after write attempt (success or failure)
+                    // Each task updates a unique index, so no race condition
+                    _lastSpeeds[i] = newSpeed;
                 }
             });
             
