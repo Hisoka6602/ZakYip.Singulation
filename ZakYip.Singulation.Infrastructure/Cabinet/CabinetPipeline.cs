@@ -377,36 +377,39 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     }
                     StartRequested?.Invoke(this, args);
                     
-                    // 启动流程：1) 使能所有轴 2) 根据远程/本地模式设置速度
-                    // 等同于调用 /api/Axes/axes/enable + /api/Axes/axes/speed (使用默认的localFixedSpeedMmps)
+                    // 启动流程：根据远程/本地模式执行不同操作
+                    // 远程模式：使能所有轴，等待 Upstream 推送速度
+                    // 本地模式：不使能轴（用户需手动使能），仅设置速度
                     try {
-                        _log.LogInformation("【启动流程开始】步骤1：调用 IAxisController.EnableAllAsync() 使能所有轴");
-                        await _axisController.EnableAllAsync(ct).ConfigureAwait(false);
-                        _log.LogInformation("【启动流程】步骤1完成：所有轴已使能");
-                        
                         bool isRemote;
                         lock (_modeLock) {
                             isRemote = _isRemoteMode;
                         }
                         
                         if (isRemote) {
-                            _log.LogInformation("【启动流程】步骤2：远程模式 - 等待 Upstream 推送速度参数");
+                            // 远程模式：使能所有轴并等待速度推送
+                            _log.LogInformation("【启动流程开始】远程模式 - 步骤1：调用 IAxisController.EnableAllAsync() 使能所有轴");
+                            await _axisController.EnableAllAsync(ct).ConfigureAwait(false);
+                            _log.LogInformation("【启动流程】步骤1完成：所有轴已使能");
+                            _log.LogInformation("【启动流程】步骤2：等待 Upstream 推送速度参数");
                             // 远程模式：速度由 Upstream 控制，不在这里设置
                         } else {
-                            _log.LogInformation("【启动流程】步骤2：本地模式 - 设置固定速度");
+                            // 本地模式：不使能轴，仅设置速度
+                            _log.LogInformation("【启动流程开始】本地模式 - 跳过使能步骤");
+                            _log.LogInformation("【启动流程】步骤1：设置固定速度");
                             // 本地模式：从配置中读取固定速度并设置
                             var controllerOpts = await _controllerOptionsStore.GetAsync(ct).ConfigureAwait(false);
                             var fixedSpeed = controllerOpts.LocalFixedSpeedMmps;
                             _log.LogInformation("【启动流程】调用 IAxisController.WriteSpeedAllAsync(speed: {Speed} mm/s) 设置本地固定速度", fixedSpeed);
                             await _axisController.WriteSpeedAllAsync(fixedSpeed, ct).ConfigureAwait(false);
-                            _log.LogInformation("【启动流程】步骤2完成：速度已设置为 {Speed} mm/s", fixedSpeed);
+                            _log.LogInformation("【启动流程】步骤1完成：速度已设置为 {Speed} mm/s", fixedSpeed);
                         }
                         
                         // 更新系统状态为运行中
                         if (_indicatorLightService != null) {
-                            _log.LogInformation("【启动流程】步骤3：调用 IndicatorLightService.UpdateStateAsync(state: Running) 更新指示灯状态");
+                            _log.LogInformation("【启动流程】步骤2：调用 IndicatorLightService.UpdateStateAsync(state: Running) 更新指示灯状态");
                             await _indicatorLightService.UpdateStateAsync(SystemState.Running, ct).ConfigureAwait(false);
-                            _log.LogInformation("【启动流程】步骤3完成：系统状态已更新为运行中");
+                            _log.LogInformation("【启动流程】步骤2完成：系统状态已更新为运行中");
                         }
                         
                         _log.LogInformation("【启动流程完成】所有步骤执行成功");
