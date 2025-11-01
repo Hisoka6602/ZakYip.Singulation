@@ -94,14 +94,16 @@ namespace ZakYip.Singulation.Core.Planning {
         }
 
         /// <summary>
-        /// 将输入的分离段与疏散段拼接为与拓扑轴数一致的 mm/s 向量。
+        /// 将输入的分离段速度转换为与拓扑轴数一致的 mm/s 向量。
+        /// 注意：疏散段速度（EjectMmps）在当前阶段不使用，预留给未来阶段实现。
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static decimal[] GetConcatenatedMmps(in SpeedSet input, int expectedCount) {
             var main = input.MainMmps;
-            var eject = input.EjectMmps;
+            // Note: EjectMmps (evacuation units) are intentionally NOT used at this stage.
+            // They are reserved for future phase implementation.
 
-            var total = (main?.Count ?? 0) + (eject?.Count ?? 0);
+            var total = main?.Count ?? 0;
             if (total != expectedCount)
                 throw new ArgumentException($"Input mm/s length {total} != expected {expectedCount}");
 
@@ -109,8 +111,6 @@ namespace ZakYip.Singulation.Core.Planning {
             int k = 0;
             if (main is not null)
                 for (int i = 0; i < main.Count; i++) arr[k++] = main[i];
-            if (eject is not null)
-                for (int i = 0; i < eject.Count; i++) arr[k++] = eject[i];
             return arr;
         }
 

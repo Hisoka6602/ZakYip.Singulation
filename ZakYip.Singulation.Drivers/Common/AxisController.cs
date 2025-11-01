@@ -149,7 +149,8 @@ namespace ZakYip.Singulation.Drivers.Common {
 
         public async Task ApplySpeedSetAsync(SpeedSet set, CancellationToken ct = default) {
             var main = set.MainMmps ?? [];
-            var eject = set.EjectMmps ?? [];
+            // Note: EjectMmps (evacuation units) are intentionally NOT applied at this stage.
+            // They are reserved for future phase implementation.
             var totalAx = _drives.Count;
 
             if (totalAx == 0) {
@@ -157,15 +158,15 @@ namespace ZakYip.Singulation.Drivers.Common {
                 return;
             }
 
-            if (main.Count == 0 && eject.Count == 0) {
+            if (main.Count == 0) {
                 OnControllerFaulted($"{JsonConvert.SerializeObject(set)}");
-                OnControllerFaulted($"main.Count={main.Count}&&eject.Count={eject.Count},无法赋值速度");
+                OnControllerFaulted($"main.Count={main.Count},无法赋值速度");
                 return;
             }
 
             var speeds = new List<decimal>(totalAx);
             speeds.AddRange(main.Select(x => (decimal)x));
-            speeds.AddRange(eject.Select(x => (decimal)x));
+            // Do NOT add eject speeds - only singulation (main) speeds are applied
             while (speeds.Count < totalAx) speeds.Add(0m);
 
             // Only write speed if it has changed from the last known value

@@ -147,6 +147,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
         /// <summary>
         /// 按指定系数缩放速度集合（用于降级模式）。
+        /// 注意：仅缩放分离段速度（MainMmps），疏散段速度（EjectMmps）在当前阶段不使用。
         /// </summary>
         /// <param name="set">原始速度集合。</param>
         /// <param name="factor">缩放系数（0-1之间）。</param>
@@ -155,23 +156,19 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         private SpeedSet Scale(SpeedSet set, decimal factor, out double delta) {
             if (factor <= 0m) factor = 0.1m;
             var main = set.MainMmps ?? Array.Empty<int>();
-            var eject = set.EjectMmps ?? Array.Empty<int>();
+            // Note: EjectMmps (evacuation units) are intentionally NOT scaled at this stage.
+            // They are reserved for future phase implementation.
             var scaledMain = new int[main.Count];
-            var scaledEject = new int[eject.Count];
             decimal diffSum = 0m;
             for (var i = 0; i < main.Count; i++) {
                 var scaled = (int)Math.Round(main[i] * factor, MidpointRounding.AwayFromZero);
                 diffSum += Math.Abs(main[i] - scaled);
                 scaledMain[i] = scaled;
             }
-            for (var i = 0; i < eject.Count; i++) {
-                var scaled = (int)Math.Round(eject[i] * factor, MidpointRounding.AwayFromZero);
-                diffSum += Math.Abs(eject[i] - scaled);
-                scaledEject[i] = scaled;
-            }
-            var count = main.Count + eject.Count;
+            var count = main.Count;
             delta = count > 0 ? (double)(diffSum / count) : 0d;
-            return new SpeedSet(set.TimestampUtc, set.Sequence, scaledMain, scaledEject);
+            // Keep original EjectMmps unchanged (though they won't be applied anyway)
+            return new SpeedSet(set.TimestampUtc, set.Sequence, scaledMain, set.EjectMmps);
         }
 
         /// <summary>
