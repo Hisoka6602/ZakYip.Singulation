@@ -15,7 +15,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
     public sealed class IndicatorLightService {
         private readonly ILogger<IndicatorLightService> _logger;
         private readonly ushort _cardNo;
-        private LeadshineSafetyIoOptions _options;
+        private LeadshineCabinetIoOptions _options;
         private SystemState _currentState = SystemState.Stopped;
         private bool _isRemoteConnected = false;
         private readonly object _stateLock = new();
@@ -23,7 +23,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         public IndicatorLightService(
             ILogger<IndicatorLightService> logger,
             ushort cardNo,
-            LeadshineSafetyIoOptions options) {
+            LeadshineCabinetIoOptions options) {
             _logger = logger;
             _cardNo = cardNo;
             _options = options;
@@ -99,9 +99,9 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             // 安全检查：确保红灯亮时，黄灯和绿灯必须关闭
 
             await Task.WhenAll(
-                SetLightAsync("红灯", _options.RedLightBit, redOn, _options.InvertRedLightLogic ?? _options.InvertLightLogic, ct),
-                SetLightAsync("黄灯", _options.YellowLightBit, yellowOn, _options.InvertYellowLightLogic ?? _options.InvertLightLogic, ct),
-                SetLightAsync("绿灯", _options.GreenLightBit, greenOn, _options.InvertGreenLightLogic ?? _options.InvertLightLogic, ct)
+                SetLightAsync("红灯", _options.CabinetIndicatorPoint.RedLight, redOn, _options.CabinetIndicatorPoint.InvertRedLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct),
+                SetLightAsync("黄灯", _options.CabinetIndicatorPoint.YellowLight, yellowOn, _options.CabinetIndicatorPoint.InvertYellowLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct),
+                SetLightAsync("绿灯", _options.CabinetIndicatorPoint.GreenLight, greenOn, _options.CabinetIndicatorPoint.InvertGreenLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct)
             ).ConfigureAwait(false);
         }
 
@@ -115,8 +115,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             bool stopLightOn = (state != SystemState.Running);
 
             await Task.WhenAll(
-                SetLightAsync("启动按钮灯", _options.StartButtonLightBit, startLightOn, _options.InvertStartButtonLightLogic ?? _options.InvertLightLogic, ct),
-                SetLightAsync("停止按钮灯", _options.StopButtonLightBit, stopLightOn, _options.InvertStopButtonLightLogic ?? _options.InvertLightLogic, ct)
+                SetLightAsync("启动按钮灯", _options.CabinetIndicatorPoint.StartButtonLight, startLightOn, _options.CabinetIndicatorPoint.InvertStartButtonLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct),
+                SetLightAsync("停止按钮灯", _options.CabinetIndicatorPoint.StopButtonLight, stopLightOn, _options.CabinetIndicatorPoint.InvertStopButtonLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct)
             ).ConfigureAwait(false);
         }
 
@@ -164,7 +164,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// <summary>
         /// 更新配置选项（用于热更新）。
         /// </summary>
-        public void UpdateOptions(LeadshineSafetyIoOptions newOptions) {
+        public void UpdateOptions(LeadshineCabinetIoOptions newOptions) {
             _options = newOptions;
             _logger.LogInformation("指示灯服务配置已更新");
         }
@@ -186,8 +186,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             _logger.LogInformation("远程连接状态变更：{OldState} → {NewState}", oldState ? "已连接" : "未连接", isConnected ? "已连接" : "未连接");
 
             // 控制远程连接指示灯
-            var invertLogic = _options.InvertRemoteConnectionLightLogic ?? _options.InvertLightLogic;
-            await SetLightAsync("远程连接指示灯", _options.RemoteConnectionLightBit, isConnected, invertLogic, ct).ConfigureAwait(false);
+            var invertLogic = _options.CabinetIndicatorPoint.InvertRemoteConnectionLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic;
+            await SetLightAsync("远程连接指示灯", _options.CabinetIndicatorPoint.RemoteConnectionLight, isConnected, invertLogic, ct).ConfigureAwait(false);
         }
     }
 }
