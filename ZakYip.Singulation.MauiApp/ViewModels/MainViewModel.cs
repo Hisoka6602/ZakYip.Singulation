@@ -201,7 +201,7 @@ public class MainViewModel : BindableBase
 
         RefreshControllersCommand = new DelegateCommand(async () => await RefreshControllersAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
-        SendSafetyCommandCommand = new DelegateCommand(async () => await SendSafetyCommandAsync(), () => !IsLoading)
+        SendSafetyCommandCommand = new DelegateCommand(async () => await SendCabinetCommandAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
         ConnectSignalRCommand = new DelegateCommand(async () => await ConnectSignalRAsync(), () => !IsLoading)
             .ObservesProperty(() => IsLoading);
@@ -509,7 +509,7 @@ public class MainViewModel : BindableBase
     /// <summary>
     /// 发送安全命令
     /// </summary>
-    private async Task SendSafetyCommandAsync()
+    private async Task SendCabinetCommandAsync()
     {
         await SafeExecutor.ExecuteAsync(
             async () =>
@@ -529,13 +529,13 @@ public class MainViewModel : BindableBase
                     _ => 0
                 };
 
-                var request = new SafetyCommandRequest
+                var request = new CabinetCommandRequest
                 {
                     Command = commandValue,
                     Reason = SafetyReason
                 };
 
-                var response = await _apiClient.SendSafetyCommandAsync(request);
+                var response = await _apiClient.SendCabinetCommandAsync(request);
                 if (response.Success)
                 {
                     StatusMessage = "Safety command sent successfully";

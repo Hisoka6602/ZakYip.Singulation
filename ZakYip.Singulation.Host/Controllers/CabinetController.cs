@@ -4,12 +4,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Host.Dto;
-using ZakYip.Singulation.Infrastructure.Safety;
+using ZakYip.Singulation.Infrastructure.Cabinet;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
@@ -25,13 +25,13 @@ namespace ZakYip.Singulation.Host.Controllers {
     [ApiController]
     [Route("api/[controller]")]
     public sealed class CabinetController : ControllerBase {
-        private readonly ISafetyPipeline _safety;
+        private readonly ICabinetPipeline _safety;
         private readonly ILogger<CabinetController> _logger;
         private readonly ILeadshineCabinetIoOptionsStore _store;
         private readonly LeadshineCabinetIoModule? _cabinetModule;
 
         public CabinetController(
-            ISafetyPipeline safety, 
+            ICabinetPipeline safety, 
             ILogger<CabinetController> logger,
             ILeadshineCabinetIoOptionsStore store,
             LeadshineCabinetIoModule? cabinetModule = null) {
@@ -65,7 +65,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [Consumes("application/json")]
         [Produces("application/json")]
-        public ActionResult<ApiResponse<object>> ExecuteCommand([FromBody] SafetyCommandRequestDto? request) {
+        public ActionResult<ApiResponse<object>> ExecuteCommand([FromBody] CabinetCommandRequestDto? request) {
             if (request is null) {
                 return BadRequest(ApiResponse<object>.Invalid("请求体不能为空"));
             }
@@ -76,24 +76,24 @@ namespace ZakYip.Singulation.Host.Controllers {
 
             var reason = request.Reason;
             switch (request.Command) {
-                case SafetyCommand.Start:
+                case CabinetCommand.Start:
                     _logger.LogInformation("【API调用】收到远程启动指令 - 原因：{Reason}，调用方：{Caller}", reason, callerInfo);
-                    _safety.RequestStart(SafetyTriggerKind.RemoteStartCommand, reason);
+                    _safety.RequestStart(CabinetTriggerKind.RemoteStartCommand, reason);
                     break;
 
-                case SafetyCommand.Stop:
+                case CabinetCommand.Stop:
                     _logger.LogInformation("【API调用】收到远程停止指令 - 原因：{Reason}，调用方：{Caller}", reason, callerInfo);
-                    _safety.RequestStop(SafetyTriggerKind.RemoteStopCommand, reason);
+                    _safety.RequestStop(CabinetTriggerKind.RemoteStopCommand, reason);
                     break;
 
-                case SafetyCommand.Reset:
+                case CabinetCommand.Reset:
                     _logger.LogInformation("【API调用】收到远程复位指令 - 原因：{Reason}，调用方：{Caller}", reason, callerInfo);
-                    _safety.RequestReset(SafetyTriggerKind.RemoteResetCommand, reason);
+                    _safety.RequestReset(CabinetTriggerKind.RemoteResetCommand, reason);
                     break;
 
-                case SafetyCommand.EmergencyStop:
+                case CabinetCommand.EmergencyStop:
                     _logger.LogWarning("【API调用】收到远程急停指令 - 原因：{Reason}，调用方：{Caller}", reason, callerInfo);
-                    _safety.RequestStop(SafetyTriggerKind.EmergencyStop, reason);
+                    _safety.RequestStop(CabinetTriggerKind.EmergencyStop, reason);
                     break;
 
                 default:

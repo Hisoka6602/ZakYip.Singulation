@@ -3,9 +3,9 @@ using System.ComponentModel;
 namespace ZakYip.Singulation.Core.Enums {
 
     /// <summary>
-    /// 安全触发来源分类。
+    /// 控制面板触发来源分类。
     /// </summary>
-    public enum SafetyTriggerKind {
+    public enum CabinetTriggerKind {
         /// <summary>未知触发源。</summary>
         [Description("未知")]
         Unknown = 0,

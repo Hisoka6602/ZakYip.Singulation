@@ -1,6 +1,6 @@
 using ZakYip.Singulation.Core.Contracts.Dto;
 
-namespace ZakYip.Singulation.Core.Abstractions.Safety {
+namespace ZakYip.Singulation.Core.Abstractions.Cabinet {
     /// <summary>
     /// 速度帧保护器输出的决策结果。
     /// </summary>

@@ -109,67 +109,6 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
 
         public static AxisGridLayoutDoc ToDoc(this AxisGridLayoutOptions dto) => new() { Rows = dto.Rows, Cols = dto.Cols };
 
-        // ====== 新增：LeadshineSafetyIoOptions ======
-        public static LeadshineSafetyIoOptions ToOptions(this LeadshineSafetyIoOptionsDoc d) => new() {
-            Enabled = d.Enabled,
-            EmergencyStopBit = d.EmergencyStopBit,
-            StopBit = d.StopBit,
-            StartBit = d.StartBit,
-            ResetBit = d.ResetBit,
-            PollingIntervalMs = d.PollingIntervalMs,
-            InvertLogic = d.InvertLogic,
-            InvertEmergencyStopLogic = d.InvertEmergencyStopLogic,
-            InvertStopLogic = d.InvertStopLogic,
-            InvertStartLogic = d.InvertStartLogic,
-            InvertResetLogic = d.InvertResetLogic,
-            RemoteLocalModeBit = d.RemoteLocalModeBit,
-            InvertRemoteLocalLogic = d.InvertRemoteLocalLogic,
-            RemoteLocalActiveHigh = d.RemoteLocalActiveHigh,
-            RedLightBit = d.RedLightBit,
-            YellowLightBit = d.YellowLightBit,
-            GreenLightBit = d.GreenLightBit,
-            StartButtonLightBit = d.StartButtonLightBit,
-            StopButtonLightBit = d.StopButtonLightBit,
-            InvertLightLogic = d.InvertLightLogic,
-            InvertRedLightLogic = d.InvertRedLightLogic,
-            InvertYellowLightLogic = d.InvertYellowLightLogic,
-            InvertGreenLightLogic = d.InvertGreenLightLogic,
-            InvertStartButtonLightLogic = d.InvertStartButtonLightLogic,
-            InvertStopButtonLightLogic = d.InvertStopButtonLightLogic,
-            RemoteConnectionLightBit = d.RemoteConnectionLightBit,
-            InvertRemoteConnectionLightLogic = d.InvertRemoteConnectionLightLogic
-        };
-
-        public static LeadshineSafetyIoOptionsDoc ToDoc(this LeadshineSafetyIoOptions o) => new() {
-            Enabled = o.Enabled,
-            EmergencyStopBit = o.EmergencyStopBit,
-            StopBit = o.StopBit,
-            StartBit = o.StartBit,
-            ResetBit = o.ResetBit,
-            PollingIntervalMs = o.PollingIntervalMs,
-            InvertLogic = o.InvertLogic,
-            InvertEmergencyStopLogic = o.InvertEmergencyStopLogic,
-            InvertStopLogic = o.InvertStopLogic,
-            InvertStartLogic = o.InvertStartLogic,
-            InvertResetLogic = o.InvertResetLogic,
-            RemoteLocalModeBit = o.RemoteLocalModeBit,
-            InvertRemoteLocalLogic = o.InvertRemoteLocalLogic,
-            RemoteLocalActiveHigh = o.RemoteLocalActiveHigh,
-            RedLightBit = o.RedLightBit,
-            YellowLightBit = o.YellowLightBit,
-            GreenLightBit = o.GreenLightBit,
-            StartButtonLightBit = o.StartButtonLightBit,
-            StopButtonLightBit = o.StopButtonLightBit,
-            InvertLightLogic = o.InvertLightLogic,
-            InvertRedLightLogic = o.InvertRedLightLogic,
-            InvertYellowLightLogic = o.InvertYellowLightLogic,
-            InvertGreenLightLogic = o.InvertGreenLightLogic,
-            InvertStartButtonLightLogic = o.InvertStartButtonLightLogic,
-            InvertStopButtonLightLogic = o.InvertStopButtonLightLogic,
-            RemoteConnectionLightBit = o.RemoteConnectionLightBit,
-            InvertRemoteConnectionLightLogic = o.InvertRemoteConnectionLightLogic
-        };
-
         // ====== 新增：IoStatusMonitorOptions ======
         public static IoStatusMonitorOptions ToOptions(this IoStatusMonitorOptionsDoc d) => new() {
             Enabled = d.Enabled,

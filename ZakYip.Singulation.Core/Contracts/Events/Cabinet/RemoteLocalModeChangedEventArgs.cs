@@ -1,6 +1,6 @@
 using System;
 
-namespace ZakYip.Singulation.Core.Contracts.Events.Safety {
+namespace ZakYip.Singulation.Core.Contracts.Events.Cabinet {
 
     /// <summary>
     /// 远程/本地模式变更事件参数。

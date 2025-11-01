@@ -2,86 +2,86 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Core.Abstractions.Safety;
-using ZakYip.Singulation.Core.Contracts.Events.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
+using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
 
-namespace ZakYip.Singulation.Infrastructure.Safety {
+namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
     /// <summary>
     /// 默认安全隔离器实现：集中管理隔离/降级状态，并对外广播。
     /// </summary>
-    public sealed class SafetyIsolator : ISafetyIsolator {
-        private readonly ILogger<SafetyIsolator> _log;
+    public sealed class CabinetIsolator : ICabinetIsolator {
+        private readonly ILogger<CabinetIsolator> _log;
         private readonly IRealtimeNotifier _realtime;
         private readonly object _gate = new();
 
-        private int _state = (int)SafetyIsolationState.Normal;
-        private int _lastTriggerKind = (int)SafetyTriggerKind.Unknown;
+        private int _state = (int)CabinetIsolationState.Normal;
+        private int _lastTriggerKind = (int)CabinetTriggerKind.Unknown;
         private string? _lastTriggerReason;
 
-        public SafetyIsolator(ILogger<SafetyIsolator> log, IRealtimeNotifier realtime) {
+        public CabinetIsolator(ILogger<CabinetIsolator> log, IRealtimeNotifier realtime) {
             _log = log;
             _realtime = realtime;
         }
 
-        public event EventHandler<SafetyStateChangedEventArgs>? StateChanged;
+        public event EventHandler<CabinetStateChangedEventArgs>? StateChanged;
 
-        public SafetyIsolationState State => (SafetyIsolationState)Volatile.Read(ref _state);
+        public CabinetIsolationState State => (CabinetIsolationState)Volatile.Read(ref _state);
 
-        public bool IsDegraded => State == SafetyIsolationState.Degraded;
+        public bool IsDegraded => State == CabinetIsolationState.Degraded;
 
-        public bool IsIsolated => State == SafetyIsolationState.Isolated;
+        public bool IsIsolated => State == CabinetIsolationState.Isolated;
 
-        public SafetyTriggerKind LastTriggerKind => (SafetyTriggerKind)Volatile.Read(ref _lastTriggerKind);
+        public CabinetTriggerKind LastTriggerKind => (CabinetTriggerKind)Volatile.Read(ref _lastTriggerKind);
 
         public string? LastTriggerReason => Volatile.Read(ref _lastTriggerReason);
 
-        public bool TryTrip(SafetyTriggerKind kind, string reason) {
+        public bool TryTrip(CabinetTriggerKind kind, string reason) {
             if (string.IsNullOrWhiteSpace(reason)) reason = "unknown";
-            return Transition(kind, reason, SafetyIsolationState.Isolated);
+            return Transition(kind, reason, CabinetIsolationState.Isolated);
         }
 
-        public bool TryEnterDegraded(SafetyTriggerKind kind, string reason) {
+        public bool TryEnterDegraded(CabinetTriggerKind kind, string reason) {
             if (string.IsNullOrWhiteSpace(reason)) reason = "degraded";
-            return Transition(kind, reason, SafetyIsolationState.Degraded);
+            return Transition(kind, reason, CabinetIsolationState.Degraded);
         }
 
         public bool TryRecoverFromDegraded(string reason) {
-            if (State != SafetyIsolationState.Degraded) return false;
-            return Transition(SafetyTriggerKind.HealthRecovered, string.IsNullOrWhiteSpace(reason) ? "recovered" : reason, SafetyIsolationState.Normal);
+            if (State != CabinetIsolationState.Degraded) return false;
+            return Transition(CabinetTriggerKind.HealthRecovered, string.IsNullOrWhiteSpace(reason) ? "recovered" : reason, CabinetIsolationState.Normal);
         }
 
         public bool TryResetIsolation(string reason, CancellationToken ct = default) {
-            if (State != SafetyIsolationState.Isolated) return false;
+            if (State != CabinetIsolationState.Isolated) return false;
             ct.ThrowIfCancellationRequested();
-            return Transition(SafetyTriggerKind.ResetButton, string.IsNullOrWhiteSpace(reason) ? "reset" : reason, SafetyIsolationState.Normal);
+            return Transition(CabinetTriggerKind.ResetButton, string.IsNullOrWhiteSpace(reason) ? "reset" : reason, CabinetIsolationState.Normal);
         }
 
-        private bool Transition(SafetyTriggerKind kind, string reason, SafetyIsolationState target) {
-            SafetyStateChangedEventArgs? ev = null;
+        private bool Transition(CabinetTriggerKind kind, string reason, CabinetIsolationState target) {
+            CabinetStateChangedEventArgs? ev = null;
             lock (_gate) {
-                var current = (SafetyIsolationState)_state;
+                var current = (CabinetIsolationState)_state;
                 if (current == target) {
-                    if (target == SafetyIsolationState.Degraded) {
+                    if (target == CabinetIsolationState.Degraded) {
                         _lastTriggerKind = (int)kind;
                         _lastTriggerReason = reason;
                     }
                     return false;
                 }
 
-                if (target == SafetyIsolationState.Degraded && current == SafetyIsolationState.Isolated)
+                if (target == CabinetIsolationState.Degraded && current == CabinetIsolationState.Isolated)
                     return false;
 
-                if (target == SafetyIsolationState.Isolated && current == SafetyIsolationState.Isolated)
+                if (target == CabinetIsolationState.Isolated && current == CabinetIsolationState.Isolated)
                     return false;
 
                 _state = (int)target;
                 _lastTriggerKind = (int)kind;
                 _lastTriggerReason = reason;
-                ev = new SafetyStateChangedEventArgs {
+                ev = new CabinetStateChangedEventArgs {
                     Previous = current,
                     Current = target,
                     ReasonKind = kind,
@@ -101,7 +101,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             return ev is not null;
         }
 
-        private void LogStateChange(SafetyStateChangedEventArgs ev) {
+        private void LogStateChange(CabinetStateChangedEventArgs ev) {
             var payload = new {
                 kind = ev.ReasonKind.ToString(),
                 state = ev.Current.ToString(),
@@ -110,12 +110,12 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             };
 
             switch (ev.Current) {
-                case SafetyIsolationState.Isolated:
+                case CabinetIsolationState.Isolated:
                     _log.LogWarning("Safety isolated due to {Kind}: {Reason}", ev.ReasonKind, ev.ReasonText);
                     SingulationMetrics.Instance.DegradeCounter.Add(1,
                         new KeyValuePair<string, object?>("state", "isolated"));
                     break;
-                case SafetyIsolationState.Degraded:
+                case CabinetIsolationState.Degraded:
                     _log.LogWarning("Safety degraded due to {Kind}: {Reason}", ev.ReasonKind, ev.ReasonText);
                     SingulationMetrics.Instance.DegradeCounter.Add(1,
                         new KeyValuePair<string, object?>("state", "degraded"));

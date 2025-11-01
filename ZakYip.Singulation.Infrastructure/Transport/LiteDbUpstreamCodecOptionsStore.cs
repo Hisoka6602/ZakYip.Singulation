@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -23,13 +23,13 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
         
         private readonly ILiteDatabase _db;
         private readonly ILogger<LiteDbUpstreamCodecOptionsStore> _logger;
-        private readonly ISafetyIsolator _safetyIsolator;
+        private readonly ICabinetIsolator _safetyIsolator;
         private readonly object _gate = new();
 
         public LiteDbUpstreamCodecOptionsStore(
             ILiteDatabase db,
             ILogger<LiteDbUpstreamCodecOptionsStore> logger,
-            ISafetyIsolator safetyIsolator) {
+            ICabinetIsolator safetyIsolator) {
             _db = db ?? throw new ArgumentNullException(nameof(db));
             var col = _db.GetCollection<UpstreamCodecOptionsDoc>(CollName);
             col.EnsureIndex(x => x.Id, unique: true);
@@ -47,7 +47,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, ErrorMessage);
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(CabinetTriggerKind.Unknown, ErrorMessage);
                 return Task.FromResult(ConfigDefaults.Codec());
             }
         }

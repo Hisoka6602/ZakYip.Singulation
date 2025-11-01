@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ZakYip.Singulation.Core.Contracts.Dto;
 
-namespace ZakYip.Singulation.Core.Abstractions.Safety {
+namespace ZakYip.Singulation.Core.Abstractions.Cabinet {
 
     /// <summary>
     /// 速度帧保护器：在下发速度前做滑窗、降级与监控。

@@ -3,18 +3,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
-using ZakYip.Singulation.Core.Abstractions.Safety;
-using ZakYip.Singulation.Core.Contracts.Events.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
+using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Core.Enums;
 using csLTDMC;
 
-namespace ZakYip.Singulation.Infrastructure.Safety {
+namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
     /// <summary>
     /// 雷赛硬件控制面板 IO 模块：通过控制器 IO 端口读取物理按键状态。
     /// 支持急停、启动、停止、复位四个物理按键，以及远程/本地模式切换开关。
     /// </summary>
-    public sealed class LeadshineCabinetIoModule : ISafetyIoModule, IDisposable {
+    public sealed class LeadshineCabinetIoModule : ICabinetIoModule, IDisposable {
         /// <summary>日志记录器。</summary>
         private readonly ILogger<LeadshineCabinetIoModule> _logger;
         
@@ -60,22 +60,22 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <summary>
         /// 当检测到急停按键按下时触发的事件。
         /// </summary>
-        public event EventHandler<SafetyTriggerEventArgs>? EmergencyStop;
+        public event EventHandler<CabinetTriggerEventArgs>? EmergencyStop;
         
         /// <summary>
         /// 当检测到停止按键按下时触发的事件。
         /// </summary>
-        public event EventHandler<SafetyTriggerEventArgs>? StopRequested;
+        public event EventHandler<CabinetTriggerEventArgs>? StopRequested;
         
         /// <summary>
         /// 当检测到启动按键按下时触发的事件。
         /// </summary>
-        public event EventHandler<SafetyTriggerEventArgs>? StartRequested;
+        public event EventHandler<CabinetTriggerEventArgs>? StartRequested;
         
         /// <summary>
         /// 当检测到复位按键按下时触发的事件。
         /// </summary>
-        public event EventHandler<SafetyTriggerEventArgs>? ResetRequested;
+        public event EventHandler<CabinetTriggerEventArgs>? ResetRequested;
         
         /// <summary>
         /// 当检测到远程/本地模式切换时触发的事件。
@@ -129,7 +129,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         var modeText = isRemoteMode ? "远程模式" : "本地模式";
                         _logger.LogInformation("启动时读取远程/本地模式 IO 状态：{Mode}", modeText);
                         
-                        // 触发初始模式事件，让 SafetyPipeline 知道当前模式
+                        // 触发初始模式事件，让 CabinetPipeline 知道当前模式
                         RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = isRemoteMode, Description = $"启动时检测到{modeText}" });
                     }
                     else {
@@ -191,7 +191,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         bool currentState = ReadInputBit(inputPoint.EmergencyStop, inputPoint.InvertEmergencyStopLogic ?? inputPoint.InvertLogic);
                         if (currentState && !_lastEmergencyStopState) {
                             _logger.LogWarning("【IO端点调用】检测到急停按键按下 - IO端口：IN{Port}", inputPoint.EmergencyStop);
-                            EmergencyStop?.Invoke(this, new SafetyTriggerEventArgs { Kind = SafetyTriggerKind.EmergencyStop, Description = "物理急停按键" });
+                            EmergencyStop?.Invoke(this, new CabinetTriggerEventArgs { Kind = CabinetTriggerKind.EmergencyStop, Description = "物理急停按键" });
                         }
                         _lastEmergencyStopState = currentState;
                     }
@@ -204,7 +204,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastStopState) {
                             _logger.LogInformation("【IO端点调用】检测到停止按键按下 - IO端口：IN{Port}", inputPoint.Stop);
-                            StopRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = SafetyTriggerKind.StopButton, Description = "物理停止按键" });
+                            StopRequested?.Invoke(this, new CabinetTriggerEventArgs { Kind = CabinetTriggerKind.StopButton, Description = "物理停止按键" });
                         }
                         _lastStopState = currentState;
                     }
@@ -217,7 +217,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastStartState) {
                             _logger.LogInformation("【IO端点调用】检测到启动按键按下 - IO端口：IN{Port}", inputPoint.Start);
-                            StartRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = SafetyTriggerKind.StartButton, Description = "物理启动按键" });
+                            StartRequested?.Invoke(this, new CabinetTriggerEventArgs { Kind = CabinetTriggerKind.StartButton, Description = "物理启动按键" });
                         }
                         _lastStartState = currentState;
                     }
@@ -230,7 +230,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastResetState) {
                             _logger.LogInformation("【IO端点调用】检测到复位按键按下 - IO端口：IN{Port}", inputPoint.Reset);
-                            ResetRequested?.Invoke(this, new SafetyTriggerEventArgs { Kind = SafetyTriggerKind.ResetButton, Description = "物理复位按键" });
+                            ResetRequested?.Invoke(this, new CabinetTriggerEventArgs { Kind = CabinetTriggerKind.ResetButton, Description = "物理复位按键" });
                         }
                         _lastResetState = currentState;
                     }

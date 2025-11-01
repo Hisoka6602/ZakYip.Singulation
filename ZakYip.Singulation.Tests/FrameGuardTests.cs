@@ -4,12 +4,12 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
-using ZakYip.Singulation.Core.Contracts.Events.Safety;
+using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Infrastructure.Safety;
+using ZakYip.Singulation.Infrastructure.Cabinet;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -106,21 +106,21 @@ namespace ZakYip.Singulation.Tests {
             }
         }
 
-        private sealed class FakeSafetyPipeline : ISafetyPipeline {
-            public event EventHandler<SafetyStateChangedEventArgs>? StateChanged;
-            public event EventHandler<SafetyTriggerEventArgs>? StartRequested;
-            public event EventHandler<SafetyTriggerEventArgs>? StopRequested;
-            public event EventHandler<SafetyTriggerEventArgs>? ResetRequested;
+        private sealed class FakeSafetyPipeline : ICabinetPipeline {
+            public event EventHandler<CabinetStateChangedEventArgs>? StateChanged;
+            public event EventHandler<CabinetTriggerEventArgs>? StartRequested;
+            public event EventHandler<CabinetTriggerEventArgs>? StopRequested;
+            public event EventHandler<CabinetTriggerEventArgs>? ResetRequested;
 
-            public SafetyIsolationState State => SafetyIsolationState.Normal;
+            public CabinetIsolationState State => CabinetIsolationState.Normal;
 
-            public bool TryTrip(SafetyTriggerKind kind, string reason) => false;
-            public bool TryEnterDegraded(SafetyTriggerKind kind, string reason) => false;
+            public bool TryTrip(CabinetTriggerKind kind, string reason) => false;
+            public bool TryEnterDegraded(CabinetTriggerKind kind, string reason) => false;
             public bool TryRecoverFromDegraded(string reason) => false;
             public bool TryResetIsolation(string reason, CancellationToken ct = default) => false;
-            public void RequestStart(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false) { }
-            public void RequestStop(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false) { }
-            public void RequestReset(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false) { }
+            public void RequestStart(CabinetTriggerKind kind, string? reason = null, bool triggeredByIo = false) { }
+            public void RequestStop(CabinetTriggerKind kind, string? reason = null, bool triggeredByIo = false) { }
+            public void RequestReset(CabinetTriggerKind kind, string? reason = null, bool triggeredByIo = false) { }
         }
     }
 }

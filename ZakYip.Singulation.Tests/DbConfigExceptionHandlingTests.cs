@@ -3,9 +3,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using LiteDB;
 using Microsoft.Extensions.Logging.Abstractions;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs;
-using ZakYip.Singulation.Core.Contracts.Events.Safety;
+using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Infrastructure.Persistence;
 using ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine;
@@ -39,9 +39,9 @@ namespace ZakYip.Singulation.Tests {
         public async Task LeadshineSafetyIoStore_HandlesNormalOperation() {
             using var db = new LiteDatabase(":memory:");
             var isolator = new RecordingSafetyIsolator();
-            var store = new LiteDbLeadshineSafetyIoOptionsStore(
+            var store = new LiteDbLeadshineCabinetIoOptionsStore(
                 db,
-                NullLogger<LiteDbLeadshineSafetyIoOptionsStore>.Instance,
+                NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance,
                 isolator);
 
             var result = await store.GetAsync();
@@ -113,26 +113,26 @@ namespace ZakYip.Singulation.Tests {
         /// <summary>
         /// 用于记录安全隔离调用的模拟实现。
         /// </summary>
-        private sealed class RecordingSafetyIsolator : ISafetyIsolator {
+        private sealed class RecordingSafetyIsolator : ICabinetIsolator {
             public bool DegradedTriggered { get; private set; }
-            public SafetyTriggerKind LastKind { get; private set; }
+            public CabinetTriggerKind LastKind { get; private set; }
             public string? LastReason { get; private set; }
 
-            public SafetyIsolationState State => SafetyIsolationState.Normal;
+            public CabinetIsolationState State => CabinetIsolationState.Normal;
             public bool IsDegraded => false;
             public bool IsIsolated => false;
-            public SafetyTriggerKind LastTriggerKind => LastKind;
+            public CabinetTriggerKind LastTriggerKind => LastKind;
             public string? LastTriggerReason => LastReason;
 
-            public event EventHandler<SafetyStateChangedEventArgs>? StateChanged;
+            public event EventHandler<CabinetStateChangedEventArgs>? StateChanged;
 
-            public bool TryTrip(SafetyTriggerKind kind, string reason) {
+            public bool TryTrip(CabinetTriggerKind kind, string reason) {
                 LastKind = kind;
                 LastReason = reason;
                 return true;
             }
 
-            public bool TryEnterDegraded(SafetyTriggerKind kind, string reason) {
+            public bool TryEnterDegraded(CabinetTriggerKind kind, string reason) {
                 DegradedTriggered = true;
                 LastKind = kind;
                 LastReason = reason;

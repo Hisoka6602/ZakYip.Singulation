@@ -3,9 +3,9 @@ using System.ComponentModel;
 namespace ZakYip.Singulation.Core.Enums {
 
     /// <summary>
-    /// 安全隔离状态：用于描述当前运行是否处于降级或隔离。
+    /// 控制面板隔离状态：用于描述当前运行是否处于降级或隔离。
     /// </summary>
-    public enum SafetyIsolationState {
+    public enum CabinetIsolationState {
         /// <summary>正常运行，允许全速执行。</summary>
         [Description("正常运行")]
         Normal = 0,

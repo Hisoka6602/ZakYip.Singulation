@@ -1,8 +1,8 @@
 using System.ComponentModel;
 
-namespace ZakYip.Singulation.Infrastructure.Safety {
+namespace ZakYip.Singulation.Infrastructure.Cabinet {
     /// <summary>安全操作的种类。</summary>
-    internal enum SafetyOperationKind {
+    internal enum CabinetOperationKind {
         /// <summary>安全状态变化。</summary>
         [Description("安全状态变化")]
         StateChanged,

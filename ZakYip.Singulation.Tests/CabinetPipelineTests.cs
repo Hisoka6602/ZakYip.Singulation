@@ -4,11 +4,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
-using ZakYip.Singulation.Core.Abstractions.Safety;
-using ZakYip.Singulation.Core.Contracts.Events.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
+using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Abstractions;
-using ZakYip.Singulation.Infrastructure.Safety;
+using ZakYip.Singulation.Infrastructure.Cabinet;
 using ZakYip.Singulation.Tests.TestHelpers;
 
 namespace ZakYip.Singulation.Tests {
@@ -18,19 +18,19 @@ namespace ZakYip.Singulation.Tests {
         [MiniFact]
         public async Task EmergencyStopFromIoZeroesSpeedAsync() {
             var axis = new RecordingAxisController();
-            var isolator = new FakeSafetyIsolator();
+            var isolator = new FakeCabinetIsolator();
             var notifier = new FakeRealtimeNotifier();
-            var pipeline = new SafetyPipeline(
-                NullLogger<SafetyPipeline>.Instance,
+            var pipeline = new CabinetPipeline(
+                NullLogger<CabinetPipeline>.Instance,
                 isolator,
-                Array.Empty<ISafetyIoModule>(),
+                Array.Empty<ICabinetIoModule>(),
                 axis,
                 new FakeAxisEventAggregator(),
                 notifier,
                 new FakeControllerOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
-            pipeline.RequestStop(SafetyTriggerKind.EmergencyStop, "测试急停", true);
+            pipeline.RequestStop(CabinetTriggerKind.EmergencyStop, "测试急停", true);
             await axis.WaitForEmergencyAsync().ConfigureAwait(false);
             MiniAssert.SequenceEqual(new[] { "write:0", "stop" }, axis.Calls, "急停应先写零速再停机");
             await pipeline.StopAsync(CancellationToken.None).ConfigureAwait(false);
@@ -39,40 +39,40 @@ namespace ZakYip.Singulation.Tests {
         [MiniFact]
         public async Task IoResetClearsIsolationAsync() {
             var axis = new RecordingAxisController();
-            var isolator = new FakeSafetyIsolator();
-            isolator.SetState(SafetyIsolationState.Isolated);
+            var isolator = new FakeCabinetIsolator();
+            isolator.SetState(CabinetIsolationState.Isolated);
             var notifier = new FakeRealtimeNotifier();
-            var pipeline = new SafetyPipeline(
-                NullLogger<SafetyPipeline>.Instance,
+            var pipeline = new CabinetPipeline(
+                NullLogger<CabinetPipeline>.Instance,
                 isolator,
-                Array.Empty<ISafetyIoModule>(),
+                Array.Empty<ICabinetIoModule>(),
                 axis,
                 new FakeAxisEventAggregator(),
                 notifier,
                 new FakeControllerOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
-            pipeline.RequestReset(SafetyTriggerKind.ResetButton, "IO复位", true);
-            await isolator.WaitForStateAsync(SafetyIsolationState.Normal).ConfigureAwait(false);
+            pipeline.RequestReset(CabinetTriggerKind.ResetButton, "IO复位", true);
+            await isolator.WaitForStateAsync(CabinetIsolationState.Normal).ConfigureAwait(false);
             await pipeline.StopAsync(CancellationToken.None).ConfigureAwait(false);
         }
 
         [MiniFact]
         public async Task IoStartPublishesRealtimeNotificationAsync() {
             var axis = new RecordingAxisController();
-            var isolator = new FakeSafetyIsolator();
+            var isolator = new FakeCabinetIsolator();
             var notifier = new FakeRealtimeNotifier();
-            var pipeline = new SafetyPipeline(
-                NullLogger<SafetyPipeline>.Instance,
+            var pipeline = new CabinetPipeline(
+                NullLogger<CabinetPipeline>.Instance,
                 isolator,
-                Array.Empty<ISafetyIoModule>(),
+                Array.Empty<ICabinetIoModule>(),
                 axis,
                 new FakeAxisEventAggregator(),
                 notifier,
                 new FakeControllerOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
-            pipeline.RequestStart(SafetyTriggerKind.StartButton, "IO启动", true);
+            pipeline.RequestStart(CabinetTriggerKind.StartButton, "IO启动", true);
             await notifier.WaitForPublishAsync().ConfigureAwait(false);
             MiniAssert.True(notifier.Payloads.Count == 1, "应发布一次实时通知");
             await pipeline.StopAsync(CancellationToken.None).ConfigureAwait(false);
@@ -123,65 +123,65 @@ namespace ZakYip.Singulation.Tests {
             }
         }
 
-        private sealed class FakeSafetyIsolator : ISafetyIsolator {
-            private SafetyIsolationState _state = SafetyIsolationState.Normal;
-            private readonly TaskCompletionSource<SafetyIsolationState> _stateTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private sealed class FakeCabinetIsolator : ICabinetIsolator {
+            private CabinetIsolationState _state = CabinetIsolationState.Normal;
+            private readonly TaskCompletionSource<CabinetIsolationState> _stateTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            public event EventHandler<SafetyStateChangedEventArgs>? StateChanged;
+            public event EventHandler<CabinetStateChangedEventArgs>? StateChanged;
 
-            public SafetyIsolationState State => _state;
+            public CabinetIsolationState State => _state;
 
-            public bool IsDegraded => _state == SafetyIsolationState.Degraded;
+            public bool IsDegraded => _state == CabinetIsolationState.Degraded;
 
-            public bool IsIsolated => _state == SafetyIsolationState.Isolated;
+            public bool IsIsolated => _state == CabinetIsolationState.Isolated;
 
-            public SafetyTriggerKind LastTriggerKind { get; private set; }
+            public CabinetTriggerKind LastTriggerKind { get; private set; }
 
             public string? LastTriggerReason { get; private set; }
 
-            public bool TryTrip(SafetyTriggerKind kind, string reason) {
+            public bool TryTrip(CabinetTriggerKind kind, string reason) {
                 LastTriggerKind = kind;
                 LastTriggerReason = reason;
-                if (_state == SafetyIsolationState.Isolated) return false;
+                if (_state == CabinetIsolationState.Isolated) return false;
                 var previous = _state;
-                _state = SafetyIsolationState.Isolated;
-                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = kind, ReasonText = reason });
+                _state = CabinetIsolationState.Isolated;
+                StateChanged?.Invoke(this, new CabinetStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = kind, ReasonText = reason });
                 _stateTcs.TrySetResult(_state);
                 return true;
             }
 
-            public bool TryEnterDegraded(SafetyTriggerKind kind, string reason) {
+            public bool TryEnterDegraded(CabinetTriggerKind kind, string reason) {
                 LastTriggerKind = kind;
                 LastTriggerReason = reason;
-                if (_state == SafetyIsolationState.Isolated) return false;
+                if (_state == CabinetIsolationState.Isolated) return false;
                 var previous = _state;
-                _state = SafetyIsolationState.Degraded;
-                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = kind, ReasonText = reason });
+                _state = CabinetIsolationState.Degraded;
+                StateChanged?.Invoke(this, new CabinetStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = kind, ReasonText = reason });
                 _stateTcs.TrySetResult(_state);
                 return true;
             }
 
             public bool TryRecoverFromDegraded(string reason) {
-                if (_state != SafetyIsolationState.Degraded) return false;
+                if (_state != CabinetIsolationState.Degraded) return false;
                 var previous = _state;
-                _state = SafetyIsolationState.Normal;
-                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = SafetyTriggerKind.HealthRecovered, ReasonText = reason });
+                _state = CabinetIsolationState.Normal;
+                StateChanged?.Invoke(this, new CabinetStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = CabinetTriggerKind.HealthRecovered, ReasonText = reason });
                 _stateTcs.TrySetResult(_state);
                 return true;
             }
 
             public bool TryResetIsolation(string reason, CancellationToken ct = default) {
-                if (_state != SafetyIsolationState.Isolated) return false;
+                if (_state != CabinetIsolationState.Isolated) return false;
                 var previous = _state;
-                _state = SafetyIsolationState.Normal;
-                StateChanged?.Invoke(this, new SafetyStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = SafetyTriggerKind.ResetButton, ReasonText = reason });
+                _state = CabinetIsolationState.Normal;
+                StateChanged?.Invoke(this, new CabinetStateChangedEventArgs { Previous = previous, Current = _state, ReasonKind = CabinetTriggerKind.ResetButton, ReasonText = reason });
                 _stateTcs.TrySetResult(_state);
                 return true;
             }
 
-            public void SetState(SafetyIsolationState state) => _state = state;
+            public void SetState(CabinetIsolationState state) => _state = state;
 
-            public async Task WaitForStateAsync(SafetyIsolationState expected) {
+            public async Task WaitForStateAsync(CabinetIsolationState expected) {
                 if (_state == expected) return;
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
                 await _stateTcs.Task.WaitAsync(cts.Token).ConfigureAwait(false);

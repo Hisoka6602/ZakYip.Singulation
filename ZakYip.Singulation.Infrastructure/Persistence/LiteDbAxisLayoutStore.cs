@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -24,12 +24,12 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
         
         private readonly ILiteCollection<AxisGridLayoutDoc> _coll;
         private readonly ILogger<LiteDbAxisLayoutStore> _logger;
-        private readonly ISafetyIsolator _safetyIsolator;
+        private readonly ICabinetIsolator _safetyIsolator;
 
         public LiteDbAxisLayoutStore(
             ILiteDatabase db,
             ILogger<LiteDbAxisLayoutStore> logger,
-            ISafetyIsolator safetyIsolator) {
+            ICabinetIsolator safetyIsolator) {
             _coll = db.GetCollection<AxisGridLayoutDoc>("axis_layout");
             _coll.EnsureIndex(x => x.Id, unique: true);
             if (_coll.FindById(Key) is null)
@@ -44,7 +44,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, ErrorMessage);
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(CabinetTriggerKind.Unknown, ErrorMessage);
                 return Task.FromResult(ConfigDefaults.AxisGrid());
             }
         }

@@ -12,7 +12,7 @@ using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {

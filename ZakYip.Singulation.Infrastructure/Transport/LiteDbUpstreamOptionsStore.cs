@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -23,13 +23,13 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
 
         private readonly ILiteCollection<UpstreamOptionsDoc> _col;
         private readonly ILogger<LiteDbUpstreamOptionsStore> _logger;
-        private readonly ISafetyIsolator _safetyIsolator;
+        private readonly ICabinetIsolator _safetyIsolator;
         private readonly object _gate = new(); // 写入串行锁，避免并发竞态
 
         public LiteDbUpstreamOptionsStore(
             ILiteDatabase db,
             ILogger<LiteDbUpstreamOptionsStore> logger,
-            ISafetyIsolator safetyIsolator) {
+            ICabinetIsolator safetyIsolator) {
             _col = db.GetCollection<UpstreamOptionsDoc>(CollName);
             _col.EnsureIndex(x => x.Id, unique: true);
             _logger = logger;
@@ -42,7 +42,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, ErrorMessage);
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(CabinetTriggerKind.Unknown, ErrorMessage);
                 return Task.FromResult(ConfigDefaults.Upstream());
             }
         }
