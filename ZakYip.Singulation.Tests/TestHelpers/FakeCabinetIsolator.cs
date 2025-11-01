@@ -7,7 +7,7 @@ namespace ZakYip.Singulation.Tests.TestHelpers {
     /// <summary>
     /// 用于测试的简单 CabinetIsolator 模拟实现。
     /// </summary>
-    internal sealed class FakeSafetyIsolator : ICabinetIsolator {
+    internal sealed class FakeCabinetIsolator : ICabinetIsolator {
         public CabinetIsolationState State => CabinetIsolationState.Normal;
         public bool IsDegraded => false;
         public bool IsIsolated => false;

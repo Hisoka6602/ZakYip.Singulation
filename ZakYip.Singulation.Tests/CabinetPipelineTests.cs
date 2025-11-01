@@ -18,7 +18,7 @@ namespace ZakYip.Singulation.Tests {
         [MiniFact]
         public async Task EmergencyStopFromIoZeroesSpeedAsync() {
             var axis = new RecordingAxisController();
-            var isolator = new FakeSafetyIsolator();
+            var isolator = new FakeCabinetIsolator();
             var notifier = new FakeRealtimeNotifier();
             var pipeline = new CabinetPipeline(
                 NullLogger<CabinetPipeline>.Instance,
@@ -39,7 +39,7 @@ namespace ZakYip.Singulation.Tests {
         [MiniFact]
         public async Task IoResetClearsIsolationAsync() {
             var axis = new RecordingAxisController();
-            var isolator = new FakeSafetyIsolator();
+            var isolator = new FakeCabinetIsolator();
             isolator.SetState(CabinetIsolationState.Isolated);
             var notifier = new FakeRealtimeNotifier();
             var pipeline = new CabinetPipeline(
@@ -60,7 +60,7 @@ namespace ZakYip.Singulation.Tests {
         [MiniFact]
         public async Task IoStartPublishesRealtimeNotificationAsync() {
             var axis = new RecordingAxisController();
-            var isolator = new FakeSafetyIsolator();
+            var isolator = new FakeCabinetIsolator();
             var notifier = new FakeRealtimeNotifier();
             var pipeline = new CabinetPipeline(
                 NullLogger<CabinetPipeline>.Instance,
@@ -123,7 +123,7 @@ namespace ZakYip.Singulation.Tests {
             }
         }
 
-        private sealed class FakeSafetyIsolator : ICabinetIsolator {
+        private sealed class FakeCabinetIsolator : ICabinetIsolator {
             private CabinetIsolationState _state = CabinetIsolationState.Normal;
             private readonly TaskCompletionSource<CabinetIsolationState> _stateTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
 

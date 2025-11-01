@@ -19,7 +19,7 @@ namespace ZakYip.Singulation.Tests {
             // Arrange
             var dbPath = Path.Combine(Path.GetTempPath(), $"test_cabinet_{Guid.NewGuid()}.db");
             using var db = new LiteDatabase($"Filename={dbPath};Mode=Shared");
-            var safetyIsolator = new FakeSafetyIsolator();
+            var safetyIsolator = new FakeCabinetIsolator();
             var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator);
 
             var options = new LeadshineCabinetIoOptions {
@@ -85,7 +85,7 @@ namespace ZakYip.Singulation.Tests {
             // Arrange
             var dbPath = Path.Combine(Path.GetTempPath(), $"test_cabinet_{Guid.NewGuid()}.db");
             using var db = new LiteDatabase($"Filename={dbPath};Mode=Shared");
-            var safetyIsolator = new FakeSafetyIsolator();
+            var safetyIsolator = new FakeCabinetIsolator();
             var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator);
 
             // Act
@@ -107,7 +107,7 @@ namespace ZakYip.Singulation.Tests {
             // Arrange
             var dbPath = Path.Combine(Path.GetTempPath(), $"test_cabinet_{Guid.NewGuid()}.db");
             using var db = new LiteDatabase($"Filename={dbPath};Mode=Shared");
-            var safetyIsolator = new FakeSafetyIsolator();
+            var safetyIsolator = new FakeCabinetIsolator();
             var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator);
 
             var options = new LeadshineCabinetIoOptions {

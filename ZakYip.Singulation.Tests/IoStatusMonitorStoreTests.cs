@@ -19,7 +19,7 @@ namespace ZakYip.Singulation.Tests {
             var store = new LiteDbIoStatusMonitorOptionsStore(
                 db,
                 NullLogger<LiteDbIoStatusMonitorOptionsStore>.Instance,
-                new FakeSafetyIsolator());
+                new FakeCabinetIsolator());
 
             // 创建测试配置
             var options = new IoStatusMonitorOptions {
@@ -55,7 +55,7 @@ namespace ZakYip.Singulation.Tests {
             var store = new LiteDbIoStatusMonitorOptionsStore(
                 db,
                 NullLogger<LiteDbIoStatusMonitorOptionsStore>.Instance,
-                new FakeSafetyIsolator());
+                new FakeCabinetIsolator());
 
             // 读取配置（应返回默认值）
             var retrieved = await store.GetAsync();
@@ -77,7 +77,7 @@ namespace ZakYip.Singulation.Tests {
             var store = new LiteDbIoStatusMonitorOptionsStore(
                 db,
                 NullLogger<LiteDbIoStatusMonitorOptionsStore>.Instance,
-                new FakeSafetyIsolator());
+                new FakeCabinetIsolator());
 
             // 创建初始配置
             var options1 = new IoStatusMonitorOptions {
@@ -113,7 +113,7 @@ namespace ZakYip.Singulation.Tests {
             var store = new LiteDbIoStatusMonitorOptionsStore(
                 db,
                 NullLogger<LiteDbIoStatusMonitorOptionsStore>.Instance,
-                new FakeSafetyIsolator());
+                new FakeCabinetIsolator());
 
             // 创建配置
             var options = new IoStatusMonitorOptions {
@@ -142,7 +142,7 @@ namespace ZakYip.Singulation.Tests {
             var store = new LiteDbIoStatusMonitorOptionsStore(
                 db,
                 NullLogger<LiteDbIoStatusMonitorOptionsStore>.Instance,
-                new FakeSafetyIsolator());
+                new FakeCabinetIsolator());
 
             // 创建高容量配置
             var options = new IoStatusMonitorOptions {
