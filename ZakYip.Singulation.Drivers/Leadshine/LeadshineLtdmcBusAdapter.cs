@@ -193,8 +193,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                                         SetError(msg);
                                         return new(false, msg);
                                     }
-                                    ;
-                                    await Task.Delay(500, ct); // 恢复时间
+                                    await Task.Delay(TimeSpan.FromSeconds(10), ct); // 恢复时间
                                 }
                                 else
                                 {
