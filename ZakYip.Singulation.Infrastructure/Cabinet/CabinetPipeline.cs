@@ -227,10 +227,47 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         /// <param name="stoppingToken">停止令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            // 等待轴控制器完全初始化完成后再启动 IO 模块监控
+            // 这样可以避免在初始化过程中物理按钮（特别是复位按钮）导致的重复复位和崩溃问题
+            _log.LogInformation("【CabinetPipeline】等待轴控制器初始化完成...");
+            
+            // 轮询检查控制器是否初始化完成，最长等待60秒
+            var maxWaitTime = TimeSpan.FromSeconds(60);
+            var pollInterval = TimeSpan.FromMilliseconds(500);
+            using var timeoutCts = new CancellationTokenSource(maxWaitTime);
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
+            
+            while (!linkedCts.Token.IsCancellationRequested) {
+                if (_axisController.Bus.IsInitialized) {
+                    _log.LogInformation("【CabinetPipeline】轴控制器已初始化，开始启动 IO 模块监控");
+                    break;
+                }
+                
+                try {
+                    await Task.Delay(pollInterval, linkedCts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
+                    // Expected during shutdown
+                    break;
+                }
+                catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested) {
+                    _log.LogWarning("【CabinetPipeline】等待轴控制器初始化超时（{Timeout}秒），继续启动 IO 模块", maxWaitTime.TotalSeconds);
+                    break;
+                }
+            }
+            
+            if (stoppingToken.IsCancellationRequested) {
+                _log.LogInformation("【CabinetPipeline】应用程序正在关闭，取消启动");
+                return;
+            }
+            
+            // 启动所有 IO 模块（包括物理按钮监控）
             var startTasks = _ioModules
                 .Select(module => module.StartAsync(stoppingToken))
                 .ToArray();
             await Task.WhenAll(startTasks).ConfigureAwait(false);
+            
+            _log.LogInformation("【CabinetPipeline】所有 IO 模块已启动，开始处理安全操作");
 
             var reader = _operations.Reader;
             while (!stoppingToken.IsCancellationRequested) {
