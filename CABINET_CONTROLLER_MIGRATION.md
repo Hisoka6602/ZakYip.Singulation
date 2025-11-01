@@ -55,14 +55,14 @@ PUT /api/Cabinet/io-configs
   "ResetBit": 3,
   "RemoteLocalModeBit": 5,
   "PollingIntervalMs": 50,
-  "InvertLogic": false,
-  "InvertEmergencyStopLogic": null,
+  "ActiveLow": false,
+  "EmergencyStopActiveLow": null,
   "RedLightBit": 10,
   "YellowLightBit": 11,
   "GreenLightBit": 12,
   "StartButtonLightBit": 13,
   "StopButtonLightBit": 14,
-  "InvertLightLogic": true
+  "LightActiveLow": true
 }
 ```
 
@@ -78,12 +78,12 @@ PUT /api/Cabinet/io-configs
     "Start": 1,
     "Reset": 3,
     "RemoteLocalMode": 5,
-    "InvertLogic": false,
-    "InvertEmergencyStopLogic": null,
-    "InvertStopLogic": null,
-    "InvertStartLogic": null,
-    "InvertResetLogic": null,
-    "InvertRemoteLocalLogic": null,
+    "ActiveLow": false,
+    "EmergencyStopActiveLow": null,
+    "StopActiveLow": null,
+    "StartActiveLow": null,
+    "ResetActiveLow": null,
+    "RemoteLocalActiveLow": null,
     "RemoteLocalActiveHigh": true
   },
   "CabinetIndicatorPoint": {
@@ -93,13 +93,13 @@ PUT /api/Cabinet/io-configs
     "StartButtonLight": 13,
     "StopButtonLight": 14,
     "RemoteConnectionLight": 15,
-    "InvertLightLogic": true,
-    "InvertRedLightLogic": null,
-    "InvertYellowLightLogic": null,
-    "InvertGreenLightLogic": null,
-    "InvertStartButtonLightLogic": null,
-    "InvertStopButtonLightLogic": null,
-    "InvertRemoteConnectionLightLogic": null
+    "LightActiveLow": true,
+    "RedLightActiveLow": null,
+    "YellowLightActiveLow": null,
+    "GreenLightActiveLow": null,
+    "StartButtonLightActiveLow": null,
+    "StopButtonLightActiveLow": null,
+    "RemoteConnectionLightActiveLow": null
   }
 }
 ```
@@ -147,12 +147,12 @@ function migrateConfig(oldConfig) {
       Start: oldConfig.StartBit,
       Reset: oldConfig.ResetBit,
       RemoteLocalMode: oldConfig.RemoteLocalModeBit,
-      InvertLogic: oldConfig.InvertLogic,
-      InvertEmergencyStopLogic: oldConfig.InvertEmergencyStopLogic,
-      InvertStopLogic: oldConfig.InvertStopLogic,
-      InvertStartLogic: oldConfig.InvertStartLogic,
-      InvertResetLogic: oldConfig.InvertResetLogic,
-      InvertRemoteLocalLogic: oldConfig.InvertRemoteLocalLogic,
+      ActiveLow: oldConfig.ActiveLow,
+      EmergencyStopActiveLow: oldConfig.EmergencyStopActiveLow,
+      StopActiveLow: oldConfig.StopActiveLow,
+      StartActiveLow: oldConfig.StartActiveLow,
+      ResetActiveLow: oldConfig.ResetActiveLow,
+      RemoteLocalActiveLow: oldConfig.RemoteLocalActiveLow,
       RemoteLocalActiveHigh: oldConfig.RemoteLocalActiveHigh
     },
     CabinetIndicatorPoint: {
@@ -162,13 +162,13 @@ function migrateConfig(oldConfig) {
       StartButtonLight: oldConfig.StartButtonLightBit,
       StopButtonLight: oldConfig.StopButtonLightBit,
       RemoteConnectionLight: oldConfig.RemoteConnectionLightBit,
-      InvertLightLogic: oldConfig.InvertLightLogic,
-      InvertRedLightLogic: oldConfig.InvertRedLightLogic,
-      InvertYellowLightLogic: oldConfig.InvertYellowLightLogic,
-      InvertGreenLightLogic: oldConfig.InvertGreenLightLogic,
-      InvertStartButtonLightLogic: oldConfig.InvertStartButtonLightLogic,
-      InvertStopButtonLightLogic: oldConfig.InvertStopButtonLightLogic,
-      InvertRemoteConnectionLightLogic: oldConfig.InvertRemoteConnectionLightLogic
+      LightActiveLow: oldConfig.LightActiveLow,
+      RedLightActiveLow: oldConfig.RedLightActiveLow,
+      YellowLightActiveLow: oldConfig.YellowLightActiveLow,
+      GreenLightActiveLow: oldConfig.GreenLightActiveLow,
+      StartButtonLightActiveLow: oldConfig.StartButtonLightActiveLow,
+      StopButtonLightActiveLow: oldConfig.StopButtonLightActiveLow,
+      RemoteConnectionLightActiveLow: oldConfig.RemoteConnectionLightActiveLow
     }
   };
 }
