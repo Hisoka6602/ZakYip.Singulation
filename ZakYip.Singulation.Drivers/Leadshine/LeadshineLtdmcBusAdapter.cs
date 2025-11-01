@@ -1,4 +1,4 @@
-﻿using Polly;
+using Polly;
 using System;
 using csLTDMC;
 using System.Linq;
@@ -10,8 +10,8 @@ using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Drivers.Abstractions;
 using static System.Runtime.CompilerServices.RuntimeHelpers;
 
-namespace ZakYip.Singulation.Drivers.Leadshine {
-
+namespace ZakYip.Singulation.Drivers.Leadshine
+{
     /// <summary>
     /// 雷赛 LTDMC 总线适配器：封装 dmc_board_init_eth / nmc_get_total_slaves / nmc_get_errcode / dmc_cool_reset / dmc_board_close。
     /// </summary>
@@ -19,7 +19,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
     /// 该适配器实现了 <see cref="IBusAdapter"/> 接口，提供对雷赛 LTD-MC 系列控制器的通信封装。
     /// 所有操作均进行安全隔离：底层 SDK 调用异常不会向上传播，而是通过 <see cref="LastErrorMessage"/> 和 <see cref="ErrorOccurred"/> 事件通知上层。
     /// </remarks>
-    public sealed class LeadshineLtdmcBusAdapter : IBusAdapter {
+    public sealed class LeadshineLtdmcBusAdapter : IBusAdapter
+    {
         private readonly ushort _cardNo;
         private readonly ushort _portNo;
         private readonly string? _controllerIp;
@@ -29,12 +30,17 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// <summary>
         /// 获取最后一次操作的错误信息（线程安全）。如果最近一次操作成功，此值为 null。
         /// </summary>
-        public string? LastErrorMessage {
-            get {
-                lock (_errorLock) return _lastErrorMessage;
+        public string? LastErrorMessage
+        {
+            get
+            {
+                lock (_errorLock)
+                    return _lastErrorMessage;
             }
-            private set {
-                lock (_errorLock) _lastErrorMessage = value;
+            private set
+            {
+                lock (_errorLock)
+                    _lastErrorMessage = value;
             }
         }
 
@@ -50,7 +56,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// <param name="cardNo">控制器卡号（通常为 0）。</param>
         /// <param name="portNo">端口号（CAN/EtherCAT 端口编号）。</param>
         /// <param name="controllerIp">控制器 IP 地址（仅以太网模式需要）；若为空或 null，则使用本地 PCI 模式。</param>
-        public LeadshineLtdmcBusAdapter(ushort cardNo, ushort portNo, string? controllerIp) {
+        public LeadshineLtdmcBusAdapter(ushort cardNo, ushort portNo, string? controllerIp)
+        {
             _cardNo = cardNo;
             _portNo = portNo;
             _controllerIp = string.IsNullOrWhiteSpace(controllerIp) ? null : controllerIp;
@@ -58,12 +65,16 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
         public bool IsInitialized { get; private set; }
 
-        public async Task<KeyValuePair<bool, string>> InitializeAsync(CancellationToken ct = default) {
-            return await Safe<KeyValuePair<bool, string>>(async () => {
-                if (IsInitialized) return new(true, "Already initialized."); // 幂等
+        public async Task<KeyValuePair<bool, string>> InitializeAsync(CancellationToken ct = default)
+        {
+            return await Safe<KeyValuePair<bool, string>>(async () =>
+            {
+                if (IsInitialized)
+                    return new(true, "Already initialized."); // 幂等
 
                 var ok = await EnsureBootGapAsync(TimeSpan.FromSeconds(15), ct);
-                if (!ok.Key) {
+                if (!ok.Key)
+                {
                     SetError(ok.Value);
                 }
                 // 重试节奏：0ms → 300ms → 1s → 2s（可调）
@@ -82,31 +93,38 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     .Or<Exception>()
                     .WaitAndRetryAsync(
                         delays,
-                        onRetryAsync: (outcome, delay, retryAttempt, _) => {
+                        onRetryAsync: (outcome, delay, retryAttempt, _) =>
+                        {
                             var reason = outcome.Exception?.Message ?? outcome.Result.Value;
                             SetError($"Initialize retry #{retryAttempt} after {delay.TotalMilliseconds}ms, reason={reason}");
                             return Task.CompletedTask;
                         });
 
-                return await policy.ExecuteAsync(async () => {
+                return await policy.ExecuteAsync(async () =>
+                {
                     attempt++;
 
                     // === 1) 可选 Ping 预检（仅当配置了 IP） ===
-                    if (_controllerIp != null) {
-                        try {
+                    if (_controllerIp != null)
+                    {
+                        try
+                        {
                             using var ping = new Ping();
                             var reply = await ping.SendPingAsync(_controllerIp, TimeSpan.FromMilliseconds(1000), cancellationToken: ct)
                                                   .ConfigureAwait(false);
-                            if (reply.Status != IPStatus.Success) {
+                            if (reply.Status != IPStatus.Success)
+                            {
                                 const string msg = "Ping controller failed.";
                                 SetError(msg);
                                 return new(false, msg);
                             }
                         }
-                        catch (OperationCanceledException) {
+                        catch (OperationCanceledException)
+                        {
                             return new(false, "Canceled");
                         }
-                        catch {
+                        catch
+                        {
                             const string msg = "Ping 异常";
                             SetError(msg);
                             return new(false, msg);
@@ -114,64 +132,82 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     }
 
                     // === 2) LTDMC 初始化（WhenAny 严格超时 + 返回码判定） ===
-                    try {
+                    try
+                    {
                         var initTask = Task.Run(() => _controllerIp is null
                             ? LTDMC.dmc_board_init()
                             : LTDMC.dmc_board_init_eth(_cardNo, _controllerIp), ct);
 
                         var timeoutTask = Task.Delay(5000, ct);
                         var winner = await Task.WhenAny(initTask, timeoutTask).ConfigureAwait(false);
-                        if (winner != initTask) {
+                        if (winner != initTask)
+                        {
                             const string msg = "LTDMC init 超时";
                             SetError(msg);
                             return new(false, msg);
                         }
 
                         var ret = await initTask.ConfigureAwait(false);
-                        if (ret != 0) {
+                        if (ret != 0)
+                        {
                             var msg = $"LTDMC init 返回: {ret}";
                             SetError(msg);
                             return new(false, msg);
                         }
                     }
-                    catch (OperationCanceledException) {
+                    catch (OperationCanceledException)
+                    {
                         const string msg = "LTDMC init 取消";
                         SetError(msg);
                         return new(false, msg);
                     }
-                    catch (Exception ex) {
+                    catch (Exception ex)
+                    {
                         var msg = $"LTDMC init 异常: {ex.Message}";
                         SetError(msg);
                         return new(false, msg);
                     }
 
                     // === 3) 总线健康检查（在初始化之后：唯一判据：errcode） ===
-                    try {
+                    try
+                    {
                         ushort errcode = 0;
                         LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
-                        if (errcode != 0) {
+                        if (errcode != 0)
+                        {
                             // 本次尝试仅做一次复位：偶数尝试→软复位；奇数尝试→冷复位
                             var useSoftReset = (attempt % 2 == 0);
 
-                            try {
-                                if (useSoftReset) {
-                                    var rc = await Task.Run(() => LTDMC.dmc_soft_reset(_cardNo), ct);
-                                    if (rc != 0) {
+                            try
+                            {
+                                if (useSoftReset)
+                                {
+                                    var rc = await Task.Run(() =>
+                                        {
+                                            LTDMC.dmc_soft_reset(_cardNo);
+                                            return LTDMC.dmc_board_close();
+                                        }, ct);
+                                    if (rc != 0)
+                                    {
                                         var msg = $"软复位失败: rc={rc}";
                                         SetError(msg);
                                         return new(false, msg);
                                     }
+                                    ;
                                     await Task.Delay(500, ct); // 恢复时间
                                 }
-                                else {
+                                else
+                                {
                                     await ResetAsync(ct);      // 冷复位（无返回值）
                                     await Task.Delay(200, ct); // 恢复时间
                                 }
                             }
-                            catch (OperationCanceledException) {
+                            catch (OperationCanceledException)
+                            {
                                 return new(false, "Canceled");
                             }
-                            catch (Exception ex) {
+                            catch (Exception ex)
+                            {
                                 var msg = $"复位过程异常: {ex.Message}";
                                 SetError(msg);
                                 return new(false, msg);
@@ -179,17 +215,20 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
                             // 复位后再读一次 errcode；若仍异常则失败，交给 Polly
                             LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
-                            if (errcode != 0) {
+                            if (errcode != 0)
+                            {
                                 var msg = $"总线异常未恢复: err={errcode}";
                                 SetError(msg);
                                 return new(false, msg);
                             }
                         }
                     }
-                    catch (OperationCanceledException) {
+                    catch (OperationCanceledException)
+                    {
                         return new(false, "Canceled");
                     }
-                    catch (Exception ex) {
+                    catch (Exception ex)
+                    {
                         var msg = $"总线检查异常: {ex.Message}";
                         SetError(msg);
                         return new(false, msg);
@@ -207,9 +246,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>任务。</returns>
-        public Task CloseAsync(CancellationToken ct = default) {
-            return Safe(() => {
-                if (!IsInitialized) return Task.CompletedTask;
+        public Task CloseAsync(CancellationToken ct = default)
+        {
+            return Safe(() =>
+            {
+                if (!IsInitialized)
+                    return Task.CompletedTask;
 
                 LTDMC.dmc_board_close();
                 IsInitialized = false;
@@ -222,11 +264,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>轴数量；若通信失败，返回 0。</returns>
-        public Task<int> GetAxisCountAsync(CancellationToken ct = default) {
-            return Safe(() => {
+        public Task<int> GetAxisCountAsync(CancellationToken ct = default)
+        {
+            return Safe(() =>
+            {
                 ushort total = 0;
                 var ret = LTDMC.nmc_get_total_slaves(_cardNo, _portNo, ref total);
-                if (ret != 0) {
+                if (ret != 0)
+                {
                     throw new InvalidOperationException($"nmc_get_total_slaves failed, ret={ret}");
                 }
 
@@ -239,11 +284,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>错误码；若通信失败，返回 -999。</returns>
-        public Task<int> GetErrorCodeAsync(CancellationToken ct = default) {
-            return Safe(() => {
+        public Task<int> GetErrorCodeAsync(CancellationToken ct = default)
+        {
+            return Safe(() =>
+            {
                 ushort err = 0;
                 var ret = LTDMC.nmc_get_errcode(_cardNo, _portNo, ref err);
-                if (ret != 0) {
+                if (ret != 0)
+                {
                     throw new InvalidOperationException($"nmc_get_errcode failed, ret={ret}");
                 }
 
@@ -257,16 +305,20 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>任务。</returns>
-        public async Task ResetAsync(CancellationToken ct = default) {
+        public async Task ResetAsync(CancellationToken ct = default)
+        {
             ct.ThrowIfCancellationRequested();
 
-            var success = await Safe(async () => {
+            var success = await Safe(async () =>
+            {
                 // Execute cold reset and check return value
-                var rc = LTDMC.dmc_cool_reset(_cardNo);
-                if (rc != 0) {
+                LTDMC.dmc_cool_reset(_cardNo);
+                var rc = LTDMC.dmc_board_close();
+                if (rc != 0)
+                {
                     throw new InvalidOperationException($"Cold reset failed for card {_cardNo} with error code {rc}. Verify hardware connection and card status.");
                 }
-                
+
                 await CloseAsync(ct).ConfigureAwait(false);
                 await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
                 var initResult = await InitializeAsync(ct).ConfigureAwait(false);
@@ -276,7 +328,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 }
             }, "ResetAsync");
 
-            if (!success) {
+            if (!success)
+            {
                 SetError("ResetAsync: 冷复位流程执行失败。");
             }
         }
@@ -290,12 +343,15 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>任务。</returns>
-        public async Task WarmResetAsync(CancellationToken ct = default) {
+        public async Task WarmResetAsync(CancellationToken ct = default)
+        {
             ct.ThrowIfCancellationRequested();
 
-            var success = await Safe(async () => {
+            var success = await Safe(async () =>
+            {
                 // 若未初始化，直接初始化即可
-                if (!IsInitialized) {
+                if (!IsInitialized)
+                {
                     var (key, value) = await InitializeAsync(ct).ConfigureAwait(false);
                     IsInitialized = key;
                     return;
@@ -303,7 +359,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
                 // 1) 软复位控制器
                 var retSoft = LTDMC.dmc_soft_reset(_cardNo);
-                if (retSoft != 0) {
+                if (retSoft != 0)
+                {
                     throw new InvalidOperationException($"dmc_soft_reset failed, ret={retSoft}");
                 }
 
@@ -315,19 +372,22 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 await Task.Delay(TimeSpan.FromMilliseconds(800), ct).ConfigureAwait(false);
 
                 // 4) 重新初始化（仅支持以太网）
-                if (string.IsNullOrWhiteSpace(_controllerIp)) {
+                if (string.IsNullOrWhiteSpace(_controllerIp))
+                {
                     throw new InvalidOperationException("WarmReset requires controller IP for dmc_board_init_eth.");
                 }
 
                 var retInit = LTDMC.dmc_board_init_eth(_cardNo, _controllerIp);
-                if (retInit != 0) {
+                if (retInit != 0)
+                {
                     throw new InvalidOperationException($"dmc_board_init_eth failed, ret={retInit}");
                 }
 
                 IsInitialized = true;
             }, "WarmResetAsync");
 
-            if (!success) {
+            if (!success)
+            {
                 SetError("WarmResetAsync: 热复位流程执行失败。");
             }
         }
@@ -341,7 +401,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         /// <param name="logicalNodeId">逻辑层的 NodeId（如 1001）。</param>
         /// <returns>物理层的 NodeId（如 1）。</returns>
-        public ushort TranslateNodeId(ushort logicalNodeId) {
+        public ushort TranslateNodeId(ushort logicalNodeId)
+        {
             // 传入：物理 1,2,3…；输出：逻辑 1001,1002,1003…
             // 若传入已是 1000+，保持不变（防止重复映射）
             return logicalNodeId >= 1000 ? logicalNodeId : (ushort)(1000 + logicalNodeId);
@@ -356,7 +417,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         /// <param name="logicalNodeId">逻辑层的 NodeId（如 1001）。</param>
         /// <returns>true 表示需要反转；false 表示保持模板默认方向。</returns>
-        public bool ShouldReverse(ushort logicalNodeId) {
+        public bool ShouldReverse(ushort logicalNodeId)
+        {
             // 奇数 NodeId 反转
             return logicalNodeId % 2 == 1;
         }
@@ -368,7 +430,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// </summary>
         private static async Task<KeyValuePair<bool, string>> EnsureBootGapAsync(
             TimeSpan threshold,
-            CancellationToken ct = default) {
+            CancellationToken ct = default)
+        {
             var log = NLog.LogManager.GetCurrentClassLogger();
 
             // 1) 系统已开机时长（毫秒计时器，不受本地时间影响）
@@ -376,32 +439,39 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             // 2) 当前进程已运行时长（使用本地时间）
             TimeSpan processUptime;
-            try {
+            try
+            {
                 var ps = System.Diagnostics.Process.GetCurrentProcess();
                 // 注意：StartTime 与 DateTime.Now 同为本地时间
                 processUptime = DateTime.Now - ps.StartTime;
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 log.Warn(ex, "[BootGap] 读取进程启动时间失败，跳过等待。");
                 return new(true, "Skipped: cannot read process start time.");
             }
 
             // 3) gap = 系统开机至进程启动的间隔
             var gap = systemUptime - processUptime;
-            if (gap < TimeSpan.Zero) gap = TimeSpan.Zero;
+            if (gap < TimeSpan.Zero)
+                gap = TimeSpan.Zero;
 
             // 4) 若 gap < 阈值，则等待 gap（可取消）
-            if (gap > TimeSpan.Zero && gap < threshold) {
+            if (gap > TimeSpan.Zero && gap < threshold)
+            {
                 log.Info($"[BootGap] gap={gap.TotalMilliseconds:N0}ms < {threshold.TotalMilliseconds:N0}ms, delay {gap.TotalMilliseconds:N0}ms.");
-                try {
+                try
+                {
                     await Task.Delay(gap, ct).ConfigureAwait(false);
                 }
-                catch (TaskCanceledException) {
+                catch (TaskCanceledException)
+                {
                     log.Warn("[BootGap] 等待被取消。");
                     return new(false, "Canceled during boot-gap delay.");
                 }
             }
-            else {
+            else
+            {
                 log.Info($"[BootGap] gap={gap.TotalMilliseconds:N0}ms ≥ {threshold.TotalMilliseconds:N0}ms，无需等待。");
             }
 
@@ -417,13 +487,16 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// <param name="operationName">操作名称，用于错误日志。</param>
         /// <returns>任务，成功返回 true，失败返回 false。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<bool> Safe(Func<Task> act, string operationName) {
-            try {
+        private async Task<bool> Safe(Func<Task> act, string operationName)
+        {
+            try
+            {
                 await act().ConfigureAwait(false);
                 ClearError();
                 return true;
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 SetError($"{operationName}: {ex.Message}");
                 return false;
             }
@@ -438,13 +511,16 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// <param name="defaultValue">失败时返回的默认值。</param>
         /// <returns>成功返回函数结果，失败返回默认值。</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private async Task<T> Safe<T>(Func<Task<T>> func, string operationName, T defaultValue = default!) {
-            try {
+        private async Task<T> Safe<T>(Func<Task<T>> func, string operationName, T defaultValue = default!)
+        {
+            try
+            {
                 var result = await func().ConfigureAwait(false);
                 ClearError();
                 return result;
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 SetError($"{operationName}: {ex.Message}");
                 return defaultValue;
             }
@@ -454,7 +530,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// 设置错误信息并触发事件。
         /// </summary>
         /// <param name="message">错误消息。</param>
-        private void SetError(string message) {
+        private void SetError(string message)
+        {
             LastErrorMessage = message;
             ErrorOccurred?.Invoke(this, message);
         }
@@ -462,7 +539,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// <summary>
         /// 清除错误信息。
         /// </summary>
-        private void ClearError() {
+        private void ClearError()
+        {
             LastErrorMessage = null;
         }
 
@@ -480,8 +558,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public async Task<Dictionary<ushort, LeadshineBatchPdoOperations.BatchWriteResult[]>> BatchWriteMultipleAxesAsync(
             IReadOnlyList<ushort> nodeIds,
             IReadOnlyList<IReadOnlyList<LeadshineBatchPdoOperations.BatchWriteRequest>> requests,
-            CancellationToken ct = default) {
-            
+            CancellationToken ct = default)
+        {
             if (nodeIds == null)
                 throw new ArgumentNullException(nameof(nodeIds));
             if (requests == null)
@@ -493,11 +571,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             // 并行处理多个轴的批量写入
             var tasks = new Task<(ushort nodeId, LeadshineBatchPdoOperations.BatchWriteResult[] result)>[nodeIds.Count];
-            
-            for (int i = 0; i < nodeIds.Count; i++) {
+
+            for (int i = 0; i < nodeIds.Count; i++)
+            {
                 var nodeId = nodeIds[i];
                 var request = requests[i];
-                tasks[i] = Task.Run(async () => {
+                tasks[i] = Task.Run(async () =>
+                {
                     var result = await LeadshineBatchPdoOperations.BatchWriteRxPdoAsync(
                         _cardNo, _portNo, nodeId, request, ct).ConfigureAwait(false);
                     return (nodeId, result);
@@ -506,7 +586,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             var allResults = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            foreach (var (nodeId, result) in allResults) {
+            foreach (var (nodeId, result) in allResults)
+            {
                 results[nodeId] = result;
             }
 
@@ -523,9 +604,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         public async Task<Dictionary<ushort, LeadshineBatchPdoOperations.BatchReadResult[]>> BatchReadMultipleAxesAsync(
             IReadOnlyList<ushort> nodeIds,
             IReadOnlyList<IReadOnlyList<LeadshineBatchPdoOperations.BatchReadRequest>> requests,
-            CancellationToken ct = default) {
-            
-            if (nodeIds == null || requests == null || nodeIds.Count != requests.Count) {
+            CancellationToken ct = default)
+        {
+            if (nodeIds == null || requests == null || nodeIds.Count != requests.Count)
+            {
                 throw new ArgumentException("节点 ID 列表和请求列表长度必须一致");
             }
 
@@ -533,11 +615,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             // 并行处理多个轴的批量读取
             var tasks = new Task<(ushort nodeId, LeadshineBatchPdoOperations.BatchReadResult[] result)>[nodeIds.Count];
-            
-            for (int i = 0; i < nodeIds.Count; i++) {
+
+            for (int i = 0; i < nodeIds.Count; i++)
+            {
                 var nodeId = nodeIds[i];
                 var request = requests[i];
-                tasks[i] = Task.Run(async () => {
+                tasks[i] = Task.Run(async () =>
+                {
                     var result = await LeadshineBatchPdoOperations.BatchReadTxPdoAsync(
                         _cardNo, _portNo, nodeId, request, ct).ConfigureAwait(false);
                     return (nodeId, result);
@@ -546,7 +630,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
 
             var allResults = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            foreach (var (nodeId, result) in allResults) {
+            foreach (var (nodeId, result) in allResults)
+            {
                 results[nodeId] = result;
             }
 
