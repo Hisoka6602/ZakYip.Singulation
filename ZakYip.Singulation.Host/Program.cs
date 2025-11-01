@@ -141,7 +141,7 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- SignalR ----------
         services.AddSingulationSignalR();
         // ---------- 配置存储 ----------
-        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineSafetyIo().AddLiteDbIoStatusMonitor();
+        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineSafetyIo().AddLiteDbLeadshineCabinetIo().AddLiteDbIoStatusMonitor();
         // ---------- 设备相关注入 ----------
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
@@ -195,7 +195,7 @@ var host = Host.CreateDefaultBuilder(args)
         // 注册 LoopbackSafetyIoModule
         services.AddSingleton<LoopbackSafetyIoModule>();
 
-        // 注册 LeadshineSafetyIoModule（可能不会被使用，取决于配置）
+        // 注册 LeadshineSafetyIoModule（保留用于向后兼容，可能不会被使用）
         services.AddSingleton<LeadshineSafetyIoModule>(sp => {
             var logger = sp.GetRequiredService<ILogger<LeadshineSafetyIoModule>>();
             var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
@@ -206,30 +206,53 @@ var host = Host.CreateDefaultBuilder(args)
             return new LeadshineSafetyIoModule(logger, cardNo, options);
         });
 
-        // 根据数据库配置选择安全 IO 模块实现
-        services.AddSingleton<ISafetyIoModule>(sp => {
-            var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
-            var options = safetyStore.GetAsync().GetAwaiter().GetResult();
-
-            if (options.Enabled) {
-                // 使用硬件安全 IO 模块（雷赛控制器物理按键）
-                return sp.GetRequiredService<LeadshineSafetyIoModule>();
-            }
-            else {
-                // 使用回环测试模块（仅用于开发测试）
-                return sp.GetRequiredService<LoopbackSafetyIoModule>();
-            }
-        });
-
-        // 注册指示灯服务
-        services.AddSingleton<IndicatorLightService>(sp => {
-            var logger = sp.GetRequiredService<ILogger<IndicatorLightService>>();
-            var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
-            var options = safetyStore.GetAsync().GetAwaiter().GetResult();
+        // 注册 LeadshineCabinetIoModule（新版控制面板 IO 模块）
+        services.AddSingleton<LeadshineCabinetIoModule>(sp => {
+            var logger = sp.GetRequiredService<ILogger<LeadshineCabinetIoModule>>();
+            var cabinetStore = sp.GetRequiredService<ILeadshineCabinetIoOptionsStore>();
+            var options = cabinetStore.GetAsync().GetAwaiter().GetResult();
             var busStore = sp.GetRequiredService<IControllerOptionsStore>();
             var busDto = busStore.GetAsync().GetAwaiter().GetResult();
             var cardNo = (ushort)busDto.Template.Card;
-            return new IndicatorLightService(logger, cardNo, options);
+            return new LeadshineCabinetIoModule(logger, cardNo, options);
+        });
+
+        // 根据数据库配置选择控制面板 IO 模块实现（优先使用新版 Cabinet 配置）
+        services.AddSingleton<ISafetyIoModule>(sp => {
+            var cabinetStore = sp.GetRequiredService<ILeadshineCabinetIoOptionsStore>();
+            var cabinetOptions = cabinetStore.GetAsync().GetAwaiter().GetResult();
+
+            if (cabinetOptions.Enabled) {
+                // 使用新版硬件控制面板 IO 模块（雷赛控制器物理按键）
+                return sp.GetRequiredService<LeadshineCabinetIoModule>();
+            }
+            else {
+                // 检查旧版配置
+                var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
+                var safetyOptions = safetyStore.GetAsync().GetAwaiter().GetResult();
+                
+                if (safetyOptions.Enabled) {
+                    // 使用旧版硬件安全 IO 模块（向后兼容）
+                    return sp.GetRequiredService<LeadshineSafetyIoModule>();
+                }
+                else {
+                    // 使用回环测试模块（仅用于开发测试）
+                    return sp.GetRequiredService<LoopbackSafetyIoModule>();
+                }
+            }
+        });
+
+        // 注册指示灯服务（优先使用新版 Cabinet 配置）
+        services.AddSingleton<IndicatorLightService>(sp => {
+            var logger = sp.GetRequiredService<ILogger<IndicatorLightService>>();
+            var cabinetStore = sp.GetRequiredService<ILeadshineCabinetIoOptionsStore>();
+            var cabinetOptions = cabinetStore.GetAsync().GetAwaiter().GetResult();
+            var busStore = sp.GetRequiredService<IControllerOptionsStore>();
+            var busDto = busStore.GetAsync().GetAwaiter().GetResult();
+            var cardNo = (ushort)busDto.Template.Card;
+            
+            // 总是使用新版配置（即使未启用也返回默认配置）
+            return new IndicatorLightService(logger, cardNo, cabinetOptions);
         });
 
         services.AddSingleton<FrameGuard>();

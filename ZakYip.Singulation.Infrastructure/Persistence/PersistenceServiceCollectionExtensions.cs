@@ -51,6 +51,12 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             return services;
         }
 
+        /// <summary>注册雷赛控制面板 IO 配置存储（与设置共享同一 LiteDB）。</summary>
+        public static IServiceCollection AddLiteDbLeadshineCabinetIo(this IServiceCollection services) {
+            services.AddSingleton<ILeadshineCabinetIoOptionsStore, LiteDbLeadshineCabinetIoOptionsStore>();
+            return services;
+        }
+
         /// <summary>注册 IO 状态监控配置存储（与设置共享同一 LiteDB）。</summary>
         public static IServiceCollection AddLiteDbIoStatusMonitor(this IServiceCollection services) {
             services.AddSingleton<IIoStatusMonitorOptionsStore, LiteDbIoStatusMonitorOptionsStore>();
