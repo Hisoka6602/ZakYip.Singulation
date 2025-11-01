@@ -1,5 +1,6 @@
 using System;
 using ZakYip.Singulation.Core.Configs;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -27,12 +28,11 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(-1, inputPoint.Start, "启动按键默认应禁用");
             MiniAssert.Equal(-1, inputPoint.Reset, "复位按键默认应禁用");
             MiniAssert.Equal(-1, inputPoint.RemoteLocalMode, "远程/本地模式默认应禁用");
-            MiniAssert.Equal(false, inputPoint.ActiveLow, "全局低电平有效默认应为 false");
-            MiniAssert.Equal(null, inputPoint.EmergencyStopActiveLow, "急停低电平有效默认应为 null");
-            MiniAssert.Equal(null, inputPoint.StopActiveLow, "停止低电平有效默认应为 null");
-            MiniAssert.Equal(null, inputPoint.StartActiveLow, "启动低电平有效默认应为 null");
-            MiniAssert.Equal(null, inputPoint.ResetActiveLow, "复位低电平有效默认应为 null");
-            MiniAssert.Equal(null, inputPoint.RemoteLocalActiveLow, "远程/本地模式低电平有效默认应为 null");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, inputPoint.EmergencyStopTriggerLevel, "急停触发电平默认应为高电平");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, inputPoint.StopTriggerLevel, "停止触发电平默认应为高电平");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, inputPoint.StartTriggerLevel, "启动触发电平默认应为高电平");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, inputPoint.ResetTriggerLevel, "复位触发电平默认应为高电平");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, inputPoint.RemoteLocalTriggerLevel, "远程/本地触发电平默认应为高电平");
             MiniAssert.Equal(true, inputPoint.RemoteLocalActiveHigh, "RemoteLocalActiveHigh 默认应为 true");
         }
 
@@ -47,47 +47,44 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(-1, indicatorPoint.StopButtonLight, "停止按钮灯默认应禁用");
             MiniAssert.Equal(-1, indicatorPoint.RemoteConnectionLight, "远程连接指示灯默认应禁用");
             
-            MiniAssert.Equal(true, indicatorPoint.LightActiveLow, "全局灯光低电平有效默认应为 true（低电平亮灯）");
-            MiniAssert.Equal(null, indicatorPoint.RedLightActiveLow, "红灯低电平有效默认应为 null");
-            MiniAssert.Equal(null, indicatorPoint.YellowLightActiveLow, "黄灯低电平有效默认应为 null");
-            MiniAssert.Equal(null, indicatorPoint.GreenLightActiveLow, "绿灯低电平有效默认应为 null");
-            MiniAssert.Equal(null, indicatorPoint.StartButtonLightActiveLow, "启动按钮灯低电平有效默认应为 null");
-            MiniAssert.Equal(null, indicatorPoint.StopButtonLightActiveLow, "停止按钮灯低电平有效默认应为 null");
-            MiniAssert.Equal(null, indicatorPoint.RemoteConnectionLightActiveLow, "远程连接指示灯低电平有效默认应为 null");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, indicatorPoint.RedLightTriggerLevel, "红灯触发电平默认应为低电平");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, indicatorPoint.YellowLightTriggerLevel, "黄灯触发电平默认应为低电平");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, indicatorPoint.GreenLightTriggerLevel, "绿灯触发电平默认应为低电平");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, indicatorPoint.StartButtonLightTriggerLevel, "启动按钮灯触发电平默认应为低电平");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, indicatorPoint.StopButtonLightTriggerLevel, "停止按钮灯触发电平默认应为低电平");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, indicatorPoint.RemoteConnectionLightTriggerLevel, "远程连接指示灯触发电平默认应为低电平");
         }
 
         [MiniFact]
-        public void IndividualInvertLogicOverridesGlobal_InputPoint() {
+        public void IndividualTriggerLevelConfiguration_InputPoint() {
             var inputPoint = new CabinetInputPoint {
-                ActiveLow = false,
-                EmergencyStopActiveLow = true,
-                StopActiveLow = null,
-                StartActiveLow = false,
-                ResetActiveLow = true
+                EmergencyStopTriggerLevel = TriggerLevel.ActiveLow,
+                StopTriggerLevel = TriggerLevel.ActiveHigh,
+                StartTriggerLevel = TriggerLevel.ActiveHigh,
+                ResetTriggerLevel = TriggerLevel.ActiveLow
             };
             
             // 验证独立配置的按键使用自己的电平配置
-            MiniAssert.Equal(true, inputPoint.EmergencyStopActiveLow, "急停应使用独立配置 true");
-            MiniAssert.Equal(null, inputPoint.StopActiveLow, "停止为 null 应回退到全局配置");
-            MiniAssert.Equal(false, inputPoint.StartActiveLow, "启动应使用独立配置 false");
-            MiniAssert.Equal(true, inputPoint.ResetActiveLow, "复位应使用独立配置 true");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, inputPoint.EmergencyStopTriggerLevel, "急停应为低电平触发");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, inputPoint.StopTriggerLevel, "停止应为高电平触发");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, inputPoint.StartTriggerLevel, "启动应为高电平触发");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, inputPoint.ResetTriggerLevel, "复位应为低电平触发");
         }
 
         [MiniFact]
-        public void IndividualInvertLogicOverridesGlobal_IndicatorPoint() {
+        public void IndividualTriggerLevelConfiguration_IndicatorPoint() {
             var indicatorPoint = new CabinetIndicatorPoint {
-                LightActiveLow = true,
-                RedLightActiveLow = false,
-                YellowLightActiveLow = null,
-                GreenLightActiveLow = true,
-                StartButtonLightActiveLow = false
+                RedLightTriggerLevel = TriggerLevel.ActiveHigh,
+                YellowLightTriggerLevel = TriggerLevel.ActiveLow,
+                GreenLightTriggerLevel = TriggerLevel.ActiveLow,
+                StartButtonLightTriggerLevel = TriggerLevel.ActiveHigh
             };
             
             // 验证独立配置的灯使用自己的电平配置
-            MiniAssert.Equal(false, indicatorPoint.RedLightActiveLow, "红灯应使用独立配置 false");
-            MiniAssert.Equal(null, indicatorPoint.YellowLightActiveLow, "黄灯为 null 应回退到全局配置");
-            MiniAssert.Equal(true, indicatorPoint.GreenLightActiveLow, "绿灯应使用独立配置 true");
-            MiniAssert.Equal(false, indicatorPoint.StartButtonLightActiveLow, "启动按钮灯应使用独立配置 false");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, indicatorPoint.RedLightTriggerLevel, "红灯应为高电平亮灯");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, indicatorPoint.YellowLightTriggerLevel, "黄灯应为低电平亮灯");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, indicatorPoint.GreenLightTriggerLevel, "绿灯应为低电平亮灯");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, indicatorPoint.StartButtonLightTriggerLevel, "启动按钮灯应为高电平亮灯");
         }
 
         [MiniFact]

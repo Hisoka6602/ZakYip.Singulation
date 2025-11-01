@@ -39,23 +39,20 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities {
         /// <summary>远程/本地模式切换输入位编号，-1 表示禁用。</summary>
         public int RemoteLocalMode { get; set; } = -1;
 
-        /// <summary>输入触发电平配置（低电平有效），默认 false。</summary>
-        public bool ActiveLow { get; set; } = false;
+        /// <summary>急停按键触发电平配置。</summary>
+        public int EmergencyStopTriggerLevel { get; set; } = 0;
 
-        /// <summary>急停按键触发电平配置（低电平有效）。</summary>
-        public bool? EmergencyStopActiveLow { get; set; } = null;
+        /// <summary>停止按键触发电平配置。</summary>
+        public int StopTriggerLevel { get; set; } = 0;
 
-        /// <summary>停止按键触发电平配置（低电平有效）。</summary>
-        public bool? StopActiveLow { get; set; } = null;
+        /// <summary>启动按键触发电平配置。</summary>
+        public int StartTriggerLevel { get; set; } = 0;
 
-        /// <summary>启动按键触发电平配置（低电平有效）。</summary>
-        public bool? StartActiveLow { get; set; } = null;
+        /// <summary>复位按键触发电平配置。</summary>
+        public int ResetTriggerLevel { get; set; } = 0;
 
-        /// <summary>复位按键触发电平配置（低电平有效）。</summary>
-        public bool? ResetActiveLow { get; set; } = null;
-
-        /// <summary>远程/本地模式触发电平配置（低电平有效）。</summary>
-        public bool? RemoteLocalActiveLow { get; set; } = null;
+        /// <summary>远程/本地模式触发电平配置。</summary>
+        public int RemoteLocalTriggerLevel { get; set; } = 0;
 
         /// <summary>远程/本地模式高电平对应的模式：true=高电平为远程模式，false=高电平为本地模式。</summary>
         public bool RemoteLocalActiveHigh { get; set; } = true;
@@ -83,25 +80,22 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities {
         /// <summary>远程连接指示灯输出位编号，-1 表示禁用。</summary>
         public int RemoteConnectionLight { get; set; } = -1;
 
-        /// <summary>灯光有效电平配置（低电平有效）：false=高电平亮灯，true=低电平亮灯。默认为 true（低电平亮灯）。</summary>
-        public bool LightActiveLow { get; set; } = true;
+        /// <summary>红灯有效电平配置。</summary>
+        public int RedLightTriggerLevel { get; set; } = 1;
 
-        /// <summary>红灯有效电平配置（低电平有效）。</summary>
-        public bool? RedLightActiveLow { get; set; } = null;
+        /// <summary>黄灯有效电平配置。</summary>
+        public int YellowLightTriggerLevel { get; set; } = 1;
 
-        /// <summary>黄灯有效电平配置（低电平有效）。</summary>
-        public bool? YellowLightActiveLow { get; set; } = null;
+        /// <summary>绿灯有效电平配置。</summary>
+        public int GreenLightTriggerLevel { get; set; } = 1;
 
-        /// <summary>绿灯有效电平配置（低电平有效）。</summary>
-        public bool? GreenLightActiveLow { get; set; } = null;
+        /// <summary>启动按钮灯有效电平配置。</summary>
+        public int StartButtonLightTriggerLevel { get; set; } = 1;
 
-        /// <summary>启动按钮灯有效电平配置（低电平有效）。</summary>
-        public bool? StartButtonLightActiveLow { get; set; } = null;
+        /// <summary>停止按钮灯有效电平配置。</summary>
+        public int StopButtonLightTriggerLevel { get; set; } = 1;
 
-        /// <summary>停止按钮灯有效电平配置（低电平有效）。</summary>
-        public bool? StopButtonLightActiveLow { get; set; } = null;
-
-        /// <summary>远程连接指示灯有效电平配置（低电平有效）。</summary>
-        public bool? RemoteConnectionLightActiveLow { get; set; } = null;
+        /// <summary>远程连接指示灯有效电平配置。</summary>
+        public int RemoteConnectionLightTriggerLevel { get; set; } = 1;
     }
 }

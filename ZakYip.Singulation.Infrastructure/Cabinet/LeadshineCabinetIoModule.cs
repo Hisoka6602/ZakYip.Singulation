@@ -114,13 +114,13 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
             if (remoteLocalModeBit >= 0 && remoteLocalModeBit <= 99) {
                 try {
                     // 使用 Task.Run 将同步 IO 调用放到线程池，并设置 2 秒超时
-                    var activeLow = _options.CabinetInputPoint.RemoteLocalActiveLow ?? _options.CabinetInputPoint.ActiveLow;
-                    var readTask = Task.Run(() => ReadInputBit(remoteLocalModeBit, activeLow), ct);
+                    var triggerLevel = _options.CabinetInputPoint.RemoteLocalTriggerLevel;
+                    var readTask = Task.Run(() => ReadInputBit(remoteLocalModeBit, triggerLevel), ct);
                     var timeoutTask = Task.Delay(TimeSpan.FromSeconds(2), ct);
                     var completedTask = await Task.WhenAny(readTask, timeoutTask).ConfigureAwait(false);
                     
                     if (completedTask == readTask) {
-                        // ReadInputBit 返回 true 表示触发状态（考虑了 RemoteLocalActiveLow）
+                        // ReadInputBit 返回 true 表示触发状态（考虑了 TriggerLevel）
                         bool rawState = await readTask.ConfigureAwait(false);
                         // RemoteLocalActiveHigh 决定高电平对应哪个模式：true=高电平为远程，false=高电平为本地
                         bool isRemoteMode = _options.CabinetInputPoint.RemoteLocalActiveHigh ? rawState : !rawState;
@@ -188,7 +188,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     // 读取急停按键（如果端口号大于99或小于0则不检测）
                     // 急停是开关类型IO，检测电平变化即可
                     if (inputPoint.EmergencyStop >= 0 && inputPoint.EmergencyStop <= 99) {
-                        bool currentState = ReadInputBit(inputPoint.EmergencyStop, inputPoint.EmergencyStopActiveLow ?? inputPoint.ActiveLow);
+                        bool currentState = ReadInputBit(inputPoint.EmergencyStop, inputPoint.EmergencyStopTriggerLevel);
                         if (currentState && !_lastEmergencyStopState) {
                             _logger.LogWarning("【IO端点调用】检测到急停按键按下 - IO端口：IN{Port}", inputPoint.EmergencyStop);
                             EmergencyStop?.Invoke(this, new CabinetTriggerEventArgs { Kind = CabinetTriggerKind.EmergencyStop, Description = "物理急停按键" });
@@ -199,7 +199,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     // 读取停止按键（如果端口号大于99或小于0则不检测）
                     // 停止按钮是瞬时触发型，使用电平检测+边沿触发（检测到触发电平时触发一次）
                     if (inputPoint.Stop >= 0 && inputPoint.Stop <= 99) {
-                        bool currentState = ReadInputBit(inputPoint.Stop, inputPoint.StopActiveLow ?? inputPoint.ActiveLow);
+                        bool currentState = ReadInputBit(inputPoint.Stop, inputPoint.StopTriggerLevel);
                         // 检测到触发电平（从非触发状态到触发状态的转换）时触发一次
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastStopState) {
@@ -212,7 +212,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     // 读取启动按键（如果端口号大于99或小于0则不检测）
                     // 启动按钮是瞬时触发型，使用电平检测+边沿触发（检测到触发电平时触发一次）
                     if (inputPoint.Start >= 0 && inputPoint.Start <= 99) {
-                        bool currentState = ReadInputBit(inputPoint.Start, inputPoint.StartActiveLow ?? inputPoint.ActiveLow);
+                        bool currentState = ReadInputBit(inputPoint.Start, inputPoint.StartTriggerLevel);
                         // 检测到触发电平（从非触发状态到触发状态的转换）时触发一次
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastStartState) {
@@ -225,7 +225,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     // 读取复位按键（如果端口号大于99或小于0则不检测）
                     // 复位按钮是瞬时触发型，使用电平检测+边沿触发（检测到触发电平时触发一次）
                     if (inputPoint.Reset >= 0 && inputPoint.Reset <= 99) {
-                        bool currentState = ReadInputBit(inputPoint.Reset, inputPoint.ResetActiveLow ?? inputPoint.ActiveLow);
+                        bool currentState = ReadInputBit(inputPoint.Reset, inputPoint.ResetTriggerLevel);
                         // 检测到触发电平（从非触发状态到触发状态的转换）时触发一次
                         // ReadInputBit 已经应用了反转逻辑，所以 currentState=true 表示按键处于触发状态
                         if (currentState && !_lastResetState) {
@@ -238,7 +238,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     // 读取远程/本地模式（如果端口号大于99或小于0则不检测）
                     // 远程/本地是开关类型IO，检测电平变化即可
                     if (inputPoint.RemoteLocalMode >= 0 && inputPoint.RemoteLocalMode <= 99) {
-                        bool rawState = ReadInputBit(inputPoint.RemoteLocalMode, inputPoint.RemoteLocalActiveLow ?? inputPoint.ActiveLow);
+                        bool rawState = ReadInputBit(inputPoint.RemoteLocalMode, inputPoint.RemoteLocalTriggerLevel);
                         // 根据 RemoteLocalActiveHigh 配置决定高电平对应的模式
                         bool isRemoteMode = inputPoint.RemoteLocalActiveHigh ? rawState : !rawState;
                         
@@ -272,9 +272,9 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         /// 读取指定输入位的状态。
         /// </summary>
         /// <param name="bitNo">输入位编号。</param>
-        /// <param name="activeLow">是否低电平有效（true=低电平触发，false=高电平触发）。</param>
+        /// <param name="triggerLevel">触发电平配置（ActiveHigh=高电平触发，ActiveLow=低电平触发）。</param>
         /// <returns>按键是否处于触发状态。true=按下，false=未按下。</returns>
-        private bool ReadInputBit(int bitNo, bool activeLow) {
+        private bool ReadInputBit(int bitNo, Core.Enums.TriggerLevel triggerLevel) {
             try {
                 // 调用雷赛 API 读取输入位
                 // 返回值：0=低电平，1=高电平，<0=错误
@@ -285,12 +285,12 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     return false;
                 }
 
-                // 根据 activeLow 配置应用电平逻辑：
-                // activeLow=false: 高电平(1)时返回true（常开按键，按下时为高电平）
-                // activeLow=true:  低电平(0)时返回true（常闭按键，按下时为低电平）
+                // 根据 triggerLevel 配置应用电平逻辑：
+                // ActiveHigh: 高电平(1)时返回true（常开按键，按下时为高电平）
+                // ActiveLow:  低电平(0)时返回true（常闭按键，按下时为低电平）
                 // 返回值 true 表示按键处于"触发状态"（按下），false 表示"非触发状态"（未按下）
                 bool state = result == 1;
-                return activeLow ? !state : state;
+                return triggerLevel == Core.Enums.TriggerLevel.ActiveLow ? !state : state;
             }
             catch (SystemException ex) {
                 _logger.LogError(ex, "读取输入位 {BitNo} 时发生异常", bitNo);

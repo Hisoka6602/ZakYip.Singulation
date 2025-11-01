@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using LiteDB;
 using Microsoft.Extensions.Logging.Abstractions;
 using ZakYip.Singulation.Core.Configs;
+using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine;
 using ZakYip.Singulation.Tests.TestHelpers;
 
@@ -31,8 +32,8 @@ namespace ZakYip.Singulation.Tests {
                     Start = 1,
                     Reset = 3,
                     RemoteLocalMode = 5,
-                    ActiveLow = true,
-                    EmergencyStopActiveLow = false,
+                    EmergencyStopTriggerLevel = TriggerLevel.ActiveHigh,
+                    StopTriggerLevel = TriggerLevel.ActiveLow,
                     RemoteLocalActiveHigh = false
                 },
                 CabinetIndicatorPoint = new CabinetIndicatorPoint {
@@ -42,8 +43,8 @@ namespace ZakYip.Singulation.Tests {
                     StartButtonLight = 13,
                     StopButtonLight = 14,
                     RemoteConnectionLight = 15,
-                    LightActiveLow = false,
-                    RedLightActiveLow = true
+                    RedLightTriggerLevel = TriggerLevel.ActiveHigh,
+                    YellowLightTriggerLevel = TriggerLevel.ActiveLow
                 }
             };
 
@@ -61,8 +62,8 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(1, retrieved.CabinetInputPoint.Start, "Start 应为 1");
             MiniAssert.Equal(3, retrieved.CabinetInputPoint.Reset, "Reset 应为 3");
             MiniAssert.Equal(5, retrieved.CabinetInputPoint.RemoteLocalMode, "RemoteLocalMode 应为 5");
-            MiniAssert.Equal(true, retrieved.CabinetInputPoint.ActiveLow, "ActiveLow 应为 true");
-            MiniAssert.Equal(false, retrieved.CabinetInputPoint.EmergencyStopActiveLow, "EmergencyStopActiveLow 应为 false");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, retrieved.CabinetInputPoint.EmergencyStopTriggerLevel, "EmergencyStopTriggerLevel 应为 ActiveHigh");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, retrieved.CabinetInputPoint.StopTriggerLevel, "StopTriggerLevel 应为 ActiveLow");
             MiniAssert.Equal(false, retrieved.CabinetInputPoint.RemoteLocalActiveHigh, "RemoteLocalActiveHigh 应为 false");
             
             // 验证指示灯点位
@@ -72,8 +73,8 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(13, retrieved.CabinetIndicatorPoint.StartButtonLight, "StartButtonLight 应为 13");
             MiniAssert.Equal(14, retrieved.CabinetIndicatorPoint.StopButtonLight, "StopButtonLight 应为 14");
             MiniAssert.Equal(15, retrieved.CabinetIndicatorPoint.RemoteConnectionLight, "RemoteConnectionLight 应为 15");
-            MiniAssert.Equal(false, retrieved.CabinetIndicatorPoint.LightActiveLow, "LightActiveLow 应为 false");
-            MiniAssert.Equal(true, retrieved.CabinetIndicatorPoint.RedLightActiveLow, "RedLightActiveLow 应为 true");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, retrieved.CabinetIndicatorPoint.RedLightTriggerLevel, "RedLightTriggerLevel 应为 ActiveHigh");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, retrieved.CabinetIndicatorPoint.YellowLightTriggerLevel, "YellowLightTriggerLevel 应为 ActiveLow");
 
             // Cleanup
             db.Dispose();
