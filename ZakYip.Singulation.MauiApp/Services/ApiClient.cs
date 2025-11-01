@@ -233,11 +233,11 @@ public class AxisInfo
 }
 
 /// <summary>
-/// 安全命令请求 - 与服务器端 SafetyCommandRequestDto 保持一致
+/// 安全命令请求 - 与服务器端 CabinetCommandRequestDto 保持一致
 /// </summary>
 public class SafetyCommandRequest
 {
-    public int Command { get; set; }  // SafetyCommand 枚举值: Start=1, Stop=2, Reset=3
+    public int Command { get; set; }  // CabinetCommand 枚举值: Start=1, Stop=2, Reset=3
     public string? Reason { get; set; }
 }
 

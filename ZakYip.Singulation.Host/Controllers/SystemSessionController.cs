@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Enums;
 using Swashbuckle.AspNetCore.Annotations;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 
 namespace ZakYip.Singulation.Host.Controllers
 {
@@ -22,14 +22,14 @@ namespace ZakYip.Singulation.Host.Controllers
     {
         private readonly IHostApplicationLifetime _lifetime;
         private readonly ILogger<SystemSessionController> _logger;
-        private readonly ISafetyPipeline _safetyPipeline;
+        private readonly ICabinetPipeline _safetyPipeline;
 
         /// <summary>
         /// 停止操作等待时间（毫秒）。
         /// </summary>
         private const int StopOperationDelayMs = 2000;
 
-        public SystemSessionController(IHostApplicationLifetime lifetime, ILogger<SystemSessionController> logger, ISafetyPipeline safetyPipeline)
+        public SystemSessionController(IHostApplicationLifetime lifetime, ILogger<SystemSessionController> logger, ICabinetPipeline safetyPipeline)
         {
             _lifetime = lifetime;
             _logger = logger;
@@ -75,7 +75,7 @@ namespace ZakYip.Singulation.Host.Controllers
                 {
                     // 在退出前确保所有轴失能，运行状态变成停止（等同于调用IO按钮停止的触发）
                     _logger.LogInformation("【退出流程】步骤1：调用安全管线停止操作，禁用所有轴并更新运行状态");
-                    _safetyPipeline.RequestStop(SafetyTriggerKind.RemoteStopCommand, "系统会话删除", triggeredByIo: false);
+                    _safetyPipeline.RequestStop(CabinetTriggerKind.RemoteStopCommand, "系统会话删除", triggeredByIo: false);
 
                     await Task.Delay(TimeSpan.FromSeconds(2));
                     // 直接使用 Environment.Exit(1) 退出进程，以便外部服务管理器重启

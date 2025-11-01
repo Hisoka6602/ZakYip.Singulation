@@ -7,7 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Dto;
@@ -15,7 +15,7 @@ using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Infrastructure.Runtime;
-using ZakYip.Singulation.Infrastructure.Safety;
+using ZakYip.Singulation.Infrastructure.Cabinet;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 
 namespace ZakYip.Singulation.ConsoleDemo.Regression {
@@ -41,22 +41,22 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
                     services.AddSingleton<IAxisController, FakeAxisController>();
                     services.AddSingleton<IUpstreamFrameHub, UpstreamFrameHub>();
                     services.AddSingleton<IUpstreamOptionsStore, FakeUpstreamOptionsStore>();
-                    services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
-                    services.AddSingleton<LoopbackSafetyIoModule>();
-                    services.AddSingleton<ISafetyIoModule>(sp => sp.GetRequiredService<LoopbackSafetyIoModule>());
+                    services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
+                    services.AddSingleton<LoopbackCabinetIoModule>();
+                    services.AddSingleton<ICabinetIoModule>(sp => sp.GetRequiredService<LoopbackCabinetIoModule>());
                     services.AddSingleton<FrameGuard>();
                     services.AddSingleton<IFrameGuard>(sp => sp.GetRequiredService<FrameGuard>());
-                    services.AddSingleton<SafetyPipeline>();
-                    services.AddSingleton<ISafetyPipeline>(sp => sp.GetRequiredService<SafetyPipeline>());
-                    services.AddHostedService(sp => sp.GetRequiredService<SafetyPipeline>());
+                    services.AddSingleton<CabinetPipeline>();
+                    services.AddSingleton<ICabinetPipeline>(sp => sp.GetRequiredService<CabinetPipeline>());
+                    services.AddHostedService(sp => sp.GetRequiredService<CabinetPipeline>());
                 })
                 .Build();
 
             await host.StartAsync();
 
             var services = host.Services;
-            var pipeline = services.GetRequiredService<ISafetyPipeline>();
-            var io = services.GetRequiredService<LoopbackSafetyIoModule>();
+            var pipeline = services.GetRequiredService<ICabinetPipeline>();
+            var io = services.GetRequiredService<LoopbackCabinetIoModule>();
             var guard = services.GetRequiredService<IFrameGuard>();
             var controller = (FakeAxisController)services.GetRequiredService<IAxisController>();
             var hub = services.GetRequiredService<IUpstreamFrameHub>();
@@ -88,7 +88,7 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
             await Task.Delay(400);
 
             Console.WriteLine("[Regression] Simulate disconnect");
-            pipeline.TryTrip(SafetyTriggerKind.AxisDisconnected, "regression disconnect");
+            pipeline.TryTrip(CabinetTriggerKind.AxisDisconnected, "regression disconnect");
             await Task.Delay(500);
             io.TriggerReset("after disconnect");
             await Task.Delay(200);

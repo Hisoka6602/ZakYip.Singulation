@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Core.Contracts.Events.Safety;
+using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace ZakYip.Singulation.Infrastructure.Safety {
+namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
     /// <summary>
     /// 帧保护器，负责检测重复帧、监控心跳超时，并在降级模式下调整速度。
     /// </summary>
     public sealed class FrameGuard : IFrameGuard {
         private readonly ILogger<FrameGuard> _log;
-        private readonly ISafetyPipeline _safety;
+        private readonly ICabinetPipeline _safety;
         private readonly FrameGuardOptions _options;
         private readonly IUpstreamFrameHub _hub;
         private readonly IUpstreamOptionsStore _upstreamOptionsStore;
@@ -46,7 +46,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="upstreamOptionsStore">上游选项存储。</param>
         public FrameGuard(
             ILogger<FrameGuard> log,
-            ISafetyPipeline safety,
+            ICabinetPipeline safety,
             IOptions<FrameGuardOptions> options,
             IUpstreamFrameHub hub,
             IUpstreamOptionsStore upstreamOptionsStore) {
@@ -82,7 +82,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         public FrameGuardDecision Evaluate(SpeedSet set) {
             var state = _safety.State;
             // 如果系统处于隔离状态，直接拒绝所有帧
-            if (state == SafetyIsolationState.Isolated) {
+            if (state == CabinetIsolationState.Isolated) {
                 SingulationMetrics.Instance.FrameDroppedCounter.Add(1,
                     new KeyValuePair<string, object?>("reason", "isolated"));
                 return new FrameGuardDecision(false, set, false, "isolated");
@@ -97,7 +97,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             }
 
             // 如果处于降级状态，缩放速度值
-            if (state == SafetyIsolationState.Degraded) {
+            if (state == CabinetIsolationState.Degraded) {
                 var scaled = Scale(set, _options.DegradeScale, out var delta);
                 if (delta > 0)
                     SingulationMetrics.Instance.SpeedDelta.Record(delta);
@@ -195,7 +195,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false)) {
                 var elapsed = DateTime.UtcNow - _lastHeartbeatUtc;
                 if (elapsed > _options.HeartbeatTimeout && !_heartbeatDegraded) {
-                    _heartbeatDegraded = _safety.TryEnterDegraded(SafetyTriggerKind.HeartbeatTimeout, $"heartbeat timeout {elapsed.TotalMilliseconds:F0}ms");
+                    _heartbeatDegraded = _safety.TryEnterDegraded(CabinetTriggerKind.HeartbeatTimeout, $"heartbeat timeout {elapsed.TotalMilliseconds:F0}ms");
                     if (_heartbeatDegraded) {
                         _log.LogWarning("Heartbeat timeout detected ({Elapsed} ms).", elapsed.TotalMilliseconds);
                         SingulationMetrics.Instance.HeartbeatTimeoutCounter.Add(1);
@@ -204,8 +204,8 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             }
         }
 
-        private void OnSafetyStateChanged(object? sender, SafetyStateChangedEventArgs e) {
-            if (e.Current == SafetyIsolationState.Normal) {
+        private void OnSafetyStateChanged(object? sender, CabinetStateChangedEventArgs e) {
+            if (e.Current == CabinetIsolationState.Normal) {
                 _heartbeatDegraded = false;
             }
         }

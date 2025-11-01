@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -22,7 +22,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
         
         private readonly ILiteCollection<ControllerOptionsDoc> _coll;
         private readonly ILogger<LiteDbControllerOptionsStore> _logger;
-        private readonly ISafetyIsolator _safetyIsolator;
+        private readonly ICabinetIsolator _safetyIsolator;
 
         /// <summary>
         /// 初始化 <see cref="LiteDbControllerOptionsStore"/> 类的新实例。
@@ -33,7 +33,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
         public LiteDbControllerOptionsStore(
             ILiteDatabase db,
             ILogger<LiteDbControllerOptionsStore> logger,
-            ISafetyIsolator safetyIsolator) {
+            ICabinetIsolator safetyIsolator) {
             _coll = db.GetCollection<ControllerOptionsDoc>("controller_options");
             _coll.EnsureIndex(x => x.Id, unique: true);
             if (_coll.FindById(Key) is null) _coll.Upsert(new ControllerOptionsDoc { Id = Key });
@@ -48,7 +48,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, ErrorMessage);
-                _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
+                _safetyIsolator.TryEnterDegraded(CabinetTriggerKind.Unknown, ErrorMessage);
                 return Task.FromResult(ConfigDefaults.Controller());
             }
         }

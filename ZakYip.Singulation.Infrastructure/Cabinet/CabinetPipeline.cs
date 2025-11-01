@@ -5,8 +5,8 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Core.Abstractions.Safety;
-using ZakYip.Singulation.Core.Contracts.Events.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
+using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Telemetry;
@@ -15,21 +15,21 @@ using ZakYip.Singulation.Core.Contracts;
 using System.Collections.Generic;
 using ZakYip.Singulation.Infrastructure.Services;
 
-namespace ZakYip.Singulation.Infrastructure.Safety {
+namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
     /// <summary>
     /// 安全联动管线：把 IO、驱动健康事件汇聚到安全隔离器，并触发 StopAll。
     /// 支持远程/本地模式切换的自动使能/禁用功能。
     /// </summary>
-    public sealed class SafetyPipeline : BackgroundService, ISafetyPipeline {
+    public sealed class CabinetPipeline : BackgroundService, ICabinetPipeline {
         /// <summary>日志记录器。</summary>
-        private readonly ILogger<SafetyPipeline> _log;
+        private readonly ILogger<CabinetPipeline> _log;
         
         /// <summary>安全隔离器。</summary>
-        private readonly ISafetyIsolator _isolator;
+        private readonly ICabinetIsolator _isolator;
         
         /// <summary>安全 IO 模块集合。</summary>
-        private readonly IReadOnlyCollection<ISafetyIoModule> _ioModules;
+        private readonly IReadOnlyCollection<ICabinetIoModule> _ioModules;
         
         /// <summary>轴控制器。</summary>
         private readonly IAxisController _axisController;
@@ -47,7 +47,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         private readonly IndicatorLightService? _indicatorLightService;
         
         /// <summary>安全操作通道。</summary>
-        private readonly Channel<SafetyOperation> _operations;
+        private readonly Channel<CabinetOperation> _operations;
 
         /// <summary>当前远程/本地模式状态：true=远程模式，false=本地模式。默认为本地模式。</summary>
         private bool _isRemoteMode = false;
@@ -56,7 +56,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         private readonly object _modeLock = new();
 
         /// <summary>
-        /// 初始化 <see cref="SafetyPipeline"/> 类的新实例。
+        /// 初始化 <see cref="CabinetPipeline"/> 类的新实例。
         /// </summary>
         /// <param name="log">日志记录器。</param>
         /// <param name="isolator">安全隔离器。</param>
@@ -66,10 +66,10 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="realtime">实时通知器。</param>
         /// <param name="controllerOptionsStore">控制器选项存储。</param>
         /// <param name="indicatorLightService">指示灯服务（可选）。</param>
-        public SafetyPipeline(
-            ILogger<SafetyPipeline> log,
-            ISafetyIsolator isolator,
-            IEnumerable<ISafetyIoModule> ioModules,
+        public CabinetPipeline(
+            ILogger<CabinetPipeline> log,
+            ICabinetIsolator isolator,
+            IEnumerable<ICabinetIoModule> ioModules,
             IAxisController axisController,
             IAxisEventAggregator axisEvents,
             IRealtimeNotifier realtime,
@@ -83,19 +83,19 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
             _realtime = realtime;
             _controllerOptionsStore = controllerOptionsStore;
             _indicatorLightService = indicatorLightService;
-            _operations = Channel.CreateUnbounded<SafetyOperation>(new UnboundedChannelOptions {
+            _operations = Channel.CreateUnbounded<CabinetOperation>(new UnboundedChannelOptions {
                 SingleReader = true,
                 SingleWriter = false,
                 AllowSynchronousContinuations = false
             });
 
-            _isolator.StateChanged += (_, e) => Enqueue(SafetyOperation.StateChanged(e));
+            _isolator.StateChanged += (_, e) => Enqueue(CabinetOperation.StateChanged(e));
 
             foreach (var module in _ioModules) {
-                module.EmergencyStop += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, SafetyTriggerKind.EmergencyStop, e.Description, true));
-                module.StopRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, SafetyTriggerKind.StopButton, e.Description, true));
-                module.StartRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Start, SafetyTriggerKind.StartButton, e.Description, true));
-                module.ResetRequested += (_, e) => Enqueue(SafetyOperation.Trigger(SafetyCommand.Reset, SafetyTriggerKind.ResetButton, e.Description, true));
+                module.EmergencyStop += (_, e) => Enqueue(CabinetOperation.Trigger(CabinetCommand.Stop, CabinetTriggerKind.EmergencyStop, e.Description, true));
+                module.StopRequested += (_, e) => Enqueue(CabinetOperation.Trigger(CabinetCommand.Stop, CabinetTriggerKind.StopButton, e.Description, true));
+                module.StartRequested += (_, e) => Enqueue(CabinetOperation.Trigger(CabinetCommand.Start, CabinetTriggerKind.StartButton, e.Description, true));
+                module.ResetRequested += (_, e) => Enqueue(CabinetOperation.Trigger(CabinetCommand.Reset, CabinetTriggerKind.ResetButton, e.Description, true));
                 module.RemoteLocalModeChanged += async (_, e) => {
                     bool previousMode;
                     lock (_modeLock) {
@@ -130,20 +130,20 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                 };
             }
 
-            _axisEvents.AxisFaulted += (_, e) => Enqueue(SafetyOperation.AxisHealth(SafetyTriggerKind.AxisFault, e.Axis.ToString(), e.Exception?.Message));
-            _axisEvents.AxisDisconnected += (_, e) => Enqueue(SafetyOperation.AxisHealth(SafetyTriggerKind.AxisDisconnected, e.Axis.ToString(), e.Reason));
-            _axisEvents.DriverNotLoaded += (_, e) => Enqueue(SafetyOperation.AxisHealth(SafetyTriggerKind.AxisFault, e.LibraryName, e.Message));
+            _axisEvents.AxisFaulted += (_, e) => Enqueue(CabinetOperation.AxisHealth(CabinetTriggerKind.AxisFault, e.Axis.ToString(), e.Exception?.Message));
+            _axisEvents.AxisDisconnected += (_, e) => Enqueue(CabinetOperation.AxisHealth(CabinetTriggerKind.AxisDisconnected, e.Axis.ToString(), e.Reason));
+            _axisEvents.DriverNotLoaded += (_, e) => Enqueue(CabinetOperation.AxisHealth(CabinetTriggerKind.AxisFault, e.LibraryName, e.Message));
         }
 
         /// <summary>
         /// 当安全隔离状态发生变化时触发的事件。
         /// </summary>
-        public event EventHandler<SafetyStateChangedEventArgs>? StateChanged;
+        public event EventHandler<CabinetStateChangedEventArgs>? StateChanged;
         
         /// <summary>
         /// 当收到启动请求时触发的事件。
         /// </summary>
-        public event EventHandler<SafetyTriggerEventArgs>? StartRequested;
+        public event EventHandler<CabinetTriggerEventArgs>? StartRequested;
         
         /// <summary>
         /// 当收到停止请求时触发的事件。
@@ -151,17 +151,17 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <summary>
         /// 当收到停止请求时触发的事件。
         /// </summary>
-        public event EventHandler<SafetyTriggerEventArgs>? StopRequested;
+        public event EventHandler<CabinetTriggerEventArgs>? StopRequested;
         
         /// <summary>
         /// 当收到复位请求时触发的事件。
         /// </summary>
-        public event EventHandler<SafetyTriggerEventArgs>? ResetRequested;
+        public event EventHandler<CabinetTriggerEventArgs>? ResetRequested;
 
         /// <summary>
         /// 获取当前安全隔离状态。
         /// </summary>
-        public SafetyIsolationState State => _isolator.State;
+        public CabinetIsolationState State => _isolator.State;
 
         /// <summary>
         /// 尝试进入隔离状态。
@@ -169,7 +169,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="kind">触发类型。</param>
         /// <param name="reason">触发原因。</param>
         /// <returns>是否成功进入隔离状态。</returns>
-        public bool TryTrip(SafetyTriggerKind kind, string reason) => _isolator.TryTrip(kind, reason);
+        public bool TryTrip(CabinetTriggerKind kind, string reason) => _isolator.TryTrip(kind, reason);
 
         /// <summary>
         /// 尝试进入降级状态。
@@ -177,7 +177,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="kind">触发类型。</param>
         /// <param name="reason">触发原因。</param>
         /// <returns>是否成功进入降级状态。</returns>
-        public bool TryEnterDegraded(SafetyTriggerKind kind, string reason) => _isolator.TryEnterDegraded(kind, reason);
+        public bool TryEnterDegraded(CabinetTriggerKind kind, string reason) => _isolator.TryEnterDegraded(kind, reason);
 
         /// <summary>
         /// 尝试从降级状态恢复。
@@ -200,8 +200,8 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="kind">触发类型。</param>
         /// <param name="reason">触发原因（可选）。</param>
         /// <param name="triggeredByIo">是否由 IO 触发（默认为 false）。</param>
-        public void RequestStart(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
-            => Enqueue(SafetyOperation.Trigger(SafetyCommand.Start, kind, reason, triggeredByIo));
+        public void RequestStart(CabinetTriggerKind kind, string? reason = null, bool triggeredByIo = false)
+            => Enqueue(CabinetOperation.Trigger(CabinetCommand.Start, kind, reason, triggeredByIo));
 
         /// <summary>
         /// 请求停止操作。
@@ -209,8 +209,8 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="kind">触发类型。</param>
         /// <param name="reason">触发原因（可选）。</param>
         /// <param name="triggeredByIo">是否由 IO 触发（默认为 false）。</param>
-        public void RequestStop(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
-            => Enqueue(SafetyOperation.Trigger(SafetyCommand.Stop, kind, reason, triggeredByIo));
+        public void RequestStop(CabinetTriggerKind kind, string? reason = null, bool triggeredByIo = false)
+            => Enqueue(CabinetOperation.Trigger(CabinetCommand.Stop, kind, reason, triggeredByIo));
 
         /// <summary>
         /// 请求复位操作。
@@ -218,8 +218,8 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="kind">触发类型。</param>
         /// <param name="reason">触发原因（可选）。</param>
         /// <param name="triggeredByIo">是否由 IO 触发（默认为 false）。</param>
-        public void RequestReset(SafetyTriggerKind kind, string? reason = null, bool triggeredByIo = false)
-            => Enqueue(SafetyOperation.Trigger(SafetyCommand.Reset, kind, reason, triggeredByIo));
+        public void RequestReset(CabinetTriggerKind kind, string? reason = null, bool triggeredByIo = false)
+            => Enqueue(CabinetOperation.Trigger(CabinetCommand.Reset, kind, reason, triggeredByIo));
 
         /// <summary>
         /// 执行安全管线的后台任务。
@@ -234,7 +234,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
 
             var reader = _operations.Reader;
             while (!stoppingToken.IsCancellationRequested) {
-                SafetyOperation currentOp = default!;
+                CabinetOperation currentOp = default!;
                 try {
                     currentOp = await reader.ReadAsync(stoppingToken).ConfigureAwait(false);
                     await HandleOperationAsync(currentOp, stoppingToken).ConfigureAwait(false);
@@ -255,7 +255,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// 将安全操作加入队列。
         /// </summary>
         /// <param name="op">安全操作。</param>
-        private void Enqueue(SafetyOperation op) {
+        private void Enqueue(CabinetOperation op) {
             var ok = _operations.Writer.TryWrite(op);
             if (!ok) _log.LogWarning("安全管线繁忙，已丢弃操作 {Operation}", op.Kind);
         }
@@ -266,15 +266,15 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="op">安全操作。</param>
         /// <param name="ct">取消令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
-        private async Task HandleOperationAsync(SafetyOperation op, CancellationToken ct) {
+        private async Task HandleOperationAsync(CabinetOperation op, CancellationToken ct) {
             switch (op.Kind) {
-                case SafetyOperationKind.StateChanged:
+                case CabinetOperationKind.StateChanged:
                     await HandleStateChangedAsync(op.StateArgs!, ct).ConfigureAwait(false);
                     break;
-                case SafetyOperationKind.Command:
+                case CabinetOperationKind.Command:
                     await HandleCommandAsync(op, ct).ConfigureAwait(false);
                     break;
-                case SafetyOperationKind.AxisHealth:
+                case CabinetOperationKind.AxisHealth:
                     HandleAxisHealth(op.AxisKind, op.AxisName, op.AxisReason);
                     break;
                 default:
@@ -289,16 +289,16 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="ev">安全状态变化事件参数。</param>
         /// <param name="ct">取消令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
-        private async Task HandleStateChangedAsync(SafetyStateChangedEventArgs ev, CancellationToken ct) {
+        private async Task HandleStateChangedAsync(CabinetStateChangedEventArgs ev, CancellationToken ct) {
             StateChanged?.Invoke(this, ev);
             switch (ev.Current) {
-                case SafetyIsolationState.Isolated:
+                case CabinetIsolationState.Isolated:
                     await StopAllAsync("safety-isolated", ev.ReasonText, ct).ConfigureAwait(false);
                     break;
-                case SafetyIsolationState.Degraded:
+                case CabinetIsolationState.Degraded:
                     await StopAllAsync("safety-degraded", ev.ReasonText, ct).ConfigureAwait(false);
                     break;
-                case SafetyIsolationState.Normal:
+                case CabinetIsolationState.Normal:
                     _log.LogInformation("安全状态已恢复：{Reason}", ev.ReasonText);
                     break;
             }
@@ -310,8 +310,8 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="operation">安全操作。</param>
         /// <param name="ct">取消令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
-        private async Task HandleCommandAsync(SafetyOperation operation, CancellationToken ct) {
-            var args = new SafetyTriggerEventArgs {
+        private async Task HandleCommandAsync(CabinetOperation operation, CancellationToken ct) {
+            var args = new CabinetTriggerEventArgs {
                 Kind = operation.CommandKind,
                 Description = operation.CommandReason
             };
@@ -322,7 +322,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                 operation.Command, source, operation.CommandKind, operation.CommandReason);
             
             switch (operation.Command) {
-                case SafetyCommand.Start:
+                case CabinetCommand.Start:
                     // 检测到启动IO变化时->检测当前状态是否运行中,如果是运行中或者报警则不做任何操作
                     if (_indicatorLightService != null) {
                         var currentState = _indicatorLightService.CurrentState;
@@ -381,7 +381,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         kind = "safety.start", reason = operation.CommandReason
                     }, ct).ConfigureAwait(false);
                     break;
-                case SafetyCommand.Stop:
+                case CabinetCommand.Stop:
                     // 检测到停止IO变化时->检测当前状态是否已停止/准备中,如果是则不做任何操作
                     if (_indicatorLightService != null) {
                         var currentState = _indicatorLightService.CurrentState;
@@ -396,7 +396,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                     _log.LogInformation("【停止流程开始】触发类型：{Kind}", operation.CommandKind);
                     
                     // 等同于调用 /api/Axes/axes/speed (设置0速度) + /api/Axes/axes/disable
-                    if (operation.CommandKind == SafetyTriggerKind.EmergencyStop) {
+                    if (operation.CommandKind == CabinetTriggerKind.EmergencyStop) {
                         _log.LogInformation("【停止流程】急停模式：调用 StopAllAsync() 紧急停机");
                         await StopAllAsync("emergency-stop", operation.CommandReason, ct).ConfigureAwait(false);
                         // 更新系统状态为报警
@@ -425,7 +425,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                     var degraded = _isolator.TryEnterDegraded(operation.CommandKind, operation.CommandReason ?? "stop");
                     _log.LogInformation("【停止流程完成】系统进入降级状态：{Result}", degraded);
                     break;
-                case SafetyCommand.Reset:
+                case CabinetCommand.Reset:
                     ResetRequested?.Invoke(this, args);
                     
                     // 复位流程：等同于调用 /api/Axes/axes/speed (设置0速度) + /api/Axes/axes/disable + /api/system/session
@@ -444,12 +444,12 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                     }
                     
                     if (_isolator.IsIsolated) {
-                        _log.LogInformation("【复位流程】步骤4：系统处于隔离状态，调用 ISafetyIsolator.TryResetIsolation(reason: {Reason}) 尝试恢复", operation.CommandReason ?? "reset");
+                        _log.LogInformation("【复位流程】步骤4：系统处于隔离状态，调用 ICabinetIsolator.TryResetIsolation(reason: {Reason}) 尝试恢复", operation.CommandReason ?? "reset");
                         var reset = _isolator.TryResetIsolation(operation.CommandReason ?? "reset", ct);
                         _log.LogInformation("【复位流程】隔离复位结果={Result}", reset);
                     }
                     else if (_isolator.IsDegraded) {
-                        _log.LogInformation("【复位流程】步骤4：系统处于降级状态，调用 ISafetyIsolator.TryRecoverFromDegraded(reason: {Reason}) 尝试恢复", operation.CommandReason ?? "reset");
+                        _log.LogInformation("【复位流程】步骤4：系统处于降级状态，调用 ICabinetIsolator.TryRecoverFromDegraded(reason: {Reason}) 尝试恢复", operation.CommandReason ?? "reset");
                         var ok = _isolator.TryRecoverFromDegraded(operation.CommandReason ?? "reset");
                         _log.LogInformation("【复位流程】降级恢复结果={Result}", ok);
                     }
@@ -471,16 +471,16 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
         /// <param name="kind">触发类型。</param>
         /// <param name="axisName">轴名称（可选）。</param>
         /// <param name="reason">原因（可选）。</param>
-        private void HandleAxisHealth(SafetyTriggerKind kind, string? axisName, string? reason) {
+        private void HandleAxisHealth(CabinetTriggerKind kind, string? axisName, string? reason) {
             var text = string.IsNullOrWhiteSpace(reason) ? "轴状态异常" : reason;
             switch (kind) {
-                case SafetyTriggerKind.AxisFault:
+                case CabinetTriggerKind.AxisFault:
                     if (_isolator.TryEnterDegraded(kind, text)) {
                         _log.LogWarning("检测到轴故障（{Axis}）：{Reason}", axisName, text);
                         SingulationMetrics.Instance.AxisFaultCounter.Add(1);
                     }
                     break;
-                case SafetyTriggerKind.AxisDisconnected:
+                case CabinetTriggerKind.AxisDisconnected:
                     if (_isolator.TryTrip(kind, text)) {
                         _log.LogError("检测到轴掉线（{Axis}）：{Reason}", axisName, text);
                     }

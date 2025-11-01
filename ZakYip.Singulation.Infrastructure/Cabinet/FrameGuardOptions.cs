@@ -1,6 +1,6 @@
 using System;
 
-namespace ZakYip.Singulation.Infrastructure.Safety {
+namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
     /// <summary>
     /// 帧保护选项，用于配置帧序列检测和心跳监控。

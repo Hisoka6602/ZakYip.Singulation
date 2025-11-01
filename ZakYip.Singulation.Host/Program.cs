@@ -8,7 +8,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
-using ZakYip.Singulation.Infrastructure.Safety;
+using ZakYip.Singulation.Infrastructure.Cabinet;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Infrastructure.Runtime;
 using ZakYip.Singulation.Infrastructure.Workers;
@@ -30,7 +30,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Protocol.Vendors.Huarary;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Persistence;
 using ZakYip.Singulation.Host.Configuration;
@@ -141,7 +141,7 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- SignalR ----------
         services.AddSingulationSignalR();
         // ---------- 配置存储 ----------
-        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineSafetyIo().AddLiteDbLeadshineCabinetIo().AddLiteDbIoStatusMonitor();
+        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineCabinetIo().AddLiteDbIoStatusMonitor();
         // ---------- 设备相关注入 ----------
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
@@ -190,23 +190,12 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
-        services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
+        services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
 
-        // 注册 LoopbackSafetyIoModule
-        services.AddSingleton<LoopbackSafetyIoModule>();
+        // 注册 LoopbackCabinetIoModule
+        services.AddSingleton<LoopbackCabinetIoModule>();
 
-        // 注册 LeadshineSafetyIoModule（作为新版 Cabinet IO 配置被禁用时的后备方案，仍会被主动使用）
-        services.AddSingleton<LeadshineSafetyIoModule>(sp => {
-            var logger = sp.GetRequiredService<ILogger<LeadshineSafetyIoModule>>();
-            var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
-            var options = safetyStore.GetAsync().GetAwaiter().GetResult();
-            var busStore = sp.GetRequiredService<IControllerOptionsStore>();
-            var busDto = busStore.GetAsync().GetAwaiter().GetResult();
-            var cardNo = (ushort)busDto.Template.Card;
-            return new LeadshineSafetyIoModule(logger, cardNo, options);
-        });
-
-        // 注册 LeadshineCabinetIoModule（新版控制面板 IO 模块）
+        // 注册 LeadshineCabinetIoModule（控制面板 IO 模块）
         services.AddSingleton<LeadshineCabinetIoModule>(sp => {
             var logger = sp.GetRequiredService<ILogger<LeadshineCabinetIoModule>>();
             var cabinetStore = sp.GetRequiredService<ILeadshineCabinetIoOptionsStore>();
@@ -217,28 +206,18 @@ var host = Host.CreateDefaultBuilder(args)
             return new LeadshineCabinetIoModule(logger, cardNo, options);
         });
 
-        // 根据数据库配置选择控制面板 IO 模块实现（优先使用新版 Cabinet 配置）
-        services.AddSingleton<ISafetyIoModule>(sp => {
+        // 根据数据库配置选择控制面板 IO 模块实现
+        services.AddSingleton<ICabinetIoModule>(sp => {
             var cabinetStore = sp.GetRequiredService<ILeadshineCabinetIoOptionsStore>();
             var cabinetOptions = cabinetStore.GetAsync().GetAwaiter().GetResult();
 
             if (cabinetOptions.Enabled) {
-                // 使用新版硬件控制面板 IO 模块（雷赛控制器物理按键）
+                // 使用硬件控制面板 IO 模块（雷赛控制器物理按键）
                 return sp.GetRequiredService<LeadshineCabinetIoModule>();
             }
             else {
-                // 检查旧版配置
-                var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
-                var safetyOptions = safetyStore.GetAsync().GetAwaiter().GetResult();
-                
-                if (safetyOptions.Enabled) {
-                    // 使用旧版硬件安全 IO 模块（向后兼容）
-                    return sp.GetRequiredService<LeadshineSafetyIoModule>();
-                }
-                else {
-                    // 使用回环测试模块（仅用于开发测试）
-                    return sp.GetRequiredService<LoopbackSafetyIoModule>();
-                }
+                // 使用回环测试模块（仅用于开发测试）
+                return sp.GetRequiredService<LoopbackCabinetIoModule>();
             }
         });
 
@@ -257,9 +236,9 @@ var host = Host.CreateDefaultBuilder(args)
 
         services.AddSingleton<FrameGuard>();
         services.AddSingleton<IFrameGuard>(sp => sp.GetRequiredService<FrameGuard>());
-        services.AddSingleton<SafetyPipeline>();
-        services.AddSingleton<ISafetyPipeline>(sp => sp.GetRequiredService<SafetyPipeline>());
-        services.AddHostedService(sp => sp.GetRequiredService<SafetyPipeline>());
+        services.AddSingleton<CabinetPipeline>();
+        services.AddSingleton<ICabinetPipeline>(sp => sp.GetRequiredService<CabinetPipeline>());
+        services.AddHostedService(sp => sp.GetRequiredService<CabinetPipeline>());
         // ---------- 上游数据连接Tcp相关注入 ----------
         services.AddUpstreamTcpFromLiteDb();
         // ---------- 解码器相关注入 ----------

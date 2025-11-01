@@ -3,9 +3,9 @@ using System.ComponentModel;
 namespace ZakYip.Singulation.Core.Enums {
 
     /// <summary>
-    /// 来自安全 IO 的高层控制命令。
+    /// 来自控制面板 IO 的高层控制命令。
     /// </summary>
-    public enum SafetyCommand {
+    public enum CabinetCommand {
         /// <summary>无命令。</summary>
         [Description("无命令")]
         None = 0,

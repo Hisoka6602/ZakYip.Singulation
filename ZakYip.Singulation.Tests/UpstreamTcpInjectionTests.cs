@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Core.Abstractions.Safety;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Infrastructure.Persistence;
-using ZakYip.Singulation.Infrastructure.Safety;
+using ZakYip.Singulation.Infrastructure.Cabinet;
 using ZakYip.Singulation.Transport.Abstractions;
 
 namespace ZakYip.Singulation.Tests {
@@ -31,7 +31,7 @@ namespace ZakYip.Singulation.Tests {
             services.AddUpstreamFromLiteDb("test_upstream.db");
             
             // 注册安全隔离器（LiteDbUpstreamOptionsStore 的依赖）
-            services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
+            services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
             
             // 调用被测试的方法
             services.AddUpstreamTcpFromLiteDb();
@@ -64,7 +64,7 @@ namespace ZakYip.Singulation.Tests {
             services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
             services.AddLiteDbAxisSettings("test_upstream_config.db");
             services.AddUpstreamFromLiteDb("test_upstream_config.db");
-            services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
+            services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
             services.AddUpstreamTcpFromLiteDb();
 
             var sp = services.BuildServiceProvider();
@@ -103,7 +103,7 @@ namespace ZakYip.Singulation.Tests {
             services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
             services.AddLiteDbAxisSettings("test_upstream_server.db");
             services.AddUpstreamFromLiteDb("test_upstream_server.db");
-            services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
+            services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
             services.AddUpstreamTcpFromLiteDb();
 
             var sp = services.BuildServiceProvider();
@@ -141,7 +141,7 @@ namespace ZakYip.Singulation.Tests {
             services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
             services.AddLiteDbAxisSettings("test_upstream_hotupdate.db");
             services.AddUpstreamFromLiteDb("test_upstream_hotupdate.db");
-            services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
+            services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
             services.AddUpstreamTcpFromLiteDb();
 
             var sp = services.BuildServiceProvider();
@@ -193,7 +193,7 @@ namespace ZakYip.Singulation.Tests {
             services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
             services.AddLiteDbAxisSettings("test_upstream_role_switch.db");
             services.AddUpstreamFromLiteDb("test_upstream_role_switch.db");
-            services.AddSingleton<ISafetyIsolator, SafetyIsolator>();
+            services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
             services.AddUpstreamTcpFromLiteDb();
 
             var sp = services.BuildServiceProvider();

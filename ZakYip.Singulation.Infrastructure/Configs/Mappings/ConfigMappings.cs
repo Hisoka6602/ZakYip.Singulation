@@ -109,8 +109,8 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
 
         public static AxisGridLayoutDoc ToDoc(this AxisGridLayoutOptions dto) => new() { Rows = dto.Rows, Cols = dto.Cols };
 
-        // ====== 新增：LeadshineSafetyIoOptions ======
-        public static LeadshineSafetyIoOptions ToOptions(this LeadshineSafetyIoOptionsDoc d) => new() {
+        // ====== 新增：LeadshineCabinetIoOptions ======
+        public static LeadshineCabinetIoOptions ToOptions(this LeadshineCabinetIoOptionsDoc d) => new() {
             Enabled = d.Enabled,
             EmergencyStopBit = d.EmergencyStopBit,
             StopBit = d.StopBit,
@@ -140,7 +140,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             InvertRemoteConnectionLightLogic = d.InvertRemoteConnectionLightLogic
         };
 
-        public static LeadshineSafetyIoOptionsDoc ToDoc(this LeadshineSafetyIoOptions o) => new() {
+        public static LeadshineCabinetIoOptionsDoc ToDoc(this LeadshineCabinetIoOptions o) => new() {
             Enabled = o.Enabled,
             EmergencyStopBit = o.EmergencyStopBit,
             StopBit = o.StopBit,
