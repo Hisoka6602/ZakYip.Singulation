@@ -362,6 +362,19 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
 
                 case TransportEventType.StateChanged:
                     _log.TransportStateChanged(ev.Source, ev.Conn.ToString());
+                    // TCP连接断开时，将所有轴速度设置为0
+                    if (ev.Conn == TransportConnectionState.Disconnected) {
+                        _log.LogWarning("【TCP断开连接】检测到传输 {Source} 断开，设置所有轴速度为0", ev.Source);
+                        _ = Task.Run(async () => {
+                            try {
+                                await _axisController.WriteSpeedAllAsync(0m, CancellationToken.None).ConfigureAwait(false);
+                                _log.LogInformation("【TCP断开连接】所有轴速度已设置为0");
+                            }
+                            catch (Exception ex) {
+                                _log.LogError(ex, "【TCP断开连接】设置轴速度为0失败");
+                            }
+                        }, CancellationToken.None);
+                    }
                     // 更新远程连接指示灯状态
                     UpdateRemoteConnectionLight(ev.Conn);
                     break;

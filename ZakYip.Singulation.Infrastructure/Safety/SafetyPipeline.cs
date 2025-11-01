@@ -109,6 +109,10 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                     
                     // 根据切换方向执行不同操作
                     try {
+                        // 切换远程/本地模式前，先将所有轴的速度设置为0
+                        _log.LogInformation("【远程/本地模式切换】设置所有轴速度为0");
+                        await _axisController.WriteSpeedAllAsync(0m, CancellationToken.None).ConfigureAwait(false);
+                        
                         if (!previousMode && e.IsRemoteMode) {
                             // [本地] -> [远程]：自动调用使能，不需要按启动按钮
                             _log.LogInformation("【远程/本地模式切换】检测到切换为远程模式，自动调用使能");
