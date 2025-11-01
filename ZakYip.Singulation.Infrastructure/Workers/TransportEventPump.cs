@@ -379,7 +379,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                             catch (Exception ex) {
                                 _log.LogError(ex, "【TCP断开连接】设置轴速度为0失败");
                             }
-                        }, _stoppingToken);
+                        });
                     }
                     // 更新远程连接指示灯状态
                     UpdateRemoteConnectionLight(ev.Conn);
