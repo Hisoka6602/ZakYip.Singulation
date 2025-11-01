@@ -168,9 +168,9 @@ namespace ZakYip.Singulation.Drivers.Common {
             speeds.AddRange(eject.Select(x => (decimal)x));
             while (speeds.Count < totalAx) speeds.Add(0m);
 
-            // Only write speed if it has changed from the last known value
-            for (var i = 0; i < totalAx; i++) {
-                if (ct.IsCancellationRequested) return;
+            // Parallel execution: write speed if it has changed from the last known value
+            var tasks = Enumerable.Range(0, totalAx).Select(async i => {
+                ct.ThrowIfCancellationRequested();
                 
                 var newSpeed = speeds[i];
                 var lastSpeed = _lastSpeeds[i];
@@ -179,12 +179,14 @@ namespace ZakYip.Singulation.Drivers.Common {
                 if (!lastSpeed.HasValue || lastSpeed.Value != newSpeed) {
                     try {
                         await _drives[i].WriteSpeedAsync(newSpeed, ct);
+                        _lastSpeeds[i] = newSpeed;
                     } catch (Exception ex) {
                         OnControllerFaulted($"Failed to write speed for axis {i}: {ex.Message}");
                     }
-                    _lastSpeeds[i] = newSpeed;
                 }
-            }
+            });
+            
+            await Task.WhenAll(tasks);
         }
 
         private void OnControllerFaulted(string msg) {
