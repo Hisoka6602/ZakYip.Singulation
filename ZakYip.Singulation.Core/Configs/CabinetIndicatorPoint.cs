@@ -30,25 +30,25 @@ namespace ZakYip.Singulation.Core.Configs {
         [Range(-1, 1000, ErrorMessage = "输出位编号必须在 -1 到 1000 之间")]
         public int RemoteConnectionLight { get; init; } = -1;
 
-        /// <summary>是否反转灯光输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。此属性作为默认值，可被各灯独立配置覆盖。默认为 true（低电平亮灯）。</summary>
-        public bool InvertLightLogic { get; init; } = true;
+        /// <summary>灯光有效电平配置（低电平有效）：false=高电平亮灯，true=低电平亮灯。此属性作为默认值，可被各灯独立配置覆盖。默认为 true（低电平亮灯）。</summary>
+        public bool LightActiveLow { get; init; } = true;
 
-        /// <summary>红灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertRedLightLogic { get; init; } = null;
+        /// <summary>红灯有效电平配置（低电平有效）：false=高电平亮灯，true=低电平亮灯。null 时使用 LightActiveLow 的值。</summary>
+        public bool? RedLightActiveLow { get; init; } = null;
 
-        /// <summary>黄灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertYellowLightLogic { get; init; } = null;
+        /// <summary>黄灯有效电平配置（低电平有效）：false=高电平亮灯，true=低电平亮灯。null 时使用 LightActiveLow 的值。</summary>
+        public bool? YellowLightActiveLow { get; init; } = null;
 
-        /// <summary>绿灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertGreenLightLogic { get; init; } = null;
+        /// <summary>绿灯有效电平配置（低电平有效）：false=高电平亮灯，true=低电平亮灯。null 时使用 LightActiveLow 的值。</summary>
+        public bool? GreenLightActiveLow { get; init; } = null;
 
-        /// <summary>启动按钮灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertStartButtonLightLogic { get; init; } = null;
+        /// <summary>启动按钮灯有效电平配置（低电平有效）：false=高电平亮灯，true=低电平亮灯。null 时使用 LightActiveLow 的值。</summary>
+        public bool? StartButtonLightActiveLow { get; init; } = null;
 
-        /// <summary>停止按钮灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertStopButtonLightLogic { get; init; } = null;
+        /// <summary>停止按钮灯有效电平配置（低电平有效）：false=高电平亮灯，true=低电平亮灯。null 时使用 LightActiveLow 的值。</summary>
+        public bool? StopButtonLightActiveLow { get; init; } = null;
 
-        /// <summary>远程连接指示灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertRemoteConnectionLightLogic { get; init; } = null;
+        /// <summary>远程连接指示灯有效电平配置（低电平有效）：false=高电平亮灯，true=低电平亮灯。null 时使用 LightActiveLow 的值。</summary>
+        public bool? RemoteConnectionLightActiveLow { get; init; } = null;
     }
 }

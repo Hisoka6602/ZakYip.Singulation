@@ -31,8 +31,8 @@ namespace ZakYip.Singulation.Tests {
                     Start = 1,
                     Reset = 3,
                     RemoteLocalMode = 5,
-                    InvertLogic = true,
-                    InvertEmergencyStopLogic = false,
+                    ActiveLow = true,
+                    EmergencyStopActiveLow = false,
                     RemoteLocalActiveHigh = false
                 },
                 CabinetIndicatorPoint = new CabinetIndicatorPoint {
@@ -42,8 +42,8 @@ namespace ZakYip.Singulation.Tests {
                     StartButtonLight = 13,
                     StopButtonLight = 14,
                     RemoteConnectionLight = 15,
-                    InvertLightLogic = false,
-                    InvertRedLightLogic = true
+                    LightActiveLow = false,
+                    RedLightActiveLow = true
                 }
             };
 
@@ -61,8 +61,8 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(1, retrieved.CabinetInputPoint.Start, "Start 应为 1");
             MiniAssert.Equal(3, retrieved.CabinetInputPoint.Reset, "Reset 应为 3");
             MiniAssert.Equal(5, retrieved.CabinetInputPoint.RemoteLocalMode, "RemoteLocalMode 应为 5");
-            MiniAssert.Equal(true, retrieved.CabinetInputPoint.InvertLogic, "InvertLogic 应为 true");
-            MiniAssert.Equal(false, retrieved.CabinetInputPoint.InvertEmergencyStopLogic, "InvertEmergencyStopLogic 应为 false");
+            MiniAssert.Equal(true, retrieved.CabinetInputPoint.ActiveLow, "ActiveLow 应为 true");
+            MiniAssert.Equal(false, retrieved.CabinetInputPoint.EmergencyStopActiveLow, "EmergencyStopActiveLow 应为 false");
             MiniAssert.Equal(false, retrieved.CabinetInputPoint.RemoteLocalActiveHigh, "RemoteLocalActiveHigh 应为 false");
             
             // 验证指示灯点位
@@ -72,8 +72,8 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(13, retrieved.CabinetIndicatorPoint.StartButtonLight, "StartButtonLight 应为 13");
             MiniAssert.Equal(14, retrieved.CabinetIndicatorPoint.StopButtonLight, "StopButtonLight 应为 14");
             MiniAssert.Equal(15, retrieved.CabinetIndicatorPoint.RemoteConnectionLight, "RemoteConnectionLight 应为 15");
-            MiniAssert.Equal(false, retrieved.CabinetIndicatorPoint.InvertLightLogic, "InvertLightLogic 应为 false");
-            MiniAssert.Equal(true, retrieved.CabinetIndicatorPoint.InvertRedLightLogic, "InvertRedLightLogic 应为 true");
+            MiniAssert.Equal(false, retrieved.CabinetIndicatorPoint.LightActiveLow, "LightActiveLow 应为 false");
+            MiniAssert.Equal(true, retrieved.CabinetIndicatorPoint.RedLightActiveLow, "RedLightActiveLow 应为 true");
 
             // Cleanup
             db.Dispose();

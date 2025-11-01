@@ -151,12 +151,12 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Start = d.Start,
             Reset = d.Reset,
             RemoteLocalMode = d.RemoteLocalMode,
-            InvertLogic = d.InvertLogic,
-            InvertEmergencyStopLogic = d.InvertEmergencyStopLogic,
-            InvertStopLogic = d.InvertStopLogic,
-            InvertStartLogic = d.InvertStartLogic,
-            InvertResetLogic = d.InvertResetLogic,
-            InvertRemoteLocalLogic = d.InvertRemoteLocalLogic,
+            ActiveLow = d.ActiveLow,
+            EmergencyStopActiveLow = d.EmergencyStopActiveLow,
+            StopActiveLow = d.StopActiveLow,
+            StartActiveLow = d.StartActiveLow,
+            ResetActiveLow = d.ResetActiveLow,
+            RemoteLocalActiveLow = d.RemoteLocalActiveLow,
             RemoteLocalActiveHigh = d.RemoteLocalActiveHigh
         };
 
@@ -166,12 +166,12 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Start = o.Start,
             Reset = o.Reset,
             RemoteLocalMode = o.RemoteLocalMode,
-            InvertLogic = o.InvertLogic,
-            InvertEmergencyStopLogic = o.InvertEmergencyStopLogic,
-            InvertStopLogic = o.InvertStopLogic,
-            InvertStartLogic = o.InvertStartLogic,
-            InvertResetLogic = o.InvertResetLogic,
-            InvertRemoteLocalLogic = o.InvertRemoteLocalLogic,
+            ActiveLow = o.ActiveLow,
+            EmergencyStopActiveLow = o.EmergencyStopActiveLow,
+            StopActiveLow = o.StopActiveLow,
+            StartActiveLow = o.StartActiveLow,
+            ResetActiveLow = o.ResetActiveLow,
+            RemoteLocalActiveLow = o.RemoteLocalActiveLow,
             RemoteLocalActiveHigh = o.RemoteLocalActiveHigh
         };
 
@@ -182,13 +182,13 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             StartButtonLight = d.StartButtonLight,
             StopButtonLight = d.StopButtonLight,
             RemoteConnectionLight = d.RemoteConnectionLight,
-            InvertLightLogic = d.InvertLightLogic,
-            InvertRedLightLogic = d.InvertRedLightLogic,
-            InvertYellowLightLogic = d.InvertYellowLightLogic,
-            InvertGreenLightLogic = d.InvertGreenLightLogic,
-            InvertStartButtonLightLogic = d.InvertStartButtonLightLogic,
-            InvertStopButtonLightLogic = d.InvertStopButtonLightLogic,
-            InvertRemoteConnectionLightLogic = d.InvertRemoteConnectionLightLogic
+            LightActiveLow = d.LightActiveLow,
+            RedLightActiveLow = d.RedLightActiveLow,
+            YellowLightActiveLow = d.YellowLightActiveLow,
+            GreenLightActiveLow = d.GreenLightActiveLow,
+            StartButtonLightActiveLow = d.StartButtonLightActiveLow,
+            StopButtonLightActiveLow = d.StopButtonLightActiveLow,
+            RemoteConnectionLightActiveLow = d.RemoteConnectionLightActiveLow
         };
 
         public static CabinetIndicatorPointDoc ToDoc(this CabinetIndicatorPoint o) => new() {
@@ -198,13 +198,13 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             StartButtonLight = o.StartButtonLight,
             StopButtonLight = o.StopButtonLight,
             RemoteConnectionLight = o.RemoteConnectionLight,
-            InvertLightLogic = o.InvertLightLogic,
-            InvertRedLightLogic = o.InvertRedLightLogic,
-            InvertYellowLightLogic = o.InvertYellowLightLogic,
-            InvertGreenLightLogic = o.InvertGreenLightLogic,
-            InvertStartButtonLightLogic = o.InvertStartButtonLightLogic,
-            InvertStopButtonLightLogic = o.InvertStopButtonLightLogic,
-            InvertRemoteConnectionLightLogic = o.InvertRemoteConnectionLightLogic
+            LightActiveLow = o.LightActiveLow,
+            RedLightActiveLow = o.RedLightActiveLow,
+            YellowLightActiveLow = o.YellowLightActiveLow,
+            GreenLightActiveLow = o.GreenLightActiveLow,
+            StartButtonLightActiveLow = o.StartButtonLightActiveLow,
+            StopButtonLightActiveLow = o.StopButtonLightActiveLow,
+            RemoteConnectionLightActiveLow = o.RemoteConnectionLightActiveLow
         };
 
         /// <summary>
