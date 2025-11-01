@@ -55,6 +55,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private bool _axisSubscribed;
         private long _axisDropped;
         private long _axisWritten;
+        private CancellationToken _stoppingToken;
 
         public TransportEventPump(
             ILogger<TransportEventPump> log,
@@ -83,6 +84,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
+            _stoppingToken = stoppingToken;
             // 初始化传输管理器（读取配置并创建传输实例，但不启动）
             try {
                 await _transportManager.InitializeAsync(stoppingToken).ConfigureAwait(false);
@@ -367,13 +369,17 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                         _log.LogWarning("【TCP断开连接】检测到传输 {Source} 断开，设置所有轴速度为0", ev.Source);
                         _ = Task.Run(async () => {
                             try {
-                                await _axisController.WriteSpeedAllAsync(0m, CancellationToken.None).ConfigureAwait(false);
+                                await _axisController.WriteSpeedAllAsync(0m, _stoppingToken).ConfigureAwait(false);
                                 _log.LogInformation("【TCP断开连接】所有轴速度已设置为0");
+                            }
+                            catch (OperationCanceledException) {
+                                // 服务正在停止，忽略取消异常
+                                _log.LogDebug("【TCP断开连接】设置轴速度操作已取消（服务正在停止）");
                             }
                             catch (Exception ex) {
                                 _log.LogError(ex, "【TCP断开连接】设置轴速度为0失败");
                             }
-                        }, CancellationToken.None);
+                        }, _stoppingToken);
                     }
                     // 更新远程连接指示灯状态
                     UpdateRemoteConnectionLight(ev.Conn);
