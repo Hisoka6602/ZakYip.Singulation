@@ -195,7 +195,7 @@ var host = Host.CreateDefaultBuilder(args)
         // 注册 LoopbackSafetyIoModule
         services.AddSingleton<LoopbackSafetyIoModule>();
 
-        // 注册 LeadshineSafetyIoModule（保留用于向后兼容，可能不会被使用）
+        // 注册 LeadshineSafetyIoModule（作为新版 Cabinet IO 配置被禁用时的后备方案，仍会被主动使用）
         services.AddSingleton<LeadshineSafetyIoModule>(sp => {
             var logger = sp.GetRequiredService<ILogger<LeadshineSafetyIoModule>>();
             var safetyStore = sp.GetRequiredService<ILeadshineSafetyIoOptionsStore>();
