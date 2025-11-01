@@ -10,13 +10,14 @@ using csLTDMC;
 namespace ZakYip.Singulation.Infrastructure.Services {
 
     /// <summary>
-    /// 指示灯服务：根据系统状态控制三色灯和按钮灯。
+    /// 指示灯服务：根据系统状态控制三色灯和按钮灯，以及远程连接指示灯。
     /// </summary>
     public sealed class IndicatorLightService {
         private readonly ILogger<IndicatorLightService> _logger;
         private readonly ushort _cardNo;
         private LeadshineSafetyIoOptions _options;
         private SystemState _currentState = SystemState.Stopped;
+        private bool _isRemoteConnected = false;
         private readonly object _stateLock = new();
 
         public IndicatorLightService(
@@ -166,6 +167,27 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         public void UpdateOptions(LeadshineSafetyIoOptions newOptions) {
             _options = newOptions;
             _logger.LogInformation("指示灯服务配置已更新");
+        }
+
+        /// <summary>
+        /// 更新远程 TCP 连接状态并控制远程连接指示灯。
+        /// </summary>
+        /// <param name="isConnected">是否已连接</param>
+        /// <param name="ct">取消令牌</param>
+        public async Task UpdateRemoteConnectionStateAsync(bool isConnected, CancellationToken ct = default) {
+            bool oldState;
+            lock (_stateLock) {
+                oldState = _isRemoteConnected;
+                if (oldState == isConnected) {
+                    return;
+                }
+                _isRemoteConnected = isConnected;
+            }
+            _logger.LogInformation("远程连接状态变更：{OldState} → {NewState}", oldState ? "已连接" : "未连接", isConnected ? "已连接" : "未连接");
+
+            // 控制远程连接指示灯
+            var invertLogic = _options.InvertRemoteConnectionLightLogic ?? _options.InvertLightLogic;
+            await SetLightAsync("远程连接指示灯", _options.RemoteConnectionLightBit, isConnected, invertLogic, ct).ConfigureAwait(false);
         }
     }
 }

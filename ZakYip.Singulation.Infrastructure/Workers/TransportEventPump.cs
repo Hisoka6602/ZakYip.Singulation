@@ -15,6 +15,7 @@ using ZakYip.Singulation.Core.Contracts.ValueObjects;
 using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Infrastructure.Configuration;
 using ZakYip.Singulation.Infrastructure.Logging;
+using ZakYip.Singulation.Infrastructure.Services;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
@@ -49,6 +50,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private readonly IRealtimeNotifier _rt;
         private readonly IAxisController _axisController;
         private readonly UpstreamTransportManager _transportManager;
+        private readonly IndicatorLightService? _indicatorLightService;
 
         private bool _axisSubscribed;
         private long _axisDropped;
@@ -61,7 +63,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             IAxisEventAggregator axisEventAggregator,
             IRealtimeNotifier rt,
             IAxisController axisController,
-            UpstreamTransportManager transportManager) {
+            UpstreamTransportManager transportManager,
+            IndicatorLightService? indicatorLightService = null) {
             _log = log;
             _sp = sp;
             _hub = hub;
@@ -69,6 +72,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _rt = rt;
             _axisController = axisController;
             _transportManager = transportManager;
+            _indicatorLightService = indicatorLightService;
 
             // 传输侧慢路径：小容量即可；DropOldest 防抖
             _ctlChannel = Channel.CreateBounded<TransportEvent>(new BoundedChannelOptions(InfrastructureConstants.TransportControlEventChannelCapacity) {
@@ -358,6 +362,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
 
                 case TransportEventType.StateChanged:
                     _log.TransportStateChanged(ev.Source, ev.Conn.ToString());
+                    // 更新远程连接指示灯状态
+                    UpdateRemoteConnectionLight(ev.Conn);
                     break;
 
                 case TransportEventType.Error:
@@ -401,6 +407,31 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     _log.LogWarning("[{Source}] unhandled axis event type={Type}", ev.Source, ev.Type);
                     break;
             }
+        }
+
+        /// <summary>
+        /// 根据上游传输连接状态更新远程连接指示灯。
+        /// </summary>
+        /// <param name="state">传输连接状态</param>
+        private void UpdateRemoteConnectionLight(TransportConnectionState state) {
+            if (_indicatorLightService == null) {
+                return;
+            }
+
+            // 只有当任一上游传输连接成功时才点亮指示灯
+            bool isAnyConnected = _transportManager.GetAllTransports()
+                .Any(t => t.Status == TransportConnectionState.Connected);
+
+            // 使用 Task.Run 避免潜在的死锁问题
+            _ = Task.Run(async () => {
+                try {
+                    await _indicatorLightService.UpdateRemoteConnectionStateAsync(isAnyConnected, CancellationToken.None)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception ex) {
+                    _log.LogWarning(ex, "更新远程连接指示灯状态失败");
+                }
+            }, CancellationToken.None);
         }
     }
 }

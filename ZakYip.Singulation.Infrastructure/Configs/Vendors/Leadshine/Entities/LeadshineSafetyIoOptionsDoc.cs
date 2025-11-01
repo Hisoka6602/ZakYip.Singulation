@@ -67,8 +67,8 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities {
         /// <summary>停止按钮灯输出位编号，-1 表示禁用。</summary>
         public int StopButtonLightBit { get; set; } = -1;
 
-        /// <summary>是否反转灯光输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。</summary>
-        public bool InvertLightLogic { get; set; } = false;
+        /// <summary>是否反转灯光输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。默认为 true（低电平亮灯）。</summary>
+        public bool InvertLightLogic { get; set; } = true;
 
         /// <summary>红灯是否反转输出逻辑。</summary>
         public bool? InvertRedLightLogic { get; set; } = null;
@@ -84,5 +84,11 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities {
 
         /// <summary>停止按钮灯是否反转输出逻辑。</summary>
         public bool? InvertStopButtonLightLogic { get; set; } = null;
+
+        /// <summary>远程连接指示灯输出位编号，-1 表示禁用。</summary>
+        public int RemoteConnectionLightBit { get; set; } = -1;
+
+        /// <summary>远程连接指示灯是否反转输出逻辑。</summary>
+        public bool? InvertRemoteConnectionLightLogic { get; set; } = null;
     }
 }
