@@ -139,11 +139,22 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                         RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取超时，默认为本地模式" });
                     }
                 }
-                catch (Exception ex) {
-                    _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 失败，默认为本地模式");
+                catch (TaskCanceledException ex) {
+                    _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 任务被取消，默认为本地模式");
                     _lastRemoteLocalModeState = false; // 默认本地模式
-                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取失败，默认为本地模式" });
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取任务被取消，默认为本地模式" });
                 }
+                catch (TimeoutException ex) {
+                    _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 超时异常，默认为本地模式");
+                    _lastRemoteLocalModeState = false; // 默认本地模式
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取超时异常，默认为本地模式" });
+                }
+                // If you know the hardware library throws only Exception, you may keep this, but document why:
+                // catch (Exception ex) {
+                //     _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 失败，默认为本地模式");
+                //     _lastRemoteLocalModeState = false; // 默认本地模式
+                //     RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取失败，默认为本地模式" });
+                // }
             }
             else {
                 _logger.LogInformation("远程/本地模式 IO 未配置，默认为本地模式");
