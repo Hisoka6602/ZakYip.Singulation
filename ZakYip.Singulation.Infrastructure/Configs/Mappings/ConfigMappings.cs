@@ -151,12 +151,11 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Start = d.Start,
             Reset = d.Reset,
             RemoteLocalMode = d.RemoteLocalMode,
-            InvertLogic = d.InvertLogic,
-            InvertEmergencyStopLogic = d.InvertEmergencyStopLogic,
-            InvertStopLogic = d.InvertStopLogic,
-            InvertStartLogic = d.InvertStartLogic,
-            InvertResetLogic = d.InvertResetLogic,
-            InvertRemoteLocalLogic = d.InvertRemoteLocalLogic,
+            EmergencyStopTriggerLevel = (Core.Enums.TriggerLevel)d.EmergencyStopTriggerLevel,
+            StopTriggerLevel = (Core.Enums.TriggerLevel)d.StopTriggerLevel,
+            StartTriggerLevel = (Core.Enums.TriggerLevel)d.StartTriggerLevel,
+            ResetTriggerLevel = (Core.Enums.TriggerLevel)d.ResetTriggerLevel,
+            RemoteLocalTriggerLevel = (Core.Enums.TriggerLevel)d.RemoteLocalTriggerLevel,
             RemoteLocalActiveHigh = d.RemoteLocalActiveHigh
         };
 
@@ -166,12 +165,11 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Start = o.Start,
             Reset = o.Reset,
             RemoteLocalMode = o.RemoteLocalMode,
-            InvertLogic = o.InvertLogic,
-            InvertEmergencyStopLogic = o.InvertEmergencyStopLogic,
-            InvertStopLogic = o.InvertStopLogic,
-            InvertStartLogic = o.InvertStartLogic,
-            InvertResetLogic = o.InvertResetLogic,
-            InvertRemoteLocalLogic = o.InvertRemoteLocalLogic,
+            EmergencyStopTriggerLevel = (int)o.EmergencyStopTriggerLevel,
+            StopTriggerLevel = (int)o.StopTriggerLevel,
+            StartTriggerLevel = (int)o.StartTriggerLevel,
+            ResetTriggerLevel = (int)o.ResetTriggerLevel,
+            RemoteLocalTriggerLevel = (int)o.RemoteLocalTriggerLevel,
             RemoteLocalActiveHigh = o.RemoteLocalActiveHigh
         };
 
@@ -182,13 +180,12 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             StartButtonLight = d.StartButtonLight,
             StopButtonLight = d.StopButtonLight,
             RemoteConnectionLight = d.RemoteConnectionLight,
-            InvertLightLogic = d.InvertLightLogic,
-            InvertRedLightLogic = d.InvertRedLightLogic,
-            InvertYellowLightLogic = d.InvertYellowLightLogic,
-            InvertGreenLightLogic = d.InvertGreenLightLogic,
-            InvertStartButtonLightLogic = d.InvertStartButtonLightLogic,
-            InvertStopButtonLightLogic = d.InvertStopButtonLightLogic,
-            InvertRemoteConnectionLightLogic = d.InvertRemoteConnectionLightLogic
+            RedLightTriggerLevel = (Core.Enums.TriggerLevel)d.RedLightTriggerLevel,
+            YellowLightTriggerLevel = (Core.Enums.TriggerLevel)d.YellowLightTriggerLevel,
+            GreenLightTriggerLevel = (Core.Enums.TriggerLevel)d.GreenLightTriggerLevel,
+            StartButtonLightTriggerLevel = (Core.Enums.TriggerLevel)d.StartButtonLightTriggerLevel,
+            StopButtonLightTriggerLevel = (Core.Enums.TriggerLevel)d.StopButtonLightTriggerLevel,
+            RemoteConnectionLightTriggerLevel = (Core.Enums.TriggerLevel)d.RemoteConnectionLightTriggerLevel
         };
 
         public static CabinetIndicatorPointDoc ToDoc(this CabinetIndicatorPoint o) => new() {
@@ -198,13 +195,12 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             StartButtonLight = o.StartButtonLight,
             StopButtonLight = o.StopButtonLight,
             RemoteConnectionLight = o.RemoteConnectionLight,
-            InvertLightLogic = o.InvertLightLogic,
-            InvertRedLightLogic = o.InvertRedLightLogic,
-            InvertYellowLightLogic = o.InvertYellowLightLogic,
-            InvertGreenLightLogic = o.InvertGreenLightLogic,
-            InvertStartButtonLightLogic = o.InvertStartButtonLightLogic,
-            InvertStopButtonLightLogic = o.InvertStopButtonLightLogic,
-            InvertRemoteConnectionLightLogic = o.InvertRemoteConnectionLightLogic
+            RedLightTriggerLevel = (int)o.RedLightTriggerLevel,
+            YellowLightTriggerLevel = (int)o.YellowLightTriggerLevel,
+            GreenLightTriggerLevel = (int)o.GreenLightTriggerLevel,
+            StartButtonLightTriggerLevel = (int)o.StartButtonLightTriggerLevel,
+            StopButtonLightTriggerLevel = (int)o.StopButtonLightTriggerLevel,
+            RemoteConnectionLightTriggerLevel = (int)o.RemoteConnectionLightTriggerLevel
         };
 
         /// <summary>

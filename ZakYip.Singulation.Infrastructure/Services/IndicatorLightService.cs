@@ -99,9 +99,9 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             // 安全检查：确保红灯亮时，黄灯和绿灯必须关闭
 
             await Task.WhenAll(
-                SetLightAsync("红灯", _options.CabinetIndicatorPoint.RedLight, redOn, _options.CabinetIndicatorPoint.InvertRedLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct),
-                SetLightAsync("黄灯", _options.CabinetIndicatorPoint.YellowLight, yellowOn, _options.CabinetIndicatorPoint.InvertYellowLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct),
-                SetLightAsync("绿灯", _options.CabinetIndicatorPoint.GreenLight, greenOn, _options.CabinetIndicatorPoint.InvertGreenLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct)
+                SetLightAsync("红灯", _options.CabinetIndicatorPoint.RedLight, redOn, _options.CabinetIndicatorPoint.RedLightTriggerLevel, ct),
+                SetLightAsync("黄灯", _options.CabinetIndicatorPoint.YellowLight, yellowOn, _options.CabinetIndicatorPoint.YellowLightTriggerLevel, ct),
+                SetLightAsync("绿灯", _options.CabinetIndicatorPoint.GreenLight, greenOn, _options.CabinetIndicatorPoint.GreenLightTriggerLevel, ct)
             ).ConfigureAwait(false);
         }
 
@@ -115,8 +115,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             bool stopLightOn = (state != SystemState.Running);
 
             await Task.WhenAll(
-                SetLightAsync("启动按钮灯", _options.CabinetIndicatorPoint.StartButtonLight, startLightOn, _options.CabinetIndicatorPoint.InvertStartButtonLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct),
-                SetLightAsync("停止按钮灯", _options.CabinetIndicatorPoint.StopButtonLight, stopLightOn, _options.CabinetIndicatorPoint.InvertStopButtonLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic, ct)
+                SetLightAsync("启动按钮灯", _options.CabinetIndicatorPoint.StartButtonLight, startLightOn, _options.CabinetIndicatorPoint.StartButtonLightTriggerLevel, ct),
+                SetLightAsync("停止按钮灯", _options.CabinetIndicatorPoint.StopButtonLight, stopLightOn, _options.CabinetIndicatorPoint.StopButtonLightTriggerLevel, ct)
             ).ConfigureAwait(false);
         }
 
@@ -126,32 +126,33 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// <param name="name">灯的名称</param>
         /// <param name="bitNo">输出位编号</param>
         /// <param name="on">是否亮灯</param>
-        /// <param name="invertLogic">是否反转输出逻辑（true=低电平亮灯，false=高电平亮灯）</param>
+        /// <param name="triggerLevel">触发电平配置（ActiveHigh=高电平亮灯，ActiveLow=低电平亮灯）</param>
         /// <param name="ct">取消令牌</param>
-        private Task SetLightAsync(string name, int bitNo, bool on, bool invertLogic, CancellationToken ct) {
+        private Task SetLightAsync(string name, int bitNo, bool on, Core.Enums.TriggerLevel triggerLevel, CancellationToken ct) {
             if (bitNo < 0) {
                 // 该灯未配置，跳过
                 return Task.CompletedTask;
             }
 
             try {
-                // 根据 invertLogic 决定电平逻辑
-                // XOR logic: state = on ^ invertLogic
+                // 根据 triggerLevel 决定电平逻辑
+                // XOR logic: state = on ^ (triggerLevel == ActiveLow)
                 // Truth table:
-                //   on | invertLogic | state
-                //  ----+-------------+------
-                //   T  |     F       |  1 (高电平亮灯)
-                //   F  |     F       |  0 (高电平灭灯)
-                //   T  |     T       |  0 (低电平亮灯)
-                //   F  |     T       |  1 (低电平灭灯)
-                ushort state = (on ^ invertLogic) ? (ushort)1 : (ushort)0;
+                //   on | triggerLevel | state
+                //  ----+--------------+------
+                //   T  | ActiveHigh   |  1 (高电平亮灯)
+                //   F  | ActiveHigh   |  0 (高电平灭灯)
+                //   T  | ActiveLow    |  0 (低电平亮灯)
+                //   F  | ActiveLow    |  1 (低电平灭灯)
+                bool isActiveLow = triggerLevel == Core.Enums.TriggerLevel.ActiveLow;
+                ushort state = (on ^ isActiveLow) ? (ushort)1 : (ushort)0;
                 short result = LTDMC.dmc_write_outbit(_cardNo, (ushort)bitNo, state);
 
                 if (result < 0) {
                     _logger.LogWarning("设置{Name}（位{BitNo}）失败，错误码：{ErrorCode}", name, bitNo, result);
                 } else {
-                    _logger.LogDebug("设置{Name}（位{BitNo}）= {State}（逻辑：{Logic}）", 
-                        name, bitNo, on ? "亮" : "灭", invertLogic ? "低电平亮灯" : "高电平亮灯");
+                    _logger.LogDebug("设置{Name}（位{BitNo}）= {State}（电平配置：{Level}）", 
+                        name, bitNo, on ? "亮" : "灭", triggerLevel == Core.Enums.TriggerLevel.ActiveLow ? "低电平有效" : "高电平有效");
                 }
             }
             catch (Exception ex) {
@@ -186,8 +187,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             _logger.LogInformation("远程连接状态变更：{OldState} → {NewState}", oldState ? "已连接" : "未连接", isConnected ? "已连接" : "未连接");
 
             // 控制远程连接指示灯
-            var invertLogic = _options.CabinetIndicatorPoint.InvertRemoteConnectionLightLogic ?? _options.CabinetIndicatorPoint.InvertLightLogic;
-            await SetLightAsync("远程连接指示灯", _options.CabinetIndicatorPoint.RemoteConnectionLight, isConnected, invertLogic, ct).ConfigureAwait(false);
+            await SetLightAsync("远程连接指示灯", _options.CabinetIndicatorPoint.RemoteConnectionLight, isConnected, _options.CabinetIndicatorPoint.RemoteConnectionLightTriggerLevel, ct).ConfigureAwait(false);
         }
     }
 }

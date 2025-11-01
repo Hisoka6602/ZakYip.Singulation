@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Core.Configs {
 
@@ -30,25 +31,22 @@ namespace ZakYip.Singulation.Core.Configs {
         [Range(-1, 1000, ErrorMessage = "输出位编号必须在 -1 到 1000 之间")]
         public int RemoteConnectionLight { get; init; } = -1;
 
-        /// <summary>是否反转灯光输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。此属性作为默认值，可被各灯独立配置覆盖。默认为 true（低电平亮灯）。</summary>
-        public bool InvertLightLogic { get; init; } = true;
+        /// <summary>红灯有效电平配置：ActiveHigh=高电平亮灯，ActiveLow=低电平亮灯。</summary>
+        public TriggerLevel RedLightTriggerLevel { get; init; } = TriggerLevel.ActiveLow;
 
-        /// <summary>红灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertRedLightLogic { get; init; } = null;
+        /// <summary>黄灯有效电平配置：ActiveHigh=高电平亮灯，ActiveLow=低电平亮灯。</summary>
+        public TriggerLevel YellowLightTriggerLevel { get; init; } = TriggerLevel.ActiveLow;
 
-        /// <summary>黄灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertYellowLightLogic { get; init; } = null;
+        /// <summary>绿灯有效电平配置：ActiveHigh=高电平亮灯，ActiveLow=低电平亮灯。</summary>
+        public TriggerLevel GreenLightTriggerLevel { get; init; } = TriggerLevel.ActiveLow;
 
-        /// <summary>绿灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertGreenLightLogic { get; init; } = null;
+        /// <summary>启动按钮灯有效电平配置：ActiveHigh=高电平亮灯，ActiveLow=低电平亮灯。</summary>
+        public TriggerLevel StartButtonLightTriggerLevel { get; init; } = TriggerLevel.ActiveLow;
 
-        /// <summary>启动按钮灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertStartButtonLightLogic { get; init; } = null;
+        /// <summary>停止按钮灯有效电平配置：ActiveHigh=高电平亮灯，ActiveLow=低电平亮灯。</summary>
+        public TriggerLevel StopButtonLightTriggerLevel { get; init; } = TriggerLevel.ActiveLow;
 
-        /// <summary>停止按钮灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertStopButtonLightLogic { get; init; } = null;
-
-        /// <summary>远程连接指示灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
-        public bool? InvertRemoteConnectionLightLogic { get; init; } = null;
+        /// <summary>远程连接指示灯有效电平配置：ActiveHigh=高电平亮灯，ActiveLow=低电平亮灯。</summary>
+        public TriggerLevel RemoteConnectionLightTriggerLevel { get; init; } = TriggerLevel.ActiveLow;
     }
 }
