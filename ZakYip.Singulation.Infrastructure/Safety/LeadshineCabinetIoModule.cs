@@ -255,7 +255,11 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) {
                     break;
                 }
-                catch (Exception ex) {
+                catch (Exception ex) when (
+                    !(ex is OutOfMemoryException) &&
+                    !(ex is StackOverflowException) &&
+                    !(ex is ThreadAbortException)
+                ) {
                     _logger.LogError(ex, "读取控制面板 IO 时发生异常");
                     await Task.Delay(1000, ct).ConfigureAwait(false);
                 }
