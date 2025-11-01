@@ -178,13 +178,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             bool oldState;
             lock (_stateLock) {
                 oldState = _isRemoteConnected;
+                if (oldState == isConnected) {
+                    return;
+                }
                 _isRemoteConnected = isConnected;
             }
-
-            if (oldState == isConnected) {
-                return;
-            }
-
             _logger.LogInformation("远程连接状态变更：{OldState} → {NewState}", oldState ? "已连接" : "未连接", isConnected ? "已连接" : "未连接");
 
             // 控制远程连接指示灯
