@@ -196,7 +196,7 @@ During migration, the old `/api/Safety` endpoint is still available. The system 
 ## 常见问题 (FAQ)
 
 ### Q: 旧的 Safety API 什么时候会被移除？
-**A:** 旧的 API 将在下一个主版本中被移除。建议尽快迁移到新的 Cabinet API。
+**A:** 旧的 API 将在 v2.0.0 版本中被移除。建议尽快迁移到新的 Cabinet API。
 
 ### Q: 数据库中的旧配置会自动迁移吗？
 **A:** 不会。您需要手动读取旧配置，转换为新格式，然后保存到新的 Cabinet 配置中。
