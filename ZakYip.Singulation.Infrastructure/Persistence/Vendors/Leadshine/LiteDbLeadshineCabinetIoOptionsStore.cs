@@ -42,12 +42,13 @@ namespace ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine {
                 }
                 return Task.FromResult(doc.ToOptions());
             }
-            catch (Exception ex) {
+            catch (LiteException ex) {
                 _logger.LogError(ex, ErrorMessage);
                 _safetyIsolator.TryEnterDegraded(SafetyTriggerKind.Unknown, ErrorMessage);
                 // 返回默认值
                 return Task.FromResult(new LeadshineCabinetIoOptions());
             }
+            // Let other exceptions propagate
         }
 
         public Task SaveAsync(LeadshineCabinetIoOptions options, CancellationToken ct = default)
