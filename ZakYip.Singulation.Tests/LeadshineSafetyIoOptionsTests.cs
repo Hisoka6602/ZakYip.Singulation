@@ -31,12 +31,16 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(-1, options.StopButtonLightBit, "停止按钮灯默认应禁用");
             
             // 新增灯光反转逻辑默认值测试
-            MiniAssert.Equal(false, options.InvertLightLogic, "全局灯光反转逻辑默认应为 false");
+            MiniAssert.Equal(true, options.InvertLightLogic, "全局灯光反转逻辑默认应为 true（低电平亮灯）");
             MiniAssert.Equal(null, options.InvertRedLightLogic, "红灯反转逻辑默认应为 null");
             MiniAssert.Equal(null, options.InvertYellowLightLogic, "黄灯反转逻辑默认应为 null");
             MiniAssert.Equal(null, options.InvertGreenLightLogic, "绿灯反转逻辑默认应为 null");
             MiniAssert.Equal(null, options.InvertStartButtonLightLogic, "启动按钮灯反转逻辑默认应为 null");
             MiniAssert.Equal(null, options.InvertStopButtonLightLogic, "停止按钮灯反转逻辑默认应为 null");
+            
+            // 新增远程连接指示灯默认值测试
+            MiniAssert.Equal(-1, options.RemoteConnectionLightBit, "远程连接指示灯默认应禁用");
+            MiniAssert.Equal(null, options.InvertRemoteConnectionLightLogic, "远程连接指示灯反转逻辑默认应为 null");
         }
 
         [MiniFact]
@@ -179,6 +183,33 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(true, greenInvert, "所有灯都应使用全局配置（低电平亮灯）");
             MiniAssert.Equal(true, startButtonInvert, "所有灯都应使用全局配置（低电平亮灯）");
             MiniAssert.Equal(true, stopButtonInvert, "所有灯都应使用全局配置（低电平亮灯）");
+        }
+
+        [MiniFact]
+        public void RemoteConnectionLightConfiguration() {
+            // 场景：配置远程连接指示灯
+            var options = new LeadshineSafetyIoOptions {
+                RemoteConnectionLightBit = 15,
+                InvertLightLogic = true,  // 全局低电平亮灯
+                InvertRemoteConnectionLightLogic = null  // 使用全局配置
+            };
+            
+            MiniAssert.Equal(15, options.RemoteConnectionLightBit, "远程连接指示灯应配置到端口 15");
+            var remoteConnectionInvert = options.InvertRemoteConnectionLightLogic ?? options.InvertLightLogic;
+            MiniAssert.Equal(true, remoteConnectionInvert, "远程连接指示灯应使用全局配置（低电平亮灯）");
+        }
+
+        [MiniFact]
+        public void RemoteConnectionLightWithCustomLogic() {
+            // 场景：远程连接指示灯使用独立的反转逻辑
+            var options = new LeadshineSafetyIoOptions {
+                RemoteConnectionLightBit = 15,
+                InvertLightLogic = false,  // 全局高电平亮灯
+                InvertRemoteConnectionLightLogic = true  // 远程连接灯独立配置为低电平亮灯
+            };
+            
+            var remoteConnectionInvert = options.InvertRemoteConnectionLightLogic ?? options.InvertLightLogic;
+            MiniAssert.Equal(true, remoteConnectionInvert, "远程连接指示灯应使用独立配置（低电平亮灯）");
         }
     }
 }

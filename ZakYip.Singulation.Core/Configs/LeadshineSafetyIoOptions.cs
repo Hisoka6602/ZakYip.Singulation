@@ -91,5 +91,12 @@ namespace ZakYip.Singulation.Core.Configs {
 
         /// <summary>停止按钮灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
         public bool? InvertStopButtonLightLogic { get; init; } = null;
+
+        /// <summary>远程连接指示灯输出位编号，-1 表示禁用。当远程 TCP 连接成功时亮灯，断开时灭灯。</summary>
+        [Range(-1, 1000, ErrorMessage = "输出位编号必须在 -1 到 1000 之间")]
+        public int RemoteConnectionLightBit { get; init; } = -1;
+
+        /// <summary>远程连接指示灯是否反转输出逻辑（设置亮灯电平）：false=高电平亮灯，true=低电平亮灯。null 时使用 InvertLightLogic 的值。</summary>
+        public bool? InvertRemoteConnectionLightLogic { get; init; } = null;
     }
 }
