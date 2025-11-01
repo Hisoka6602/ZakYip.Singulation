@@ -191,6 +191,83 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             SignalRChannel = o.SignalRChannel
         };
 
+        // ====== 新增：LeadshineCabinetIoOptions ======
+        public static LeadshineCabinetIoOptions ToOptions(this LeadshineCabinetIoOptionsDoc d) => new() {
+            Enabled = d.Enabled,
+            PollingIntervalMs = d.PollingIntervalMs,
+            CabinetInputPoint = d.CabinetInputPoint.ToOptions(),
+            CabinetIndicatorPoint = d.CabinetIndicatorPoint.ToOptions()
+        };
+
+        public static LeadshineCabinetIoOptionsDoc ToDoc(this LeadshineCabinetIoOptions o) => new() {
+            Enabled = o.Enabled,
+            PollingIntervalMs = o.PollingIntervalMs,
+            CabinetInputPoint = o.CabinetInputPoint.ToDoc(),
+            CabinetIndicatorPoint = o.CabinetIndicatorPoint.ToDoc()
+        };
+
+        public static CabinetInputPoint ToOptions(this CabinetInputPointDoc d) => new() {
+            EmergencyStop = d.EmergencyStop,
+            Stop = d.Stop,
+            Start = d.Start,
+            Reset = d.Reset,
+            RemoteLocalMode = d.RemoteLocalMode,
+            InvertLogic = d.InvertLogic,
+            InvertEmergencyStopLogic = d.InvertEmergencyStopLogic,
+            InvertStopLogic = d.InvertStopLogic,
+            InvertStartLogic = d.InvertStartLogic,
+            InvertResetLogic = d.InvertResetLogic,
+            InvertRemoteLocalLogic = d.InvertRemoteLocalLogic,
+            RemoteLocalActiveHigh = d.RemoteLocalActiveHigh
+        };
+
+        public static CabinetInputPointDoc ToDoc(this CabinetInputPoint o) => new() {
+            EmergencyStop = o.EmergencyStop,
+            Stop = o.Stop,
+            Start = o.Start,
+            Reset = o.Reset,
+            RemoteLocalMode = o.RemoteLocalMode,
+            InvertLogic = o.InvertLogic,
+            InvertEmergencyStopLogic = o.InvertEmergencyStopLogic,
+            InvertStopLogic = o.InvertStopLogic,
+            InvertStartLogic = o.InvertStartLogic,
+            InvertResetLogic = o.InvertResetLogic,
+            InvertRemoteLocalLogic = o.InvertRemoteLocalLogic,
+            RemoteLocalActiveHigh = o.RemoteLocalActiveHigh
+        };
+
+        public static CabinetIndicatorPoint ToOptions(this CabinetIndicatorPointDoc d) => new() {
+            RedLight = d.RedLight,
+            YellowLight = d.YellowLight,
+            GreenLight = d.GreenLight,
+            StartButtonLight = d.StartButtonLight,
+            StopButtonLight = d.StopButtonLight,
+            RemoteConnectionLight = d.RemoteConnectionLight,
+            InvertLightLogic = d.InvertLightLogic,
+            InvertRedLightLogic = d.InvertRedLightLogic,
+            InvertYellowLightLogic = d.InvertYellowLightLogic,
+            InvertGreenLightLogic = d.InvertGreenLightLogic,
+            InvertStartButtonLightLogic = d.InvertStartButtonLightLogic,
+            InvertStopButtonLightLogic = d.InvertStopButtonLightLogic,
+            InvertRemoteConnectionLightLogic = d.InvertRemoteConnectionLightLogic
+        };
+
+        public static CabinetIndicatorPointDoc ToDoc(this CabinetIndicatorPoint o) => new() {
+            RedLight = o.RedLight,
+            YellowLight = o.YellowLight,
+            GreenLight = o.GreenLight,
+            StartButtonLight = o.StartButtonLight,
+            StopButtonLight = o.StopButtonLight,
+            RemoteConnectionLight = o.RemoteConnectionLight,
+            InvertLightLogic = o.InvertLightLogic,
+            InvertRedLightLogic = o.InvertRedLightLogic,
+            InvertYellowLightLogic = o.InvertYellowLightLogic,
+            InvertGreenLightLogic = o.InvertGreenLightLogic,
+            InvertStartButtonLightLogic = o.InvertStartButtonLightLogic,
+            InvertStopButtonLightLogic = o.InvertStopButtonLightLogic,
+            InvertRemoteConnectionLightLogic = o.InvertRemoteConnectionLightLogic
+        };
+
         /// <summary>
         /// 生成“模板级别”的 DriverOptions：已带 Card/Port，NodeId 留 0（让控制器在按轴创建时再映射）。
         /// </summary>
