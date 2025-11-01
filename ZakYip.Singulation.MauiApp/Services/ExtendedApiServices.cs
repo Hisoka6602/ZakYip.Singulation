@@ -248,7 +248,7 @@ public class SafetyApiService
     /// <summary>
     /// 发送安全命令
     /// </summary>
-    public async Task<ApiResponse<object>> SendCommandAsync(SafetyCommandRequest request)
+    public async Task<ApiResponse<object>> SendCommandAsync(CabinetCommandRequest request)
     {
         try
         {

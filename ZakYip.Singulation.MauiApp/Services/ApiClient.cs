@@ -76,7 +76,7 @@ public class ApiClient
     /// <summary>
     /// 发送安全命令
     /// </summary>
-    public async Task<ApiResponse<object>> SendSafetyCommandAsync(SafetyCommandRequest request)
+    public async Task<ApiResponse<object>> SendCabinetCommandAsync(CabinetCommandRequest request)
     {
         try
         {
@@ -235,7 +235,7 @@ public class AxisInfo
 /// <summary>
 /// 安全命令请求 - 与服务器端 CabinetCommandRequestDto 保持一致
 /// </summary>
-public class SafetyCommandRequest
+public class CabinetCommandRequest
 {
     public int Command { get; set; }  // CabinetCommand 枚举值: Start=1, Stop=2, Reset=3
     public string? Reason { get; set; }
