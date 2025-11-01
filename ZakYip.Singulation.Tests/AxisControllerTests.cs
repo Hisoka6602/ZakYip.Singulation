@@ -148,6 +148,73 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.True(speeds[1] == 200m, "轴1速度应仍为200");
             MiniAssert.True(speeds[2] == 300m, "轴2速度应仍为300");
         }
+
+        [MiniFact]
+        public async Task ResetLastSpeedsEnsuresSpeedWriteAfterReset() {
+            // Arrange: Create controller with 4 axes
+            var bus = new FakeBusAdapter(4);
+            var registry = new FakeDriveRegistry();
+            var aggregator = new FakeAxisEventAggregator();
+            var controller = new AxisController(bus, registry, aggregator);
+            var options = new DriverOptions {
+                Card = 0,
+                Port = 0,
+                NodeId = 1,
+                GearRatio = 1m,
+                PulleyPitchDiameterMm = 1m
+            };
+
+            var result = await controller.InitializeAsync("fake", options, 4, CancellationToken.None).ConfigureAwait(false);
+            MiniAssert.True(result.Key, "初始化应成功");
+
+            // Act 1: Write initial speed of 300 to all axes
+            var speedSet1 = new SpeedSet(
+                DateTime.UtcNow,
+                1,
+                new[] { 300, 300, 300, 300 },
+                Array.Empty<int>()
+            );
+            await controller.ApplySpeedSetAsync(speedSet1, CancellationToken.None).ConfigureAwait(false);
+
+            // Assert 1: All axes should have been written to once
+            MiniAssert.True(registry.Created[0].WriteSpeedCalls == 1, "轴0应写入1次");
+            MiniAssert.True(registry.Created[1].WriteSpeedCalls == 1, "轴1应写入1次");
+            MiniAssert.True(registry.Created[2].WriteSpeedCalls == 1, "轴2应写入1次");
+            MiniAssert.True(registry.Created[3].WriteSpeedCalls == 1, "轴3应写入1次");
+
+            // Act 2: Try to write the same speed again - should skip
+            var speedSet2 = new SpeedSet(
+                DateTime.UtcNow,
+                2,
+                new[] { 300, 300, 300, 300 },
+                Array.Empty<int>()
+            );
+            await controller.ApplySpeedSetAsync(speedSet2, CancellationToken.None).ConfigureAwait(false);
+
+            // Assert 2: No axes should have been written to again (optimization should skip)
+            MiniAssert.True(registry.Created[0].WriteSpeedCalls == 1, "轴0不应再次写入（速度相同）");
+            MiniAssert.True(registry.Created[1].WriteSpeedCalls == 1, "轴1不应再次写入（速度相同）");
+            MiniAssert.True(registry.Created[2].WriteSpeedCalls == 1, "轴2不应再次写入（速度相同）");
+            MiniAssert.True(registry.Created[3].WriteSpeedCalls == 1, "轴3不应再次写入（速度相同）");
+
+            // Act 3: Reset last speeds cache (simulating mode switch)
+            controller.ResetLastSpeeds();
+
+            // Act 4: Write the same speed again - should NOT skip after reset
+            var speedSet3 = new SpeedSet(
+                DateTime.UtcNow,
+                3,
+                new[] { 300, 300, 300, 300 },
+                Array.Empty<int>()
+            );
+            await controller.ApplySpeedSetAsync(speedSet3, CancellationToken.None).ConfigureAwait(false);
+
+            // Assert 3: All axes should have been written to again (cache was reset)
+            MiniAssert.True(registry.Created[0].WriteSpeedCalls == 2, "轴0应写入2次（缓存已重置）");
+            MiniAssert.True(registry.Created[1].WriteSpeedCalls == 2, "轴1应写入2次（缓存已重置）");
+            MiniAssert.True(registry.Created[2].WriteSpeedCalls == 2, "轴2应写入2次（缓存已重置）");
+            MiniAssert.True(registry.Created[3].WriteSpeedCalls == 2, "轴3应写入2次（缓存已重置）");
+        }
     }
 
     internal sealed class FakeDriveRegistry : IDriveRegistry {
