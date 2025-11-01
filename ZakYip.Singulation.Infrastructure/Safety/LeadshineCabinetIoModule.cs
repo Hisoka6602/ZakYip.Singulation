@@ -292,7 +292,7 @@ namespace ZakYip.Singulation.Infrastructure.Safety {
                 bool state = result == 1;
                 return invertLogic ? !state : state;
             }
-            catch (Exception ex) {
+            catch (SystemException ex) {
                 _logger.LogError(ex, "读取输入位 {BitNo} 时发生异常", bitNo);
                 return false;
             }
