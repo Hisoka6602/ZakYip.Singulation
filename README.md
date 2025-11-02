@@ -1,6 +1,53 @@
 # ZakYip.Singulation 项目总览
 
-## 🎯 最新更新（2025-11-02 速度联动IO配置功能）
+## 🎯 最新更新（2025-11-02）
+
+### ✅ 2025-11-02 重要Bug修复和功能改进
+
+本次更新修复了多个关键问题，提升了系统的可靠性和准确性：
+
+#### 1. **速度联动使用目标速度（仅远程模式）** ⚡
+- **说明**：速度联动服务使用目标速度(`TargetSpeedsMmps`)进行判断
+- **原因**：需要基于上游下发的目标速度来触发IO联动，而不是实际反馈速度
+- **影响**：当上游将目标速度设置为0时，IO联动立即触发，无需等待轴实际停止
+- **模式限制**：**速度联动仅在远程模式下生效，本地模式下不触发**
+- **相关文件**：`SpeedLinkageService.cs`
+
+#### 2. **实时速度反馈API** 📊
+- **验证**：确认`LastFeedbackMmps`在`PingAsync`方法中正确更新
+- **影响**：`GET /api/Axes/axes` API能够正确返回轴的实时反馈速度
+- **相关字段**：`FeedbackLinearMmps` (mm/s)
+
+#### 3. **轴使能/失能状态检查** 🔍
+- **改进**：在使能/失能轴之前，先读取当前ControlWord状态
+- **目的**：避免重复操作，提高状态机转换的可靠性
+- **实现**：
+  - `EnableAsync`：执行前读取并记录当前ControlWord值
+  - `DisableAsync`：执行前读取并记录当前ControlWord值
+- **相关文件**：`LeadshineLtdmcAxisDrive.cs`
+
+#### 4. **LeadshineProtocolMap注释完善** 📝
+- **改进**：为所有协议映射字段添加详细的XML文档注释
+- **覆盖范围**：
+  - `BitLen` 类：所有位宽常量
+  - `ControlWord` 类：所有控制字命令及其位定义
+  - `Mode` 类：所有操作模式值
+  - `DelayMs` 类：所有延时参数及其用途
+- **影响**：提高代码可读性和可维护性
+- **相关文件**：`LeadshineProtocolMap.cs`
+
+#### 5. **运行预警时间持久化修复** 🐛
+- **问题**：`RunningWarningSeconds`（运行预警秒数）设置后无法保存到数据库
+- **原因**：数据库文档实体和映射方法中缺少该字段
+- **修复**：
+  - 在`CabinetIndicatorPointDoc`中添加`RunningWarningSeconds`属性
+  - 更新`ToOptions`和`ToDoc`映射方法包含该字段
+- **影响**：运行预警时间现在能够正确保存和读取
+- **相关文件**：
+  - `LeadshineCabinetIoOptionsDoc.cs`
+  - `ConfigMappings.cs`
+
+---
 
 ### ✅ 速度联动配置功能
 

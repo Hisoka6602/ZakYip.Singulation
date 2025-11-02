@@ -9,6 +9,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Drivers.Abstractions;
 
 namespace ZakYip.Singulation.Infrastructure.Services {
@@ -17,12 +18,14 @@ namespace ZakYip.Singulation.Infrastructure.Services {
     /// 速度联动服务：监听轴速度变化并自动控制配置的 IO 端口。
     /// 当指定轴组的所有轴速度从非0降到0时，设置指定IO为指定电平；
     /// 当所有轴速度从0提升到非0时，设置相反电平。
+    /// 注意：仅在远程模式下生效，本地模式下不触发速度联动。
     /// </summary>
     public sealed class SpeedLinkageService : BackgroundService {
         private readonly ILogger<SpeedLinkageService> _logger;
         private readonly ISpeedLinkageOptionsStore _store;
         private readonly IoStatusService _ioStatusService;
         private readonly IAxisController _axisController;
+        private readonly ICabinetPipeline _cabinetPipeline;
         
         // 用于跟踪每个组的状态：true表示组内所有轴都已停止
         private readonly Dictionary<int, bool> _groupStoppedStates = new();
@@ -32,11 +35,13 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             ILogger<SpeedLinkageService> logger,
             ISpeedLinkageOptionsStore store,
             IoStatusService ioStatusService,
-            IAxisController axisController) {
+            IAxisController axisController,
+            ICabinetPipeline cabinetPipeline) {
             _logger = logger;
             _store = store;
             _ioStatusService = ioStatusService;
             _axisController = axisController;
+            _cabinetPipeline = cabinetPipeline;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -64,6 +69,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// </summary>
         private async Task CheckAndApplySpeedLinkageAsync(CancellationToken ct) {
             try {
+                // 仅在远程模式下执行速度联动
+                if (!_cabinetPipeline.IsRemoteMode) {
+                    return;
+                }
+
                 // 获取配置
                 var options = await _store.GetAsync(ct);
 
@@ -75,10 +85,10 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     return;
                 }
 
-                // 获取所有轴的反馈速度（用于速度联动判断）
-                // 使用 RealtimeSpeedsMmps (LastFeedbackMmps) 而非 TargetSpeedsMmps，
-                // 因为需要根据实际速度而非目标速度来判断轴是否已停止
-                var speeds = _axisController.RealtimeSpeedsMmps;
+                // 获取所有轴的目标速度（用于速度联动判断）
+                // 使用 TargetSpeedsMmps (上游下发的目标速度) 而非 RealtimeSpeedsMmps，
+                // 因为需要根据上游指令的目标速度来判断是否应该触发IO联动
+                var speeds = _axisController.TargetSpeedsMmps;
 
                 // 处理每个联动组
                 for (int groupIndex = 0; groupIndex < options.LinkageGroups.Count; groupIndex++) {
