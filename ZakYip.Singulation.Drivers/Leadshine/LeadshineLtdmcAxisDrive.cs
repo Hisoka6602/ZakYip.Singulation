@@ -12,6 +12,7 @@ using ZakYip.Singulation.Core.Utils;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Drivers.Enums;
+using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Health;
 using ZakYip.Singulation.Drivers.Resilience;
@@ -166,6 +167,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxDecelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             }
         }
+
+        /// <summary>
+        /// 轴类型，用于区分分离轴（Main）和疏散轴（Eject）。
+        /// 默认值为 Main（分离轴）。
+        /// </summary>
+        public AxisType AxisType { get; set; } = AxisType.Main;
 
         // ---------------- 几何换算核心（本类私有） ----------------
 

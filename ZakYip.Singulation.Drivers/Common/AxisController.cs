@@ -163,22 +163,32 @@ namespace ZakYip.Singulation.Drivers.Common {
                 return;
             }
 
-            var speeds = new List<decimal>(totalAx);
-            speeds.AddRange(main.Select(x => (decimal)x));
-            speeds.AddRange(eject.Select(x => (decimal)x));
-            while (speeds.Count < totalAx) speeds.Add(0m);
+            // Distribute speeds based on AxisType
+            var mainIndex = 0;
+            var ejectIndex = 0;
 
             // Only write speed if it has changed from the last known value
             for (var i = 0; i < totalAx; i++) {
                 if (ct.IsCancellationRequested) return;
                 
-                var newSpeed = speeds[i];
+                decimal newSpeed = 0m;
+                var drive = _drives[i];
+                
+                // Assign speed based on axis type
+                if (drive.AxisType == Core.Enums.AxisType.Main && mainIndex < main.Count) {
+                    newSpeed = (decimal)main[mainIndex];
+                    mainIndex++;
+                } else if (drive.AxisType == Core.Enums.AxisType.Eject && ejectIndex < eject.Count) {
+                    newSpeed = (decimal)eject[ejectIndex];
+                    ejectIndex++;
+                }
+                
                 var lastSpeed = _lastSpeeds[i];
                 
                 // Write speed only if it's different from the last written speed
                 if (!lastSpeed.HasValue || lastSpeed.Value != newSpeed) {
                     try {
-                        await _drives[i].WriteSpeedAsync(newSpeed, ct);
+                        await drive.WriteSpeedAsync(newSpeed, ct);
                     } catch (Exception ex) {
                         OnControllerFaulted($"Failed to write speed for axis {i}: {ex.Message}");
                     }

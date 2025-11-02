@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using ZakYip.Singulation.Drivers.Enums;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Host.Dto {
     /// <summary>
@@ -71,5 +72,11 @@ namespace ZakYip.Singulation.Host.Dto {
         /// 若驱动未配置或不可用，则该值为 null。
         /// </summary>
         public double? MaxDecelMmps2 { get; init; }
+
+        /// <summary>
+        /// 轴类型，用于区分分离轴（Main）和疏散轴（Eject）。
+        /// 默认值为 Main（分离轴）。
+        /// </summary>
+        public AxisType AxisType { get; init; } = AxisType.Main;
     }
 }
