@@ -105,6 +105,13 @@ namespace ZakYip.Singulation.Drivers.Common {
         }
 
         private async Task ForEachDriveAsync(Func<IAxisDrive, Task> action, CancellationToken ct) {
+            // 在执行轴操作前，检查总线是否已初始化
+            if (!Bus.IsInitialized) {
+                var msg = "总线未初始化或正在复位中，禁止轴操作";
+                OnControllerFaulted(msg);
+                throw new InvalidOperationException(msg);
+            }
+
             // 并行执行所有轴的操作，提升性能
             var tasks = _drives.Select(async d => {
                 ct.ThrowIfCancellationRequested();
