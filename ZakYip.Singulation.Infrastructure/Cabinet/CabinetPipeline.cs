@@ -371,15 +371,8 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
             switch (operation.Command) {
                 case CabinetCommand.Start:
                     // 远程模式下开始按钮不生效（仅在本地模式有效）
-                    if (operation.TriggeredByIo) {
-                        bool isRemote;
-                        lock (_modeLock) {
-                            isRemote = _isRemoteMode;
-                        }
-                        if (isRemote) {
-                            _log.LogInformation("忽略启动请求：远程模式下开始按钮不生效");
-                            return;
-                        }
+                    if (operation.TriggeredByIo && ShouldIgnoreIoInRemoteMode("启动")) {
+                        return;
                     }
                     
                     // 检测到启动IO变化时->检测当前状态是否运行中,如果是运行中或者报警则不做任何操作
@@ -439,15 +432,9 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 case CabinetCommand.Stop:
                     // 远程模式下停止按钮不生效（仅在本地模式有效）
                     // 注意：急停按钮在任何模式下都必须生效，这是安全要求
-                    if (operation.TriggeredByIo && operation.CommandKind != CabinetTriggerKind.EmergencyStop) {
-                        bool isRemote;
-                        lock (_modeLock) {
-                            isRemote = _isRemoteMode;
-                        }
-                        if (isRemote) {
-                            _log.LogInformation("忽略停止请求：远程模式下停止按钮不生效");
-                            return;
-                        }
+                    if (operation.TriggeredByIo && operation.CommandKind != CabinetTriggerKind.EmergencyStop 
+                        && ShouldIgnoreIoInRemoteMode("停止")) {
+                        return;
                     }
                     
                     // 检测到停止IO变化时->检测当前状态是否已停止/准备中,如果是则不做任何操作
@@ -557,6 +544,21 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     _log.LogWarning("未处理的轴安全类型 {Kind}", kind);
                     break;
             }
+        }
+
+        /// <summary>
+        /// 检查是否应该忽略远程模式下的IO命令。
+        /// </summary>
+        /// <param name="commandName">命令名称（用于日志）</param>
+        /// <returns>如果应该忽略返回 true</returns>
+        private bool ShouldIgnoreIoInRemoteMode(string commandName) {
+            lock (_modeLock) {
+                if (_isRemoteMode) {
+                    _log.LogInformation("忽略{Command}请求：远程模式下{Command}按钮不生效", commandName, commandName);
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>

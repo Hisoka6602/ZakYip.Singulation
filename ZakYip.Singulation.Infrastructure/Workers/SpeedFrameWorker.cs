@@ -82,7 +82,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                                     await _controller.EnableAllAsync(stoppingToken).ConfigureAwait(false);
                                     _log.LogDebug("【远程模式速度接收】轴使能完成");
                                 } catch (Exception ex) {
-                                    _log.LogWarning(ex, "【远程模式速度接收】使能轴时发生异常，继续执行");
+                                    _log.LogWarning(ex, "【远程模式速度接收】使能轴时发生异常，速度可能无法正确应用");
                                 }
                                 
                                 // 更新状态为运行中并亮绿灯
