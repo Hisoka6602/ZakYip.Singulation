@@ -498,7 +498,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 // 2) QuickStop (ControlWord bit2=1, bit1=1)
                 var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0002);
                 if (ret != 0)
-                {
+                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0006);
                     SetErrorFromRet("write 0x6040 (ControlWord:QuickStop)", ret);
                     throw new InvalidOperationException(LastErrorMessage!);
                 }
