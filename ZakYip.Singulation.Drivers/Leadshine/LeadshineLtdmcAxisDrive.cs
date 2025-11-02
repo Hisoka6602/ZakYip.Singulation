@@ -440,14 +440,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     
                     // 读回验证
                     var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort actualValue, suppressLog: true);
-                    if (readRet == 0)
-                    {
-                        Debug.WriteLine($"[Enable] 写入 ControlWord: 0x{expectedValue:X4}, 读回: 0x{actualValue:X4}");
-                        // 验证关键位是否设置正确（不要求完全相等，因为某些位可能由驱动器控制）
-                        // 对于 EnableOperation (0x000F)，检查 bit0-3 是否都为1
-                        if (expectedValue == LeadshineProtocolMap.ControlWord.EnableOperation)
-                        {
-                            if ((actualValue & 0x000F) != 0x000F)
                             {
                                 throw new InvalidOperationException($"EnableOperation 验证失败: 期望 bit0-3=1, 实际 ControlWord=0x{actualValue:X4}");
                             }
