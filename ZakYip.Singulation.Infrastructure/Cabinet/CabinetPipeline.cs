@@ -107,8 +107,9 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     bool isInitialMode = false;
                     lock (_modeLock) {
                         previousMode = _isRemoteMode;
-                        // 检测是否是初始模式（仅当初始模式为本地模式，即_isRemoteMode初始为false时，两者都是false才说明是第一次设置。若初始为远程模式，则此判断不成立。）
-                        isInitialMode = !previousMode && !_isRemoteMode;
+                        // 检测是否是初始模式设置（第一次接收到模式变化事件）
+                        // 使用描述字符串判断：如果描述包含"启动时"，则认为是初始模式
+                        isInitialMode = e.Description?.Contains("启动时") == true;
                         _isRemoteMode = e.IsRemoteMode;
                     }
                     

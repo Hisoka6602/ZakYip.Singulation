@@ -96,14 +96,9 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 return new FrameGuardDecision(false, set, false, "duplicate");
             }
 
-            // 如果处于降级状态，缩放速度值
-            if (state == CabinetIsolationState.Degraded) {
-                var scaled = Scale(set, _options.DegradeScale, out var delta);
-                if (delta > 0)
-                    SingulationMetrics.Instance.SpeedDelta.Record(delta);
-                return new FrameGuardDecision(true, scaled, true, "degraded");
-            }
-
+            // 【关键修复】移除速度降级逻辑
+            // 无论系统处于何种状态（包括降级状态），速度都不应该被缩放
+            // 速度必须始终保持与预期速度一致，不能偏离
             return new FrameGuardDecision(true, set, false, null);
         }
 
