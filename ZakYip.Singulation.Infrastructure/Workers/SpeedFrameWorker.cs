@@ -70,18 +70,30 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                             continue;
                         }
 
-                        await _controller.ApplySpeedSetAsync(
-                            _codec.SetGridLayout(decision.Output, layoutOptions.Rows),
-                            stoppingToken).ConfigureAwait(false);
-
                         // 当远程模式下接收到上游下发速度时判断运行状态，如果不是运行中应该改成运行中，并且亮绿灯
+                        // 重要：必须先确保轴已使能并更新状态，再应用速度，否则速度可能无法正确执行
                         if (_indicatorLightService != null) {
                             var currentState = _indicatorLightService.CurrentState;
                             if (currentState != SystemState.Running) {
-                                _log.LogInformation("【远程模式速度接收】当前状态为 {State}，更新为运行中并亮绿灯", currentState);
+                                _log.LogInformation("【远程模式速度接收】当前状态为 {State}，先使能轴并更新为运行中，再应用速度", currentState);
+                                
+                                // 先使能所有轴（如果系统启动时就是远程模式，轴可能还未使能）
+                                try {
+                                    await _controller.EnableAllAsync(stoppingToken).ConfigureAwait(false);
+                                    _log.LogDebug("【远程模式速度接收】轴使能完成");
+                                } catch (Exception ex) {
+                                    _log.LogWarning(ex, "【远程模式速度接收】使能轴时发生异常，速度可能无法正确应用");
+                                }
+                                
+                                // 更新状态为运行中并亮绿灯
                                 await _indicatorLightService.UpdateStateAsync(SystemState.Running, stoppingToken).ConfigureAwait(false);
+                                _log.LogInformation("【远程模式速度接收】状态已更新为运行中");
                             }
                         }
+
+                        await _controller.ApplySpeedSetAsync(
+                            _codec.SetGridLayout(decision.Output, layoutOptions.Rows),
+                            stoppingToken).ConfigureAwait(false);
 
                         sw.Stop();
                         SingulationMetrics.Instance.LoopDuration.Record(sw.Elapsed.TotalMilliseconds);

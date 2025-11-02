@@ -10,6 +10,7 @@ using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Host.Dto;
 using ZakYip.Singulation.Drivers.Leadshine;
+using ZakYip.Singulation.Infrastructure.Services;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
@@ -29,16 +30,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly ILogger<CabinetController> _logger;
         private readonly ILeadshineCabinetIoOptionsStore _store;
         private readonly LeadshineCabinetIoModule? _cabinetModule;
+        private readonly IndicatorLightService? _indicatorLightService;
 
         public CabinetController(
             ICabinetPipeline safety, 
             ILogger<CabinetController> logger,
             ILeadshineCabinetIoOptionsStore store,
-            LeadshineCabinetIoModule? cabinetModule = null) {
+            LeadshineCabinetIoModule? cabinetModule = null,
+            IndicatorLightService? indicatorLightService = null) {
             _safety = safety;
             _logger = logger;
             _store = store;
             _cabinetModule = cabinetModule;
+            _indicatorLightService = indicatorLightService;
         }
 
         /// <summary>
@@ -184,9 +188,18 @@ namespace ZakYip.Singulation.Host.Controllers {
             if (_cabinetModule is not null) {
                 _cabinetModule.UpdateOptions(options);
                 _logger.LogInformation("控制面板 IO 配置已更新并应用到运行中的模块");
+            }
+            
+            // 热更新指示灯服务配置
+            if (_indicatorLightService is not null) {
+                _indicatorLightService.UpdateOptions(options);
+                _logger.LogInformation("指示灯服务配置已更新（包括运行预警秒数）");
+            }
+            
+            if (_cabinetModule is not null || _indicatorLightService is not null) {
                 return ApiResponse<string>.Success("配置已保存并应用（热更新成功）");
             } else {
-                _logger.LogInformation("控制面板 IO 配置已保存（当前未使用硬件控制面板模块）");
+                _logger.LogInformation("控制面板 IO 配置已保存（未启用热更新服务）");
                 return ApiResponse<string>.Success("配置已保存（重启后生效）");
             }
         }
