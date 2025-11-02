@@ -175,16 +175,12 @@ namespace ZakYip.Singulation.Drivers.Common {
                 var drive = _drives[i];
                 
                 // Assign speed based on axis type
-                if (drive.AxisType == Core.Enums.AxisType.Main) {
-                    if (mainIndex < main.Count) {
-                        newSpeed = (decimal)main[mainIndex];
-                        mainIndex++;
-                    }
-                } else if (drive.AxisType == Core.Enums.AxisType.Eject) {
-                    if (ejectIndex < eject.Count) {
-                        newSpeed = (decimal)eject[ejectIndex];
-                        ejectIndex++;
-                    }
+                if (drive.AxisType == Core.Enums.AxisType.Main && mainIndex < main.Count) {
+                    newSpeed = (decimal)main[mainIndex];
+                    mainIndex++;
+                } else if (drive.AxisType == Core.Enums.AxisType.Eject && ejectIndex < eject.Count) {
+                    newSpeed = (decimal)eject[ejectIndex];
+                    ejectIndex++;
                 }
                 
                 var lastSpeed = _lastSpeeds[i];
