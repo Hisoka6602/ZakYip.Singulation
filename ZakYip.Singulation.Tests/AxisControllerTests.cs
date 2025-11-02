@@ -151,6 +151,55 @@ namespace ZakYip.Singulation.Tests {
         }
 
         [MiniFact]
+        public async Task TargetSpeedsMmpsReflectsLastTargetFromDrives() {
+            // Arrange: Create controller with 3 axes
+            var bus = new FakeBusAdapter(3);
+            var registry = new FakeDriveRegistry();
+            var aggregator = new FakeAxisEventAggregator();
+            var controller = new AxisController(bus, registry, aggregator);
+            var options = new DriverOptions {
+                Card = 0,
+                Port = 0,
+                NodeId = 1,
+                GearRatio = 1m,
+                PulleyPitchDiameterMm = 1m
+            };
+
+            var result = await controller.InitializeAsync("fake", options, 3, CancellationToken.None).ConfigureAwait(false);
+            MiniAssert.True(result.Key, "初始化应成功");
+            MiniAssert.True(registry.Created.Count == 3, "应创建3根轴驱动");
+
+            // Act & Assert 1: Initially, all target speeds should be null
+            var speeds = controller.TargetSpeedsMmps;
+            MiniAssert.True(speeds.Count == 3, "应有3个目标速度值");
+            MiniAssert.True(speeds[0] == null, "轴0初始目标速度应为null");
+            MiniAssert.True(speeds[1] == null, "轴1初始目标速度应为null");
+            MiniAssert.True(speeds[2] == null, "轴2初始目标速度应为null");
+
+            // Act 2: Write speed to axis 0
+            await registry.Created[0].WriteSpeedAsync(100m, CancellationToken.None).ConfigureAwait(false);
+            speeds = controller.TargetSpeedsMmps;
+            MiniAssert.True(speeds[0] == 100m, "轴0目标速度应为100");
+            MiniAssert.True(speeds[1] == null, "轴1目标速度应仍为null");
+            MiniAssert.True(speeds[2] == null, "轴2目标速度应仍为null");
+
+            // Act 3: Write speed to axis 1 and 2
+            await registry.Created[1].WriteSpeedAsync(200m, CancellationToken.None).ConfigureAwait(false);
+            await registry.Created[2].WriteSpeedAsync(300m, CancellationToken.None).ConfigureAwait(false);
+            speeds = controller.TargetSpeedsMmps;
+            MiniAssert.True(speeds[0] == 100m, "轴0目标速度应为100");
+            MiniAssert.True(speeds[1] == 200m, "轴1目标速度应为200");
+            MiniAssert.True(speeds[2] == 300m, "轴2目标速度应为300");
+
+            // Act 4: Update speed for axis 0
+            await registry.Created[0].WriteSpeedAsync(150m, CancellationToken.None).ConfigureAwait(false);
+            speeds = controller.TargetSpeedsMmps;
+            MiniAssert.True(speeds[0] == 150m, "轴0目标速度应更新为150");
+            MiniAssert.True(speeds[1] == 200m, "轴1目标速度应仍为200");
+            MiniAssert.True(speeds[2] == 300m, "轴2目标速度应仍为300");
+        }
+
+        [MiniFact]
         public async Task ResetLastSpeedsEnsuresSpeedWriteAfterReset() {
             // Arrange: Create controller with 4 axes
             var bus = new FakeBusAdapter(4);
