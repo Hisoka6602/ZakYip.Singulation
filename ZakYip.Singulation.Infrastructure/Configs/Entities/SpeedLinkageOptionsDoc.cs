@@ -9,7 +9,7 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
         /// <summary>IO 端口编号（0-1023）。</summary>
         public int BitNumber { get; set; }
 
-        /// <summary>当所有轴速度为0时的目标电平状态（0=ActiveHigh/高电平, 1=ActiveLow/低电平）。</summary>
+        /// <summary>当所有轴速度为0时的目标电平状态（0=ActiveHigh/高电平有效, 1=ActiveLow/低电平有效）。</summary>
         public int LevelWhenStopped { get; set; }
     }
 
