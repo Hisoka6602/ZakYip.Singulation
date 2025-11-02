@@ -161,8 +161,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// ControlWord 位掩码（用于验证状态）。
         /// </summary>
         internal static class ControlWordMask {
-            /// <summary>EnableOperation 位掩码 (0x000F)：bit0-3，用于验证是否使能运行</summary>
-            public const ushort EnableOperationMask = 0x000F;
+            /// <summary>EnableOperation 位掩码 (0x000F)：bit0-3，用于验证是否使能运行。与 ControlWord.EnableOperation 相同。</summary>
+            public const ushort EnableOperationMask = ControlWord.EnableOperation;
 
             /// <summary>EnableOperation 位 (0x0008)：bit3，用于验证运行使能位</summary>
             public const ushort EnableOperationBit = 0x0008;
