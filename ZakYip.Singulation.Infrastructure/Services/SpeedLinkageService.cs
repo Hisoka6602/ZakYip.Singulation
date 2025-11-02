@@ -31,6 +31,9 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly Dictionary<int, bool> _groupStoppedStates = new();
         private readonly object _stateLock = new();
 
+        // 性能优化：缓存轴ID到驱动器的映射，避免每次都使用LINQ查询
+        private Dictionary<int, IAxisDrive>? _axisIdToDriveCache;
+
         public SpeedLinkageService(
             ILogger<SpeedLinkageService> logger,
             ISpeedLinkageOptionsStore store,
@@ -85,6 +88,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     return;
                 }
 
+                // 性能优化：构建轴ID到驱动器的映射缓存（如果尚未构建或驱动器列表已更改）
+                if (_axisIdToDriveCache == null) {
+                    BuildAxisIdToDriveCache();
+                }
+
                 // 处理每个联动组
                 for (int groupIndex = 0; groupIndex < options.LinkageGroups.Count; groupIndex++) {
                     var group = options.LinkageGroups[groupIndex];
@@ -101,6 +109,21 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         /// <summary>
+        /// 构建轴ID到驱动器的映射缓存，提升查找性能。
+        /// </summary>
+        private void BuildAxisIdToDriveCache() {
+            var drives = _axisController.Drives;
+            var cache = new Dictionary<int, IAxisDrive>(drives.Count);
+            
+            for (int i = 0; i < drives.Count; i++) {
+                var drive = drives[i];
+                cache[drive.Axis.Value] = drive;
+            }
+            
+            _axisIdToDriveCache = cache;
+        }
+
+        /// <summary>
         /// 处理单个联动组。
         /// </summary>
         private async Task ProcessGroupAsync(
@@ -109,12 +132,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             CancellationToken ct) {
 
             // 检查组内所有轴是否都已停止
-            // 使用轴ID（如1001, 1002）而非索引来查找对应的驱动器
+            // 使用缓存的字典查找，避免每次都使用LINQ查询，提升性能
             bool allStopped = true;
             foreach (var axisId in group.AxisIds) {
-                // 从驱动器列表中查找对应的轴ID
-                var drive = _axisController.Drives.FirstOrDefault(d => d.Axis.Value == axisId);
-                if (drive == null) {
+                // 从缓存中查找对应的轴ID
+                if (!_axisIdToDriveCache!.TryGetValue(axisId, out var drive)) {
                     _logger.LogWarning("速度联动组 {GroupIndex} 中的轴ID {AxisId} 未找到对应的驱动器", groupIndex, axisId);
                     continue;
                 }

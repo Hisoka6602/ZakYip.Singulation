@@ -64,10 +64,6 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     // 通过 SignalR 广播 IO 状态
                     await _notifier.PublishAsync(currentOptions.SignalRChannel, ioStatus, stoppingToken);
 
-                    _logger.LogDebug(
-                        "IO 状态已广播：总计 {TotalCount} 个 IO，成功 {ValidCount} 个，失败 {ErrorCount} 个",
-                        ioStatus.TotalCount, ioStatus.ValidCount, ioStatus.ErrorCount);
-
                     // 等待下一次轮询
                     await Task.Delay(currentOptions.PollingIntervalMs, stoppingToken);
                 }
