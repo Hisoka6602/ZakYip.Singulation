@@ -456,22 +456,56 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     return true;
                 }
 
-                // 1) 清除报警 → 清零
-                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.FaultReset, LeadshineProtocolMap.DelayMs.AfterFaultReset);
+                // 1) 清除报警：先读取 StatusWord 检查是否有故障
+                var statusRet = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort statusWord, suppressLog: true);
+                if (statusRet == 0)
+                {
+                    Debug.WriteLine($"[Enable] 初始 StatusWord: 0x{statusWord:X4}");
+                    
+                    // 如果 Fault 位（bit3）为 1，表示有故障，需要清除
+                    if ((statusWord & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
+                    {
+                        Debug.WriteLine("[Enable] 检测到故障状态，执行 FaultReset");
+                        
+                        // 写入 FaultReset 命令
+                        var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.FaultReset);
+                        if (ret != 0)
+                        {
+                            SetErrorFromRet("write 0x6040 (ControlWord:FaultReset)", ret);
+                            throw new InvalidOperationException(LastErrorMessage!);
+                        }
+                        
+                        // 等待故障清除，并验证 StatusWord
+                        await Task.Delay(LeadshineProtocolMap.DelayMs.AfterFaultReset, cancellationToken);
+                        
+                        // 读取 StatusWord 验证故障是否已清除
+                        var verifyRet = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort verifyStatus, suppressLog: true);
+                        if (verifyRet == 0)
+                        {
+                            Debug.WriteLine($"[Enable] FaultReset 后 StatusWord: 0x{verifyStatus:X4}");
+                            if ((verifyStatus & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
+                            {
+                                throw new InvalidOperationException($"FaultReset 失败: 故障位仍然为1, StatusWord=0x{verifyStatus:X4}");
+                            }
+                        }
+                    }
+                }
+                
+                // 2) 清零控制字，准备状态机
                 await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.Clear, LeadshineProtocolMap.DelayMs.AfterClear);
 
-                // 2) 设置模式：速度模式 (PV=3)
+                // 3) 设置模式：速度模式 (PV=3)
                 var m = WriteRxPdo(LeadshineProtocolMap.Index.ModeOfOperation, LeadshineProtocolMap.Mode.ProfileVelocity);
                 if (m != 0)
                 { throw new InvalidOperationException("Set Mode=PV failed"); }
                 await Task.Delay(LeadshineProtocolMap.DelayMs.AfterSetMode, cancellationToken);
 
-                // 3) 402 状态机三步
+                // 4) 402 状态机三步
                 await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
                 await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
                 await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
 
-                // 4) 强制读取 PPR（未取到禁止写速度）
+                // 5) 强制读取 PPR（未取到禁止写速度）
                 if (!Volatile.Read(ref _sPprReady))
                 {
                     var ppr = await ReadAxisPulsesPerRevAsync(cancellationToken);
