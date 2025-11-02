@@ -15,6 +15,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
     public sealed class IndicatorLightService {
         private readonly ILogger<IndicatorLightService> _logger;
         private readonly ushort _cardNo;
+        private readonly ZakYip.Singulation.Drivers.Abstractions.IBusAdapter? _busAdapter;
         private LeadshineCabinetIoOptions _options;
         private SystemState _currentState = SystemState.Stopped;
         private bool _isRemoteConnected = false;
@@ -25,11 +26,13 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             ILogger<IndicatorLightService> logger,
             ushort cardNo,
             LeadshineCabinetIoOptions options,
-            IoLinkageService? ioLinkageService = null) {
+            IoLinkageService? ioLinkageService = null,
+            ZakYip.Singulation.Drivers.Abstractions.IBusAdapter? busAdapter = null) {
             _logger = logger;
             _cardNo = cardNo;
             _options = options;
             _ioLinkageService = ioLinkageService;
+            _busAdapter = busAdapter;
         }
 
         /// <summary>
@@ -143,6 +146,12 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// <param name="triggerLevel">触发电平配置（ActiveHigh=高电平亮灯，ActiveLow=低电平亮灯）</param>
         /// <param name="ct">取消令牌</param>
         private Task SetLightAsync(string name, int bitNo, bool on, Core.Enums.TriggerLevel triggerLevel, CancellationToken ct) {
+            // 检查总线是否已初始化，禁止在初始化/复位期间写入 IO
+            if (_busAdapter != null && !_busAdapter.IsInitialized) {
+                _logger.LogDebug("总线未初始化或正在复位中，跳过{Name}（位{BitNo}）", name, bitNo);
+                return Task.CompletedTask;
+            }
+
             if (bitNo < 0) {
                 // 该灯未配置，跳过
                 return Task.CompletedTask;

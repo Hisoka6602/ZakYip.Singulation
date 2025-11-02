@@ -236,9 +236,10 @@ var host = Host.CreateDefaultBuilder(args)
             var busDto = busStore.GetAsync().GetAwaiter().GetResult();
             var cardNo = (ushort)busDto.Template.Card;
             var ioLinkageService = sp.GetRequiredService<IoLinkageService>();
+            var busAdapter = sp.GetRequiredService<IBusAdapter>();
             
             // 总是使用新版配置（即使未启用也返回默认配置）
-            return new IndicatorLightService(logger, cardNo, cabinetOptions, ioLinkageService);
+            return new IndicatorLightService(logger, cardNo, cabinetOptions, ioLinkageService, busAdapter);
         });
 
         services.AddSingleton<FrameGuard>();

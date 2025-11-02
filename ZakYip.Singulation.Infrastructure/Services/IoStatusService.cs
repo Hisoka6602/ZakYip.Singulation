@@ -16,13 +16,16 @@ namespace ZakYip.Singulation.Infrastructure.Services {
     public sealed class IoStatusService {
         private readonly ILogger<IoStatusService> _logger;
         private readonly IControllerOptionsStore _ctrlOptsStore;
+        private readonly ZakYip.Singulation.Drivers.Abstractions.IBusAdapter _busAdapter;
         private ushort _cardNo;
 
         public IoStatusService(
             ILogger<IoStatusService> logger,
-            IControllerOptionsStore ctrlOptsStore) {
+            IControllerOptionsStore ctrlOptsStore,
+            ZakYip.Singulation.Drivers.Abstractions.IBusAdapter busAdapter) {
             _logger = logger;
             _ctrlOptsStore = ctrlOptsStore;
+            _busAdapter = busAdapter;
         }
 
         /// <summary>
@@ -167,6 +170,13 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             CancellationToken ct = default) {
 
             await InitializeAsync(ct);
+
+            // 检查总线是否已初始化，禁止在初始化/复位期间写入 IO
+            if (!_busAdapter.IsInitialized) {
+                var errorMsg = "总线未初始化或正在复位中，禁止写入 IO 端口";
+                _logger.LogWarning(errorMsg);
+                return (false, errorMsg);
+            }
 
             try {
                 // 将 IoState 枚举转换为 API 需要的值

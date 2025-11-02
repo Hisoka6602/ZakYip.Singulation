@@ -310,6 +310,71 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.True(registry.Created[4].LastTargetMmps == 500m, "Eject轴4应为500");
             MiniAssert.True(registry.Created[5].LastTargetMmps == 600m, "Eject轴5应为600");
         }
+
+        [MiniFact]
+        public async Task AxisOperationsThrowWhenBusNotInitialized() {
+            // Arrange: Create controller but DON'T initialize
+            var bus = new FakeBusAdapter(2);
+            var registry = new FakeDriveRegistry();
+            var aggregator = new FakeAxisEventAggregator();
+            var controller = new AxisController(bus, registry, aggregator);
+            var options = new DriverOptions {
+                Card = 0,
+                Port = 0,
+                NodeId = 1,
+                GearRatio = 1m,
+                PulleyPitchDiameterMm = 1m
+            };
+
+            // Initialize normally first
+            var result = await controller.InitializeAsync("fake", options, 2, CancellationToken.None).ConfigureAwait(false);
+            MiniAssert.True(result.Key, "初始化应成功");
+
+            // Act: Close the bus to simulate uninitialized state
+            await bus.CloseAsync().ConfigureAwait(false);
+            MiniAssert.True(!bus.IsInitialized, "总线应处于未初始化状态");
+
+            // Assert: All axis operations should throw InvalidOperationException
+            bool stopThrew = false;
+            try {
+                await controller.StopAllAsync().ConfigureAwait(false);
+            } catch (InvalidOperationException ex) {
+                stopThrew = ex.Message.Contains("总线未初始化");
+            }
+            MiniAssert.True(stopThrew, "StopAllAsync 应抛出 InvalidOperationException");
+
+            bool enableThrew = false;
+            try {
+                await controller.EnableAllAsync().ConfigureAwait(false);
+            } catch (InvalidOperationException ex) {
+                enableThrew = ex.Message.Contains("总线未初始化");
+            }
+            MiniAssert.True(enableThrew, "EnableAllAsync 应抛出 InvalidOperationException");
+
+            bool disableThrew = false;
+            try {
+                await controller.DisableAllAsync().ConfigureAwait(false);
+            } catch (InvalidOperationException ex) {
+                disableThrew = ex.Message.Contains("总线未初始化");
+            }
+            MiniAssert.True(disableThrew, "DisableAllAsync 应抛出 InvalidOperationException");
+
+            bool speedThrew = false;
+            try {
+                await controller.WriteSpeedAllAsync(100m).ConfigureAwait(false);
+            } catch (InvalidOperationException ex) {
+                speedThrew = ex.Message.Contains("总线未初始化");
+            }
+            MiniAssert.True(speedThrew, "WriteSpeedAllAsync 应抛出 InvalidOperationException");
+
+            bool accelThrew = false;
+            try {
+                await controller.SetAccelDecelAllAsync(100m, 100m).ConfigureAwait(false);
+            } catch (InvalidOperationException ex) {
+                accelThrew = ex.Message.Contains("总线未初始化");
+            }
+            MiniAssert.True(accelThrew, "SetAccelDecelAllAsync 应抛出 InvalidOperationException");
+        }
     }
 
     internal sealed class FakeDriveRegistry : IDriveRegistry {
