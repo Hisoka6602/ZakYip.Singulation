@@ -89,6 +89,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "检查速度联动时发生异常");
+                throw;
             }
         }
 
