@@ -113,6 +113,7 @@ namespace ZakYip.Singulation.Tests {
             public event EventHandler<CabinetTriggerEventArgs>? ResetRequested;
 
             public CabinetIsolationState State => CabinetIsolationState.Normal;
+            public bool IsRemoteMode => false;
 
             public bool TryTrip(CabinetTriggerKind kind, string reason) => false;
             public bool TryEnterDegraded(CabinetTriggerKind kind, string reason) => false;
