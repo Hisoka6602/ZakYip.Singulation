@@ -2,7 +2,7 @@ using Polly;
 using System;
 using Polly.Retry;
 
-namespace ZakYip.Singulation.Drivers.Resilience {
+namespace ZakYip.Singulation.Drivers.Leadshine {
 
     /// <summary>
     /// 雷赛轴使能/失能重试策略：失败时重试最多3次，无等待时间。

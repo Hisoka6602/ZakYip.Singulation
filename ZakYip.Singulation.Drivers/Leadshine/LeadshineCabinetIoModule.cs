@@ -8,7 +8,7 @@ using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Core.Enums;
 using csLTDMC;
 
-namespace ZakYip.Singulation.Infrastructure.Cabinet {
+namespace ZakYip.Singulation.Drivers.Leadshine {
 
     /// <summary>
     /// 雷赛硬件控制面板 IO 模块：通过控制器 IO 端口读取物理按键状态。

@@ -10,6 +10,7 @@ using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Host.Dto;
 using ZakYip.Singulation.Infrastructure.Cabinet;
+using ZakYip.Singulation.Drivers.Leadshine;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
