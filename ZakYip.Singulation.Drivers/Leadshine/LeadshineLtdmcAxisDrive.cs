@@ -462,7 +462,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 {
                     Debug.WriteLine($"[Enable] 初始 StatusWord: 0x{statusWord:X4}");
                     
-                    // 如果 Fault 位（bit3）为 1，表示有故障，需要清除
+                    // 如果 Fault 位（bit3, 0-indexed，即第4位）为 1，表示有故障，需要清除
                     if ((statusWord & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
                     {
                         Debug.WriteLine("[Enable] 检测到故障状态，执行 FaultReset");
@@ -480,13 +480,17 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                         
                         // 读取 StatusWord 验证故障是否已清除
                         var verifyRet = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort verifyStatus, suppressLog: true);
-                        if (verifyRet == 0)
+                        if (verifyRet != 0)
                         {
-                            Debug.WriteLine($"[Enable] FaultReset 后 StatusWord: 0x{verifyStatus:X4}");
-                            if ((verifyStatus & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
-                            {
-                                throw new InvalidOperationException($"FaultReset 失败: 故障位仍然为1, StatusWord=0x{verifyStatus:X4}");
-                            }
+                            // 无法读取 StatusWord，无法验证故障是否清除
+                            SetErrorFromRet("read 0x6041 (StatusWord) after FaultReset", verifyRet);
+                            throw new InvalidOperationException(LastErrorMessage!);
+                        }
+                        
+                        Debug.WriteLine($"[Enable] FaultReset 后 StatusWord: 0x{verifyStatus:X4}");
+                        if ((verifyStatus & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
+                        {
+                            throw new InvalidOperationException($"FaultReset 失败: 故障位仍然为1, StatusWord=0x{verifyStatus:X4}");
                         }
                     }
                 }

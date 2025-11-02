@@ -173,7 +173,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// 基于 CiA 402 (DS402) 规范。
         /// </summary>
         internal static class StatusWordMask {
-            /// <summary>Fault 位 (0x0008)：bit3，1 表示驱动器处于故障状态</summary>
+            /// <summary>Fault 位 (0x0008)：bit3 (0-indexed，即第4位)，1 表示驱动器处于故障状态</summary>
             public const ushort FaultBit = 0x0008;
         }
 
