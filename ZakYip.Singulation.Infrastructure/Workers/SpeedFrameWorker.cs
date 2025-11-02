@@ -14,6 +14,8 @@ using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Infrastructure.Telemetry;
+using ZakYip.Singulation.Infrastructure.Services;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
@@ -29,6 +31,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private readonly IRealtimeNotifier _rt;
         private readonly IAxisLayoutStore _axisLayoutStore;
         private readonly IFrameGuard _frameGuard;
+        private readonly IndicatorLightService? _indicatorLightService;
 
         public SpeedFrameWorker(
             ILogger<SpeedFrameWorker> log,
@@ -37,7 +40,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             IAxisController controller,
             IRealtimeNotifier rt,
             IAxisLayoutStore axisLayoutStore,
-            IFrameGuard frameGuard) {
+            IFrameGuard frameGuard,
+            IndicatorLightService? indicatorLightService = null) {
             _log = log;
             _hub = hub;
             _codec = codec;
@@ -45,6 +49,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _rt = rt;
             _axisLayoutStore = axisLayoutStore;
             _frameGuard = frameGuard;
+            _indicatorLightService = indicatorLightService;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -68,6 +73,15 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                         await _controller.ApplySpeedSetAsync(
                             _codec.SetGridLayout(decision.Output, layoutOptions.Rows),
                             stoppingToken).ConfigureAwait(false);
+
+                        // 当远程模式下接收到上游下发速度时判断运行状态，如果不是运行中应该改成运行中，并且亮绿灯
+                        if (_indicatorLightService != null) {
+                            var currentState = _indicatorLightService.CurrentState;
+                            if (currentState != SystemState.Running) {
+                                _log.LogInformation("【远程模式速度接收】当前状态为 {State}，更新为运行中并亮绿灯", currentState);
+                                await _indicatorLightService.UpdateStateAsync(SystemState.Running, stoppingToken).ConfigureAwait(false);
+                            }
+                        }
 
                         sw.Stop();
                         SingulationMetrics.Instance.LoopDuration.Record(sw.Elapsed.TotalMilliseconds);

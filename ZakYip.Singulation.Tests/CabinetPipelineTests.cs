@@ -27,7 +27,8 @@ namespace ZakYip.Singulation.Tests {
                 axis,
                 new FakeAxisEventAggregator(),
                 notifier,
-                new FakeControllerOptionsStore());
+                new FakeControllerOptionsStore(),
+                new FakeLeadshineCabinetIoOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
             pipeline.RequestStop(CabinetTriggerKind.EmergencyStop, "测试急停", true);
@@ -49,7 +50,8 @@ namespace ZakYip.Singulation.Tests {
                 axis,
                 new FakeAxisEventAggregator(),
                 notifier,
-                new FakeControllerOptionsStore());
+                new FakeControllerOptionsStore(),
+                new FakeLeadshineCabinetIoOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
             pipeline.RequestReset(CabinetTriggerKind.ResetButton, "IO复位", true);
@@ -69,7 +71,8 @@ namespace ZakYip.Singulation.Tests {
                 axis,
                 new FakeAxisEventAggregator(),
                 notifier,
-                new FakeControllerOptionsStore());
+                new FakeControllerOptionsStore(),
+                new FakeLeadshineCabinetIoOptionsStore());
 
             await pipeline.StartAsync(CancellationToken.None).ConfigureAwait(false);
             pipeline.RequestStart(CabinetTriggerKind.StartButton, "IO启动", true);

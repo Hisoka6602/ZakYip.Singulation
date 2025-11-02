@@ -189,5 +189,39 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             // 控制远程连接指示灯
             await SetLightAsync("远程连接指示灯", _options.CabinetIndicatorPoint.RemoteConnectionLight, isConnected, _options.CabinetIndicatorPoint.RemoteConnectionLightTriggerLevel, ct).ConfigureAwait(false);
         }
+
+        /// <summary>
+        /// 显示运行预警灯（红灯）指定秒数后执行回调。
+        /// 用于本地模式下按下启动按钮时，先亮红灯持续指定秒数，再执行开启逻辑。
+        /// </summary>
+        /// <param name="warningSeconds">预警持续秒数</param>
+        /// <param name="callback">预警结束后执行的回调</param>
+        /// <param name="ct">取消令牌</param>
+        public async Task ShowRunningWarningAsync(int warningSeconds, Func<Task> callback, CancellationToken ct = default) {
+            if (warningSeconds <= 0) {
+                // 无预警，直接执行回调
+                await callback().ConfigureAwait(false);
+                return;
+            }
+
+            _logger.LogInformation("【运行预警】开始预警，持续 {Seconds} 秒，三色灯亮红灯", warningSeconds);
+            
+            // 暂时设置为报警状态（红灯）
+            await UpdateTriColorLightsAsync(SystemState.Alarm, ct).ConfigureAwait(false);
+            
+            // 等待指定秒数
+            try {
+                await Task.Delay(TimeSpan.FromSeconds(warningSeconds), ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) {
+                _logger.LogWarning("【运行预警】预警过程被取消");
+                throw;
+            }
+            
+            _logger.LogInformation("【运行预警】预警结束，开始执行启动逻辑");
+            
+            // 执行回调
+            await callback().ConfigureAwait(false);
+        }
     }
 }
