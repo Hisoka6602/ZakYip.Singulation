@@ -440,6 +440,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     
                     // 读回验证
                     var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort actualValue, suppressLog: true);
+                    if (readRet == 0)
+                    {
+                        Debug.WriteLine($"[Enable] 写入 ControlWord: 0x{expectedValue:X4}, 读回: 0x{actualValue:X4}");
+                        // 验证关键位是否设置正确（不要求完全相等，因为某些位可能由驱动器控制）
+                        // 对于 EnableOperation (0x000F)，检查 bit0-3 是否都为1
+                        if (expectedValue == LeadshineProtocolMap.ControlWord.EnableOperation)
+                        {
+                            if ((actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationMask) != LeadshineProtocolMap.ControlWordMask.EnableOperationMask)
                             {
                                 throw new InvalidOperationException($"EnableOperation 验证失败: 期望 bit0-3=1, 实际 ControlWord=0x{actualValue:X4}");
                             }
@@ -495,10 +503,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 // 1) 停止运动
                 _ = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, 0, suppressLog: true);
 
-                // 2) QuickStop (ControlWord bit2=1, bit1=1)
-                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0002);
+                // 2) QuickStop
+                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.QuickStop);
                 if (ret != 0)
-                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0006);
+                {
                     SetErrorFromRet("write 0x6040 (ControlWord:QuickStop)", ret);
                     throw new InvalidOperationException(LastErrorMessage!);
                 }
@@ -520,7 +528,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     Debug.WriteLine($"[Disable] Shutdown 后读回 ControlWord: 0x{actualValue:X4}");
                     // 验证 bit3 (EnableOperation) 是否为0，表示已经禁用
                     // 注意：驱动器可能会修改某些位，所以不要求完全等于 Shutdown 值
-                    if ((actualValue & 0x0008) != 0)
+                    if ((actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationBit) != 0)
                     {
                         throw new InvalidOperationException($"Disable 验证失败: EnableOperation 位仍然为1, 实际 ControlWord=0x{actualValue:X4}");
                     }

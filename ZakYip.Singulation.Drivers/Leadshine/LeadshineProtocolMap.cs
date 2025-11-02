@@ -141,8 +141,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             /// <summary>清零控制字 (0x0000)：将控制字拉回0，用于初始化状态机</summary>
             public const ushort Clear = 0x0000;
 
-            /// <summary>故障复位 (0x0080)：清除驱动器故障状态，bit7=1</summary>
-            public const ushort FaultReset = 0x0080;
+            /// <summary>快速停止 (0x0002)：QuickStop命令，bit1=1</summary>
+            public const ushort QuickStop = 0x0002;
 
             /// <summary>关机指令 (0x0006)：进入 Ready to Switch On 状态，bit1=1, bit2=1</summary>
             public const ushort Shutdown = 0x0006;
@@ -150,8 +150,22 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             /// <summary>开机指令 (0x0007)：进入 Switched On 状态，bit0=1, bit1=1, bit2=1</summary>
             public const ushort SwitchOn = 0x0007;
 
+            /// <summary>故障复位 (0x0080)：清除驱动器故障状态，bit7=1</summary>
+            public const ushort FaultReset = 0x0080;
+
             /// <summary>使能运行 (0x000F)：进入 Operation Enabled 状态，bit0-3=1，允许轴运动</summary>
             public const ushort EnableOperation = 0x000F;
+        }
+
+        /// <summary>
+        /// ControlWord 位掩码（用于验证状态）。
+        /// </summary>
+        internal static class ControlWordMask {
+            /// <summary>EnableOperation 位掩码 (0x000F)：bit0-3，用于验证是否使能运行</summary>
+            public const ushort EnableOperationMask = 0x000F;
+
+            /// <summary>EnableOperation 位 (0x0008)：bit3，用于验证运行使能位</summary>
+            public const ushort EnableOperationBit = 0x0008;
         }
 
         /// <summary>
