@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Drivers.Enums;
+using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
@@ -215,6 +216,51 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.True(registry.Created[2].WriteSpeedCalls == 2, "轴2应写入2次（缓存已重置）");
             MiniAssert.True(registry.Created[3].WriteSpeedCalls == 2, "轴3应写入2次（缓存已重置）");
         }
+
+        [MiniFact]
+        public async Task ApplySpeedSetDistributesSpeedsByAxisType() {
+            // Arrange: Create controller with 6 axes (3 Main, 3 Eject)
+            var bus = new FakeBusAdapter(6);
+            var registry = new FakeDriveRegistry();
+            var aggregator = new FakeAxisEventAggregator();
+            var controller = new AxisController(bus, registry, aggregator);
+            var options = new DriverOptions {
+                Card = 0,
+                Port = 0,
+                NodeId = 1,
+                GearRatio = 1m,
+                PulleyPitchDiameterMm = 1m
+            };
+
+            var result = await controller.InitializeAsync("fake", options, 6, CancellationToken.None).ConfigureAwait(false);
+            MiniAssert.True(result.Key, "初始化应成功");
+            MiniAssert.True(registry.Created.Count == 6, "应创建6根轴驱动");
+
+            // Set axis types: 0,1,2 = Main, 3,4,5 = Eject
+            registry.Created[0].AxisType = AxisType.Main;
+            registry.Created[1].AxisType = AxisType.Main;
+            registry.Created[2].AxisType = AxisType.Main;
+            registry.Created[3].AxisType = AxisType.Eject;
+            registry.Created[4].AxisType = AxisType.Eject;
+            registry.Created[5].AxisType = AxisType.Eject;
+
+            // Act: Apply speed set with 3 main speeds and 3 eject speeds
+            var speedSet = new SpeedSet(
+                DateTime.UtcNow,
+                1,
+                new[] { 100, 200, 300 },  // Main speeds
+                new[] { 400, 500, 600 }   // Eject speeds
+            );
+            await controller.ApplySpeedSetAsync(speedSet, CancellationToken.None).ConfigureAwait(false);
+
+            // Assert: Main axes get main speeds, eject axes get eject speeds
+            MiniAssert.True(registry.Created[0].LastTargetMmps == 100m, "Main轴0应为100");
+            MiniAssert.True(registry.Created[1].LastTargetMmps == 200m, "Main轴1应为200");
+            MiniAssert.True(registry.Created[2].LastTargetMmps == 300m, "Main轴2应为300");
+            MiniAssert.True(registry.Created[3].LastTargetMmps == 400m, "Eject轴3应为400");
+            MiniAssert.True(registry.Created[4].LastTargetMmps == 500m, "Eject轴4应为500");
+            MiniAssert.True(registry.Created[5].LastTargetMmps == 600m, "Eject轴5应为600");
+        }
     }
 
     internal sealed class FakeDriveRegistry : IDriveRegistry {
@@ -308,6 +354,7 @@ namespace ZakYip.Singulation.Tests {
         public decimal? MaxLinearMmps => 1000m;
         public decimal? MaxAccelMmps2 => 500m;
         public decimal? MaxDecelMmps2 => 500m;
+        public AxisType AxisType { get; set; } = AxisType.Main;
 
         public ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default) {
             LastTargetMmps = rpm.Value;
