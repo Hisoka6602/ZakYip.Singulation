@@ -185,26 +185,21 @@ namespace ZakYip.Singulation.Host.Controllers {
             await _store.SaveAsync(options, ct);
             
             // 热更新到运行中的模块
-            bool moduleUpdated = false;
-            bool indicatorUpdated = false;
-            
             if (_cabinetModule is not null) {
                 _cabinetModule.UpdateOptions(options);
-                moduleUpdated = true;
                 _logger.LogInformation("控制面板 IO 配置已更新并应用到运行中的模块");
             }
             
             // 热更新指示灯服务配置
             if (_indicatorLightService is not null) {
                 _indicatorLightService.UpdateOptions(options);
-                indicatorUpdated = true;
                 _logger.LogInformation("指示灯服务配置已更新（包括运行预警秒数）");
             }
             
-            if (moduleUpdated || indicatorUpdated) {
+            if (_cabinetModule is not null || _indicatorLightService is not null) {
                 return ApiResponse<string>.Success("配置已保存并应用（热更新成功）");
             } else {
-                _logger.LogInformation("控制面板 IO 配置已保存（当前未使用硬件控制面板模块和指示灯服务）");
+                _logger.LogInformation("控制面板 IO 配置已保存（未启用热更新服务）");
                 return ApiResponse<string>.Success("配置已保存（重启后生效）");
             }
         }
