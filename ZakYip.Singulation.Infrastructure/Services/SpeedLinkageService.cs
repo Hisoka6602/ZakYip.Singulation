@@ -75,8 +75,10 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     return;
                 }
 
-                // 获取所有轴的目标速度（用于速度联动判断）
-                var speeds = _axisController.TargetSpeedsMmps;
+                // 获取所有轴的反馈速度（用于速度联动判断）
+                // 使用 RealtimeSpeedsMmps (LastFeedbackMmps) 而非 TargetSpeedsMmps，
+                // 因为需要根据实际速度而非目标速度来判断轴是否已停止
+                var speeds = _axisController.RealtimeSpeedsMmps;
 
                 // 处理每个联动组
                 for (int groupIndex = 0; groupIndex < options.LinkageGroups.Count; groupIndex++) {

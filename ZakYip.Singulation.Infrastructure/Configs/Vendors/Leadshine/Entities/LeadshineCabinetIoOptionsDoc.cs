@@ -97,5 +97,8 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities {
 
         /// <summary>远程连接指示灯有效电平配置。</summary>
         public int RemoteConnectionLightTriggerLevel { get; set; } = 1;
+
+        /// <summary>运行预警秒数：用于在本地模式下按下启动按钮时三色灯亮红灯的持续秒数，默认0秒。</summary>
+        public int RunningWarningSeconds { get; set; } = 0;
     }
 }
