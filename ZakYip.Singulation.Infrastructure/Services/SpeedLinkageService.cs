@@ -101,9 +101,14 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             CancellationToken ct) {
 
             // 检查组内所有轴是否都已停止
+            // Axis IDs must start from 1 and be sequential. This is required for correct speed lookup.
             bool allStopped = true;
             foreach (var axisId in group.AxisIds) {
-                // 轴ID从1开始，数组索引从0开始
+                // Validate axisId is within expected range
+                if (axisId < 1 || axisId > speeds.Count) {
+                    _logger.LogWarning("速度联动组 {GroupIndex} 中的轴ID {AxisId} 不符合要求（必须 >= 1 且 <= 轴数量 {AxisCount}）", groupIndex, axisId, speeds.Count);
+                    continue;
+                }
                 int speedIndex = axisId - 1;
                 
                 if (speedIndex < 0 || speedIndex >= speeds.Count) {
