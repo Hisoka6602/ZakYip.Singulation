@@ -85,15 +85,10 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     return;
                 }
 
-                // 获取所有轴的目标速度（用于速度联动判断）
-                // 使用 TargetSpeedsMmps (上游下发的目标速度) 而非 RealtimeSpeedsMmps，
-                // 因为需要根据上游指令的目标速度来判断是否应该触发IO联动
-                var speeds = _axisController.TargetSpeedsMmps;
-
                 // 处理每个联动组
                 for (int groupIndex = 0; groupIndex < options.LinkageGroups.Count; groupIndex++) {
                     var group = options.LinkageGroups[groupIndex];
-                    await ProcessGroupAsync(groupIndex, group, speeds, ct);
+                    await ProcessGroupAsync(groupIndex, group, ct);
                 }
             }
             catch (OperationCanceledException) {
@@ -111,27 +106,21 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private async Task ProcessGroupAsync(
             int groupIndex,
             SpeedLinkageGroup group,
-            IReadOnlyList<decimal?> speeds,
             CancellationToken ct) {
 
             // 检查组内所有轴是否都已停止
-            // Axis IDs must start from 1 and be sequential. This is required for correct speed lookup.
+            // 使用轴ID（如1001, 1002）而非索引来查找对应的驱动器
             bool allStopped = true;
             foreach (var axisId in group.AxisIds) {
-                // Validate axisId is within expected range
-                if (axisId < 1 || axisId > speeds.Count) {
-                    _logger.LogWarning("速度联动组 {GroupIndex} 中的轴ID {AxisId} 不符合要求（必须 >= 1 且 <= 轴数量 {AxisCount}）", groupIndex, axisId, speeds.Count);
-                    continue;
-                }
-                int speedIndex = axisId - 1;
-                
-                if (speedIndex < 0 || speedIndex >= speeds.Count) {
-                    // 轴ID超出范围，记录警告但继续
-                    _logger.LogWarning("速度联动组 {GroupIndex} 中的轴ID {AxisId} 超出范围", groupIndex, axisId);
+                // 从驱动器列表中查找对应的轴ID
+                var drive = _axisController.Drives.FirstOrDefault(d => d.Axis.Value == axisId);
+                if (drive == null) {
+                    _logger.LogWarning("速度联动组 {GroupIndex} 中的轴ID {AxisId} 未找到对应的驱动器", groupIndex, axisId);
                     continue;
                 }
 
-                var speed = speeds[speedIndex];
+                // 获取该轴的目标速度
+                var speed = drive.LastTargetMmps;
                 
                 // 如果速度为null或非0，则认为轴未停止
                 if (!speed.HasValue || Math.Abs(speed.Value) > 0.001m) {
@@ -152,6 +141,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     _groupStoppedStates[groupIndex] = allStopped;
                 }
 
+                // 仅在状态变化时记录日志
                 _logger.LogInformation(
                     "速度联动组 {GroupIndex} 状态变更：{OldState} → {NewState}",
                     groupIndex,
@@ -198,12 +188,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
                     if (success) {
                         successCount++;
-                        _logger.LogDebug(
-                            "速度联动组 {GroupIndex}：IO {BitNumber} 设置为 {Level} ({State})",
-                            groupIndex,
-                            ioPoint.BitNumber,
-                            targetLevel,
-                            ioState);
+                        // 移除成功时的调试日志，避免日志过多
                     } else {
                         failCount++;
                         _logger.LogWarning(
@@ -223,11 +208,14 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 }
             }
 
-            _logger.LogInformation(
-                "速度联动组 {GroupIndex} IO设置完成：成功={Success}，失败={Fail}",
-                groupIndex,
-                successCount,
-                failCount);
+            // 仅在有失败时记录详细信息，成功时使用调试级别
+            if (failCount > 0) {
+                _logger.LogWarning(
+                    "速度联动组 {GroupIndex} IO设置完成：成功={Success}，失败={Fail}",
+                    groupIndex,
+                    successCount,
+                    failCount);
+            }
         }
     }
 }
