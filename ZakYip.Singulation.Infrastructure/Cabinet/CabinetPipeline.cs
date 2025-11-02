@@ -107,7 +107,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     bool isInitialMode = false;
                     lock (_modeLock) {
                         previousMode = _isRemoteMode;
-                        // 检测是否是初始模式（两者都是false说明是第一次设置）
+                        // 检测是否是初始模式（仅当初始模式为本地模式，即_isRemoteMode初始为false时，两者都是false才说明是第一次设置。若初始为远程模式，则此判断不成立。）
                         isInitialMode = !previousMode && !_isRemoteMode;
                         _isRemoteMode = e.IsRemoteMode;
                     }
