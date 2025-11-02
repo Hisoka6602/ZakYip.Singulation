@@ -118,6 +118,10 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     successCount,
                     failCount);
             }
+            catch (OperationCanceledException) {
+                // 取消操作，直接抛出，不记录为错误
+                throw;
+            }
             catch (Exception ex) {
                 _logger.LogError(ex, "执行 IO 联动时发生异常");
             }
