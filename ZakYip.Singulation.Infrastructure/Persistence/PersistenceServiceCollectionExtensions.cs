@@ -56,5 +56,11 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             services.AddSingleton<IIoStatusMonitorOptionsStore, LiteDbIoStatusMonitorOptionsStore>();
             return services;
         }
+
+        /// <summary>注册 IO 联动配置存储（与设置共享同一 LiteDB）。</summary>
+        public static IServiceCollection AddLiteDbIoLinkage(this IServiceCollection services) {
+            services.AddSingleton<IIoLinkageOptionsStore, LiteDbIoLinkageOptionsStore>();
+            return services;
+        }
     }
 }

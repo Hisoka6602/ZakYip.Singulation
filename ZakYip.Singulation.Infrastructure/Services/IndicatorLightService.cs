@@ -19,14 +19,17 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private SystemState _currentState = SystemState.Stopped;
         private bool _isRemoteConnected = false;
         private readonly object _stateLock = new();
+        private readonly IoLinkageService? _ioLinkageService;
 
         public IndicatorLightService(
             ILogger<IndicatorLightService> logger,
             ushort cardNo,
-            LeadshineCabinetIoOptions options) {
+            LeadshineCabinetIoOptions options,
+            IoLinkageService? ioLinkageService = null) {
             _logger = logger;
             _cardNo = cardNo;
             _options = options;
+            _ioLinkageService = ioLinkageService;
         }
 
         /// <summary>
@@ -64,6 +67,17 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
             // 控制按钮灯
             await UpdateButtonLightsAsync(newState, ct).ConfigureAwait(false);
+
+            // 调用 IO 联动服务
+            if (_ioLinkageService != null) {
+                try {
+                    await _ioLinkageService.OnStateChangedAsync(newState, ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException ocex) {
+                    _logger.LogWarning(ocex, "IO 联动服务操作被取消");
+                }
+                // 如果有其他已知异常类型，可以在此添加额外的 catch 块
+            }
         }
 
         /// <summary>
