@@ -310,19 +310,6 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.True(registry.Created[4].LastTargetMmps == 500m, "Eject轴4应为500");
             MiniAssert.True(registry.Created[5].LastTargetMmps == 600m, "Eject轴5应为600");
         }
-    }
-
-    internal sealed class FakeDriveRegistry : IDriveRegistry {
-        public List<FakeAxisDrive> Created { get; } = new();
-
-        public void Register(string vendor, Func<AxisId, IAxisPort, DriverOptions, IAxisDrive> factory) {
-        }
-
-        public IAxisDrive Create(string vendor, AxisId axisId, IAxisPort port, DriverOptions opts) {
-            var drive = new FakeAxisDrive(axisId);
-            Created.Add(drive);
-            return drive;
-        }
 
         [MiniFact]
         public async Task AxisOperationsThrowWhenBusNotInitialized() {
@@ -387,6 +374,19 @@ namespace ZakYip.Singulation.Tests {
                 accelThrew = ex.Message.Contains("总线未初始化");
             }
             MiniAssert.True(accelThrew, "SetAccelDecelAllAsync 应抛出 InvalidOperationException");
+        }
+    }
+
+    internal sealed class FakeDriveRegistry : IDriveRegistry {
+        public List<FakeAxisDrive> Created { get; } = new();
+
+        public void Register(string vendor, Func<AxisId, IAxisPort, DriverOptions, IAxisDrive> factory) {
+        }
+
+        public IAxisDrive Create(string vendor, AxisId axisId, IAxisPort port, DriverOptions opts) {
+            var drive = new FakeAxisDrive(axisId);
+            Created.Add(drive);
+            return drive;
         }
     }
 
