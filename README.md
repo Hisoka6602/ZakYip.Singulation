@@ -18,12 +18,13 @@
 - **影响**：`GET /api/Axes/axes` API能够正确返回轴的实时反馈速度
 - **相关字段**：`FeedbackLinearMmps` (mm/s)
 
-#### 3. **轴使能/失能状态检查** 🔍
-- **改进**：在使能/失能轴之前，先读取当前ControlWord状态
-- **目的**：避免重复操作，提高状态机转换的可靠性
+#### 3. **轴使能/失能状态验证** 🔍
+- **改进**：在使能/失能轴后，读取ControlWord验证状态转换是否成功
+- **目的**：确保状态机转换成功完成，如果验证失败则通过Polly重试
 - **实现**：
-  - `EnableAsync`：执行前读取并记录当前ControlWord值
-  - `DisableAsync`：执行前读取并记录当前ControlWord值
+  - `EnableAsync`：写入EnableOperation后验证bit0-3是否都为1
+  - `DisableAsync`：写入Shutdown后验证bit3 (EnableOperation)是否为0
+  - 验证失败时抛出异常，触发Polly重试机制（最多3次）
 - **相关文件**：`LeadshineLtdmcAxisDrive.cs`
 
 #### 4. **LeadshineProtocolMap注释完善** 📝
