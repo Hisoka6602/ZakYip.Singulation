@@ -185,7 +185,8 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             GreenLightTriggerLevel = (Core.Enums.TriggerLevel)d.GreenLightTriggerLevel,
             StartButtonLightTriggerLevel = (Core.Enums.TriggerLevel)d.StartButtonLightTriggerLevel,
             StopButtonLightTriggerLevel = (Core.Enums.TriggerLevel)d.StopButtonLightTriggerLevel,
-            RemoteConnectionLightTriggerLevel = (Core.Enums.TriggerLevel)d.RemoteConnectionLightTriggerLevel
+            RemoteConnectionLightTriggerLevel = (Core.Enums.TriggerLevel)d.RemoteConnectionLightTriggerLevel,
+            RunningWarningSeconds = d.RunningWarningSeconds
         };
 
         public static CabinetIndicatorPointDoc ToDoc(this CabinetIndicatorPoint o) => new() {
@@ -200,7 +201,8 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             GreenLightTriggerLevel = (int)o.GreenLightTriggerLevel,
             StartButtonLightTriggerLevel = (int)o.StartButtonLightTriggerLevel,
             StopButtonLightTriggerLevel = (int)o.StopButtonLightTriggerLevel,
-            RemoteConnectionLightTriggerLevel = (int)o.RemoteConnectionLightTriggerLevel
+            RemoteConnectionLightTriggerLevel = (int)o.RemoteConnectionLightTriggerLevel,
+            RunningWarningSeconds = o.RunningWarningSeconds
         };
 
         // ====== 新增：IoLinkageOptions ======

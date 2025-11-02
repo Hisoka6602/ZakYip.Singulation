@@ -9,6 +9,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Drivers.Abstractions;
 
 namespace ZakYip.Singulation.Infrastructure.Services {
@@ -17,26 +18,33 @@ namespace ZakYip.Singulation.Infrastructure.Services {
     /// 速度联动服务：监听轴速度变化并自动控制配置的 IO 端口。
     /// 当指定轴组的所有轴速度从非0降到0时，设置指定IO为指定电平；
     /// 当所有轴速度从0提升到非0时，设置相反电平。
+    /// 注意：仅在远程模式下生效，本地模式下不触发速度联动。
     /// </summary>
     public sealed class SpeedLinkageService : BackgroundService {
         private readonly ILogger<SpeedLinkageService> _logger;
         private readonly ISpeedLinkageOptionsStore _store;
         private readonly IoStatusService _ioStatusService;
         private readonly IAxisController _axisController;
+        private readonly ICabinetPipeline _cabinetPipeline;
         
         // 用于跟踪每个组的状态：true表示组内所有轴都已停止
         private readonly Dictionary<int, bool> _groupStoppedStates = new();
         private readonly object _stateLock = new();
 
+        // 性能优化：缓存轴ID到驱动器的映射，避免每次都使用LINQ查询
+        private Dictionary<int, IAxisDrive>? _axisIdToDriveCache;
+
         public SpeedLinkageService(
             ILogger<SpeedLinkageService> logger,
             ISpeedLinkageOptionsStore store,
             IoStatusService ioStatusService,
-            IAxisController axisController) {
+            IAxisController axisController,
+            ICabinetPipeline cabinetPipeline) {
             _logger = logger;
             _store = store;
             _ioStatusService = ioStatusService;
             _axisController = axisController;
+            _cabinetPipeline = cabinetPipeline;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -64,6 +72,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// </summary>
         private async Task CheckAndApplySpeedLinkageAsync(CancellationToken ct) {
             try {
+                // 仅在远程模式下执行速度联动
+                if (!_cabinetPipeline.IsRemoteMode) {
+                    return;
+                }
+
                 // 获取配置
                 var options = await _store.GetAsync(ct);
 
@@ -75,13 +88,15 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     return;
                 }
 
-                // 获取所有轴的目标速度（用于速度联动判断）
-                var speeds = _axisController.TargetSpeedsMmps;
+                // 性能优化：构建轴ID到驱动器的映射缓存（如果尚未构建或驱动器列表已更改）
+                if (_axisIdToDriveCache == null) {
+                    BuildAxisIdToDriveCache();
+                }
 
                 // 处理每个联动组
                 for (int groupIndex = 0; groupIndex < options.LinkageGroups.Count; groupIndex++) {
                     var group = options.LinkageGroups[groupIndex];
-                    await ProcessGroupAsync(groupIndex, group, speeds, ct);
+                    await ProcessGroupAsync(groupIndex, group, ct);
                 }
             }
             catch (OperationCanceledException) {
@@ -94,32 +109,40 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         /// <summary>
+        /// 构建轴ID到驱动器的映射缓存，提升查找性能。
+        /// </summary>
+        private void BuildAxisIdToDriveCache() {
+            var drives = _axisController.Drives;
+            var cache = new Dictionary<int, IAxisDrive>(drives.Count);
+            
+            for (int i = 0; i < drives.Count; i++) {
+                var drive = drives[i];
+                cache[drive.Axis.Value] = drive;
+            }
+            
+            _axisIdToDriveCache = cache;
+        }
+
+        /// <summary>
         /// 处理单个联动组。
         /// </summary>
         private async Task ProcessGroupAsync(
             int groupIndex,
             SpeedLinkageGroup group,
-            IReadOnlyList<decimal?> speeds,
             CancellationToken ct) {
 
             // 检查组内所有轴是否都已停止
-            // Axis IDs must start from 1 and be sequential. This is required for correct speed lookup.
+            // 使用缓存的字典查找，避免每次都使用LINQ查询，提升性能
             bool allStopped = true;
             foreach (var axisId in group.AxisIds) {
-                // Validate axisId is within expected range
-                if (axisId < 1 || axisId > speeds.Count) {
-                    _logger.LogWarning("速度联动组 {GroupIndex} 中的轴ID {AxisId} 不符合要求（必须 >= 1 且 <= 轴数量 {AxisCount}）", groupIndex, axisId, speeds.Count);
-                    continue;
-                }
-                int speedIndex = axisId - 1;
-                
-                if (speedIndex < 0 || speedIndex >= speeds.Count) {
-                    // 轴ID超出范围，记录警告但继续
-                    _logger.LogWarning("速度联动组 {GroupIndex} 中的轴ID {AxisId} 超出范围", groupIndex, axisId);
+                // 从缓存中查找对应的轴ID
+                if (!_axisIdToDriveCache!.TryGetValue(axisId, out var drive)) {
+                    _logger.LogWarning("速度联动组 {GroupIndex} 中的轴ID {AxisId} 未找到对应的驱动器", groupIndex, axisId);
                     continue;
                 }
 
-                var speed = speeds[speedIndex];
+                // 获取该轴的目标速度
+                var speed = drive.LastTargetMmps;
                 
                 // 如果速度为null或非0，则认为轴未停止
                 if (!speed.HasValue || Math.Abs(speed.Value) > 0.001m) {
@@ -140,6 +163,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     _groupStoppedStates[groupIndex] = allStopped;
                 }
 
+                // 仅在状态变化时记录日志
                 _logger.LogInformation(
                     "速度联动组 {GroupIndex} 状态变更：{OldState} → {NewState}",
                     groupIndex,
@@ -186,12 +210,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
                     if (success) {
                         successCount++;
-                        _logger.LogDebug(
-                            "速度联动组 {GroupIndex}：IO {BitNumber} 设置为 {Level} ({State})",
-                            groupIndex,
-                            ioPoint.BitNumber,
-                            targetLevel,
-                            ioState);
+                        // 移除成功时的调试日志，避免日志过多
                     } else {
                         failCount++;
                         _logger.LogWarning(
@@ -211,11 +230,14 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 }
             }
 
-            _logger.LogInformation(
-                "速度联动组 {GroupIndex} IO设置完成：成功={Success}，失败={Fail}",
-                groupIndex,
-                successCount,
-                failCount);
+            // 仅在有失败时记录详细信息，成功时使用调试级别
+            if (failCount > 0) {
+                _logger.LogWarning(
+                    "速度联动组 {GroupIndex} IO设置完成：成功={Success}，失败={Fail}",
+                    groupIndex,
+                    successCount,
+                    failCount);
+            }
         }
     }
 }

@@ -426,10 +426,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             {
                 await ThrottleAsync(cancellationToken);
 
-                // 简化封装：写 ControlWord 并可选延时
-                async Task<bool> WriteCtrlAsync(ushort value, int delayMs)
+                // 简化封装：写 ControlWord、延时，然后验证
+                async Task<bool> WriteAndVerifyCtrlAsync(ushort expectedValue, int delayMs)
                 {
-                    var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, value);
+                    var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, expectedValue);
                     if (ret != 0)
                     {
                         SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
@@ -437,25 +437,41 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     }
                     if (delayMs > 0)
                         await Task.Delay(delayMs, cancellationToken);
+                    
+                    // 读回验证
+                    var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort actualValue, suppressLog: true);
+                    if (readRet == 0)
+                    {
+                        Debug.WriteLine($"[Enable] 写入 ControlWord: 0x{expectedValue:X4}, 读回: 0x{actualValue:X4}");
+                        // 验证关键位是否设置正确（不要求完全相等，因为某些位可能由驱动器控制）
+                        // 对于 EnableOperation (0x000F)，检查 bit0-3 是否都为1
+                        if (expectedValue == LeadshineProtocolMap.ControlWord.EnableOperation)
+                        {
+                            if ((actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationMask) != LeadshineProtocolMap.ControlWordMask.EnableOperationMask)
+                            {
+                                throw new InvalidOperationException($"EnableOperation 验证失败: 期望 bit0-3=1, 实际 ControlWord=0x{actualValue:X4}");
+                            }
+                        }
+                    }
                     return true;
                 }
 
-                // 0) 清除报警 → 清零
-                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.FaultReset, LeadshineProtocolMap.DelayMs.AfterFaultReset);
-                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Clear, LeadshineProtocolMap.DelayMs.AfterClear);
+                // 1) 清除报警 → 清零
+                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.FaultReset, LeadshineProtocolMap.DelayMs.AfterFaultReset);
+                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.Clear, LeadshineProtocolMap.DelayMs.AfterClear);
 
-                // 1) 设置模式：速度模式 (PV=3)
+                // 2) 设置模式：速度模式 (PV=3)
                 var m = WriteRxPdo(LeadshineProtocolMap.Index.ModeOfOperation, LeadshineProtocolMap.Mode.ProfileVelocity);
                 if (m != 0)
                 { throw new InvalidOperationException("Set Mode=PV failed"); }
                 await Task.Delay(LeadshineProtocolMap.DelayMs.AfterSetMode, cancellationToken);
 
-                // 2) 402 状态机三步
-                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
-                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
-                await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
+                // 3) 402 状态机三步
+                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
+                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
+                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
 
-                // 3) 强制读取 PPR（未取到禁止写速度）
+                // 4) 强制读取 PPR（未取到禁止写速度）
                 if (!Volatile.Read(ref _sPprReady))
                 {
                     var ppr = await ReadAxisPulsesPerRevAsync(cancellationToken);
@@ -484,22 +500,39 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             {
                 await ThrottleAsync(cancellationToken);
 
+                // 1) 停止运动
                 _ = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, 0, suppressLog: true);
-                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0002);
+
+                // 2) QuickStop
+                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.QuickStop);
                 if (ret != 0)
                 {
-                    SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
+                    SetErrorFromRet("write 0x6040 (ControlWord:QuickStop)", ret);
                     throw new InvalidOperationException(LastErrorMessage!);
                 }
                 await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
 
+                // 3) Shutdown 进入 Ready to Switch On
                 var cw = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.Shutdown);
                 if (cw != 0)
                 {
-                    SetErrorFromRet("write 0x6040 (ControlWord:<step>)", cw);
+                    SetErrorFromRet("write 0x6040 (ControlWord:Shutdown)", cw);
                     throw new InvalidOperationException($"Disable: write ControlWord=Shutdown(0x0006) failed, ret={cw}");
                 }
                 await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
+
+                // 4) 读回验证 ControlWord，确保 Shutdown 成功（bit3 应该为0）
+                var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort actualValue, suppressLog: true);
+                if (readRet == 0)
+                {
+                    Debug.WriteLine($"[Disable] Shutdown 后读回 ControlWord: 0x{actualValue:X4}");
+                    // 验证 bit3 (EnableOperation) 是否为0，表示已经禁用
+                    // 注意：驱动器可能会修改某些位，所以不要求完全等于 Shutdown 值
+                    if ((actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationBit) != 0)
+                    {
+                        throw new InvalidOperationException($"Disable 验证失败: EnableOperation 位仍然为1, 实际 ControlWord=0x{actualValue:X4}");
+                    }
+                }
             }, ct).ConfigureAwait(false);
 
             // 状态清理仅在成功后执行一次
@@ -797,6 +830,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             value = default!;
             var bitLen = index switch
             {
+                var i when i == LeadshineProtocolMap.Index.ControlWord => (ushort)LeadshineProtocolMap.BitLen.ControlWord,
                 var i when i == LeadshineProtocolMap.Index.StatusWord => (ushort)LeadshineProtocolMap.BitLen.StatusWord,
                 var i when i == LeadshineProtocolMap.Index.ModeOfOperation => (ushort)LeadshineProtocolMap.BitLen.ModeOfOperation,
                 var i when i == LeadshineProtocolMap.Index.ActualVelocity => (ushort)LeadshineProtocolMap.BitLen.ActualVelocity,
