@@ -8,7 +8,7 @@ using ZakYip.Singulation.Core.Contracts.Events.Cabinet;
 using ZakYip.Singulation.Core.Enums;
 using csLTDMC;
 
-namespace ZakYip.Singulation.Infrastructure.Cabinet {
+namespace ZakYip.Singulation.Drivers.Leadshine {
 
     /// <summary>
     /// 雷赛硬件控制面板 IO 模块：通过控制器 IO 端口读取物理按键状态。
@@ -149,12 +149,17 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     _lastRemoteLocalModeState = false; // 默认本地模式
                     RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取超时异常，默认为本地模式" });
                 }
-                // If you know the hardware library throws only Exception, you may keep this, but document why:
-                // catch (Exception ex) {
-                //     _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 失败，默认为本地模式");
-                //     _lastRemoteLocalModeState = false; // 默认本地模式
-                //     RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取失败，默认为本地模式" });
-                // }
+                catch (Exception ex) when (
+                    ex is DllNotFoundException ||
+                    ex is EntryPointNotFoundException ||
+                    ex is BadImageFormatException ||
+                    ex is InvalidOperationException
+                ) {
+                    // 硬件库加载或调用失败（DLL缺失、P/Invoke入口点错误、架构不匹配等）
+                    _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 失败（硬件库异常），默认为本地模式");
+                    _lastRemoteLocalModeState = false; // 默认本地模式
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取失败（硬件库异常），默认为本地模式" });
+                }
             }
             else {
                 _logger.LogInformation("远程/本地模式 IO 未配置，默认为本地模式");
@@ -292,8 +297,15 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 bool state = result == 1;
                 return triggerLevel == Core.Enums.TriggerLevel.ActiveLow ? !state : state;
             }
-            catch (SystemException ex) {
-                _logger.LogError(ex, "读取输入位 {BitNo} 时发生异常", bitNo);
+            catch (Exception ex) when (
+                ex is DllNotFoundException ||
+                ex is EntryPointNotFoundException ||
+                ex is BadImageFormatException ||
+                ex is AccessViolationException ||
+                ex is InvalidOperationException
+            ) {
+                // 捕获硬件库特定异常：DLL缺失、P/Invoke入口点错误、架构不匹配、内存访问违规等
+                _logger.LogError(ex, "读取输入位 {BitNo} 时发生硬件库异常", bitNo);
                 return false;
             }
         }
