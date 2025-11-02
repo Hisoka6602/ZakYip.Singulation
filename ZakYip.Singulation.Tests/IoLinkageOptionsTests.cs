@@ -1,5 +1,5 @@
 using ZakYip.Singulation.Core.Configs;
-using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -24,10 +24,10 @@ namespace ZakYip.Singulation.Tests {
             var options = new IoLinkageOptions {
                 Enabled = false,
                 RunningStateIos = new() {
-                    new IoLinkagePoint { BitNumber = 1, State = IoState.High }
+                    new IoLinkagePoint { BitNumber = 1, Level = TriggerLevel.ActiveLow }
                 },
                 StoppedStateIos = new() {
-                    new IoLinkagePoint { BitNumber = 2, State = IoState.Low }
+                    new IoLinkagePoint { BitNumber = 2, Level = TriggerLevel.ActiveHigh }
                 }
             };
 
@@ -35,7 +35,7 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(1, options.RunningStateIos.Count, "RunningStateIos 应该有 1 个元素");
             MiniAssert.Equal(1, options.StoppedStateIos.Count, "StoppedStateIos 应该有 1 个元素");
             MiniAssert.Equal(1, options.RunningStateIos[0].BitNumber, "第一个运行状态 IO 位号应该为 1");
-            MiniAssert.Equal(IoState.High, options.RunningStateIos[0].State, "第一个运行状态 IO 应该为高电平");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, options.RunningStateIos[0].Level, "第一个运行状态 IO 应该为低电平");
         }
 
         [MiniFact]
@@ -43,18 +43,18 @@ namespace ZakYip.Singulation.Tests {
             var point = new IoLinkagePoint();
 
             MiniAssert.Equal(0, point.BitNumber, "默认 BitNumber 应该为 0");
-            MiniAssert.Equal(IoState.Low, point.State, "默认 State 应该为 Low (0)");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, point.Level, "默认 Level 应该为 ActiveHigh (0)");
         }
 
         [MiniFact]
-        public void IoLinkagePointCanStoreAllStates() {
-            var lowPoint = new IoLinkagePoint { BitNumber = 5, State = IoState.Low };
-            var highPoint = new IoLinkagePoint { BitNumber = 10, State = IoState.High };
+        public void IoLinkagePointCanStoreAllLevels() {
+            var highPoint = new IoLinkagePoint { BitNumber = 5, Level = TriggerLevel.ActiveHigh };
+            var lowPoint = new IoLinkagePoint { BitNumber = 10, Level = TriggerLevel.ActiveLow };
 
-            MiniAssert.Equal(5, lowPoint.BitNumber, "低电平点位号应该为 5");
-            MiniAssert.Equal(IoState.Low, lowPoint.State, "低电平点状态应该为 Low");
-            MiniAssert.Equal(10, highPoint.BitNumber, "高电平点位号应该为 10");
-            MiniAssert.Equal(IoState.High, highPoint.State, "高电平点状态应该为 High");
+            MiniAssert.Equal(5, highPoint.BitNumber, "高电平点位号应该为 5");
+            MiniAssert.Equal(TriggerLevel.ActiveHigh, highPoint.Level, "高电平点状态应该为 ActiveHigh");
+            MiniAssert.Equal(10, lowPoint.BitNumber, "低电平点位号应该为 10");
+            MiniAssert.Equal(TriggerLevel.ActiveLow, lowPoint.Level, "低电平点状态应该为 ActiveLow");
         }
 
         [MiniFact]
@@ -62,7 +62,7 @@ namespace ZakYip.Singulation.Tests {
             var original = new IoLinkageOptions {
                 Enabled = true,
                 RunningStateIos = new() {
-                    new IoLinkagePoint { BitNumber = 3, State = IoState.Low }
+                    new IoLinkagePoint { BitNumber = 3, Level = TriggerLevel.ActiveHigh }
                 }
             };
 

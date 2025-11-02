@@ -76,17 +76,25 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
                 foreach (var ioPoint in iosToApply) {
                     try {
+                        // 将 TriggerLevel 转换为 IoState
+                        // ActiveHigh (0) -> 输出高电平 (High)
+                        // ActiveLow (1) -> 输出低电平 (Low)
+                        var ioState = ioPoint.Level == Core.Enums.TriggerLevel.ActiveHigh 
+                            ? IoState.High 
+                            : IoState.Low;
+
                         var (success, message) = await _ioStatusService.WriteOutputBitAsync(
                             ioPoint.BitNumber,
-                            ioPoint.State,
+                            ioState,
                             ct);
 
                         if (success) {
                             successCount++;
                             _logger.LogDebug(
-                                "IO 联动成功：位 {BitNumber} 设置为 {State}",
+                                "IO 联动成功：位 {BitNumber} 设置为 {Level} ({State})",
                                 ioPoint.BitNumber,
-                                ioPoint.State);
+                                ioPoint.Level,
+                                ioState);
                         } else {
                             failCount++;
                             _logger.LogWarning(

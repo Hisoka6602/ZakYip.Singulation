@@ -48,17 +48,20 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// {
         ///   "enabled": true,
         ///   "runningStateIos": [
-        ///     { "bitNumber": 3, "state": 0 },
-        ///     { "bitNumber": 5, "state": 0 },
-        ///     { "bitNumber": 6, "state": 0 }
+        ///     { "bitNumber": 3, "level": 0 },
+        ///     { "bitNumber": 5, "level": 0 },
+        ///     { "bitNumber": 6, "level": 0 }
         ///   ],
         ///   "stoppedStateIos": [
-        ///     { "bitNumber": 3, "state": 1 },
-        ///     { "bitNumber": 5, "state": 1 },
-        ///     { "bitNumber": 6, "state": 1 }
+        ///     { "bitNumber": 3, "level": 1 },
+        ///     { "bitNumber": 5, "level": 1 },
+        ///     { "bitNumber": 6, "level": 1 }
         ///   ]
         /// }
         /// ```
+        /// 
+        /// **注意**：
+        /// - level: 0 = ActiveHigh (高电平), 1 = ActiveLow (低电平)
         /// </remarks>
         /// <param name="ct">取消令牌</param>
         /// <returns>IO 联动配置对象</returns>
@@ -83,27 +86,27 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// 
         /// **使用示例**：
         /// 
-        /// 配置运行中时将 IO 3、5、6 设置为低电平，停止/复位时将 IO 3、5、6 设置为高电平：
+        /// 配置运行中时将 IO 3、5、6 设置为高电平，停止/复位时将 IO 3、5、6 设置为低电平：
         /// ```json
         /// PUT /api/io-linkage/configs
         /// {
         ///   "enabled": true,
         ///   "runningStateIos": [
-        ///     { "bitNumber": 3, "state": 0 },
-        ///     { "bitNumber": 5, "state": 0 },
-        ///     { "bitNumber": 6, "state": 0 }
+        ///     { "bitNumber": 3, "level": 0 },
+        ///     { "bitNumber": 5, "level": 0 },
+        ///     { "bitNumber": 6, "level": 0 }
         ///   ],
         ///   "stoppedStateIos": [
-        ///     { "bitNumber": 3, "state": 1 },
-        ///     { "bitNumber": 5, "state": 1 },
-        ///     { "bitNumber": 6, "state": 1 }
+        ///     { "bitNumber": 3, "level": 1 },
+        ///     { "bitNumber": 5, "level": 1 },
+        ///     { "bitNumber": 6, "level": 1 }
         ///   ]
         /// }
         /// ```
         /// 
         /// **注意事项**：
         /// - IO 端口编号从 0 开始，范围为 0-1023
-        /// - State 值：0 表示低电平（Low），1 表示高电平（High）
+        /// - level 值：0 表示 ActiveHigh（高电平），1 表示 ActiveLow（低电平）
         /// - 如果需要禁用 IO 联动，请设置 enabled 为 false
         /// - 配置会在下次状态切换时生效
         /// </remarks>

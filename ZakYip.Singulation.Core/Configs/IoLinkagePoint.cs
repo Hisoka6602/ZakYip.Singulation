@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Core.Configs {
 
@@ -16,9 +16,9 @@ namespace ZakYip.Singulation.Core.Configs {
         public int BitNumber { get; init; }
 
         /// <summary>
-        /// 目标电平状态（High=1 或 Low=0）。
+        /// 目标电平状态（ActiveHigh=高电平，ActiveLow=低电平）。
         /// </summary>
-        [Required(ErrorMessage = "IO 状态不能为空")]
-        public IoState State { get; init; }
+        [Required(ErrorMessage = "IO 电平状态不能为空")]
+        public TriggerLevel Level { get; init; }
     }
 }

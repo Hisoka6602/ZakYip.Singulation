@@ -9,8 +9,8 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Entities {
         /// <summary>IO 端口编号（0-1023）。</summary>
         public int BitNumber { get; set; }
 
-        /// <summary>目标电平状态（0=Low, 1=High）。</summary>
-        public int State { get; set; }
+        /// <summary>目标电平状态（0=ActiveHigh/高电平, 1=ActiveLow/低电平）。</summary>
+        public int Level { get; set; }
     }
 
     /// <summary>

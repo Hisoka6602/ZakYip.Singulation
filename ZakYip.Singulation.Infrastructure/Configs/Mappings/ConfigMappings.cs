@@ -208,11 +208,11 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Enabled = d.Enabled,
             RunningStateIos = d.RunningStateIos.Select(p => new IoLinkagePoint {
                 BitNumber = p.BitNumber,
-                State = (IoState)p.State
+                Level = (Core.Enums.TriggerLevel)p.Level
             }).ToList(),
             StoppedStateIos = d.StoppedStateIos.Select(p => new IoLinkagePoint {
                 BitNumber = p.BitNumber,
-                State = (IoState)p.State
+                Level = (Core.Enums.TriggerLevel)p.Level
             }).ToList()
         };
 
@@ -220,11 +220,11 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             Enabled = o.Enabled,
             RunningStateIos = o.RunningStateIos.Select(p => new IoLinkagePointDoc {
                 BitNumber = p.BitNumber,
-                State = (int)p.State
+                Level = (int)p.Level
             }).ToList(),
             StoppedStateIos = o.StoppedStateIos.Select(p => new IoLinkagePointDoc {
                 BitNumber = p.BitNumber,
-                State = (int)p.State
+                Level = (int)p.Level
             }).ToList()
         };
 
