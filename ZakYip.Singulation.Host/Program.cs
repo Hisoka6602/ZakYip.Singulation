@@ -141,7 +141,7 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- SignalR ----------
         services.AddSingulationSignalR();
         // ---------- 配置存储 ----------
-        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineCabinetIo().AddLiteDbIoStatusMonitor();
+        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineCabinetIo().AddLiteDbIoStatusMonitor().AddLiteDbIoLinkage();
         // ---------- 设备相关注入 ----------
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
@@ -188,6 +188,9 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<IoStatusService>();
         services.AddHostedService<IoStatusWorker>();
 
+        // ---------- IO 联动服务 ----------
+        services.AddSingleton<IoLinkageService>();
+
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
         services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
@@ -229,9 +232,10 @@ var host = Host.CreateDefaultBuilder(args)
             var busStore = sp.GetRequiredService<IControllerOptionsStore>();
             var busDto = busStore.GetAsync().GetAwaiter().GetResult();
             var cardNo = (ushort)busDto.Template.Card;
+            var ioLinkageService = sp.GetRequiredService<IoLinkageService>();
             
             // 总是使用新版配置（即使未启用也返回默认配置）
-            return new IndicatorLightService(logger, cardNo, cabinetOptions);
+            return new IndicatorLightService(logger, cardNo, cabinetOptions, ioLinkageService);
         });
 
         services.AddSingleton<FrameGuard>();

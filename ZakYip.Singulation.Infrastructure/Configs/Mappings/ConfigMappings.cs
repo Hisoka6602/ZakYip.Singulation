@@ -203,6 +203,31 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             RemoteConnectionLightTriggerLevel = (int)o.RemoteConnectionLightTriggerLevel
         };
 
+        // ====== 新增：IoLinkageOptions ======
+        public static IoLinkageOptions ToOptions(this IoLinkageOptionsDoc d) => new() {
+            Enabled = d.Enabled,
+            RunningStateIos = d.RunningStateIos.Select(p => new IoLinkagePoint {
+                BitNumber = p.BitNumber,
+                State = (IoState)p.State
+            }).ToList(),
+            StoppedStateIos = d.StoppedStateIos.Select(p => new IoLinkagePoint {
+                BitNumber = p.BitNumber,
+                State = (IoState)p.State
+            }).ToList()
+        };
+
+        public static IoLinkageOptionsDoc ToDoc(this IoLinkageOptions o) => new() {
+            Enabled = o.Enabled,
+            RunningStateIos = o.RunningStateIos.Select(p => new IoLinkagePointDoc {
+                BitNumber = p.BitNumber,
+                State = (int)p.State
+            }).ToList(),
+            StoppedStateIos = o.StoppedStateIos.Select(p => new IoLinkagePointDoc {
+                BitNumber = p.BitNumber,
+                State = (int)p.State
+            }).ToList()
+        };
+
         /// <summary>
         /// 生成“模板级别”的 DriverOptions：已带 Card/Port，NodeId 留 0（让控制器在按轴创建时再映射）。
         /// </summary>
