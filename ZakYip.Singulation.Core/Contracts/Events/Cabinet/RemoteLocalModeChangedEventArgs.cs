@@ -17,6 +17,11 @@ namespace ZakYip.Singulation.Core.Contracts.Events.Cabinet {
         public string? Description { get; init; }
 
         /// <summary>
+        /// 获取是否为初始模式检测（程序启动时首次检测）。true=初始检测，false=运行时模式切换。
+        /// </summary>
+        public bool IsInitialDetection { get; init; }
+
+        /// <summary>
         /// 获取事件时间戳（UTC）。
         /// </summary>
         public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;

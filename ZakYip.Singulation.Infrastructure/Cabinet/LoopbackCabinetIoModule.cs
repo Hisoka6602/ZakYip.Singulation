@@ -34,7 +34,11 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         public void TriggerReset(string? reason = null)
             => ResetRequested?.Invoke(this, new CabinetTriggerEventArgs { Kind = Core.Enums.CabinetTriggerKind.ResetButton, Description = reason });
 
-        public void TriggerRemoteLocalModeChange(bool isRemoteMode, string? reason = null)
-            => RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = isRemoteMode, Description = reason });
+        public void TriggerRemoteLocalModeChange(bool isRemoteMode, string? reason = null, bool isInitialDetection = false)
+            => RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { 
+                IsRemoteMode = isRemoteMode, 
+                Description = reason, 
+                IsInitialDetection = isInitialDetection 
+            });
     }
 }
