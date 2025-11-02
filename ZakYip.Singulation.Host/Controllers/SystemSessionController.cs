@@ -13,11 +13,11 @@ namespace ZakYip.Singulation.Host.Controllers
 {
 
     /// <summary>
-    /// 提供对宿主运行会话的 RESTful 管理接口。
-    /// 通过删除当前会话资源来触发宿主优雅退出，交由外部进程负责重启。
+    /// 提供对宿主服务重启的 RESTful 管理接口。
+    /// 通过删除当前运行会话来触发宿主优雅退出，交由外部进程负责重启。
     /// </summary>
     [ApiController]
-    [Route("api/system/session")]
+    [Route("api/system/restart")]
     public sealed class SystemSessionController : ControllerBase
     {
         private readonly IHostApplicationLifetime _lifetime;
@@ -37,10 +37,10 @@ namespace ZakYip.Singulation.Host.Controllers
         }
 
         /// <summary>
-        /// 删除当前运行会话
+        /// 重启服务
         /// </summary>
         /// <remarks>
-        /// 删除当前运行会话资源，触发宿主应用优雅退出。
+        /// 触发宿主应用优雅退出并重启。
         /// 此操作会先停止所有轴（失能）并将运行状态设置为停止，然后退出进程。
         /// 外部部署工具（如 Windows 服务管理器或 systemd）应配置为自动重启服务。
         ///
@@ -48,12 +48,12 @@ namespace ZakYip.Singulation.Host.Controllers
         /// </remarks>
         /// <param name="ct">取消令牌</param>
         /// <returns>操作受理结果</returns>
-        /// <response code="202">关闭请求已受理，服务正在准备退出</response>
+        /// <response code="202">重启请求已受理，服务正在准备退出</response>
         /// <response code="400">请求已取消</response>
         [HttpDelete]
         [SwaggerOperation(
-            Summary = "删除当前运行会话",
-            Description = "删除当前运行会话资源，触发宿主应用优雅退出。此操作会先停止所有轴（失能）并将运行状态设置为停止，然后退出进程。注意：此操作是异步执行的，API 会立即返回 202 状态码，实际退出会在后台进行。")]
+            Summary = "重启服务",
+            Description = "触发宿主应用优雅退出并重启。此操作会先停止所有轴（失能）并将运行状态设置为停止，然后退出进程。注意：此操作是异步执行的，API 会立即返回 202 状态码，实际退出会在后台进行。")]
         [ProducesResponseType(typeof(ApiResponse<object>), 202)]
         [ProducesResponseType(typeof(ApiResponse<object>), 400)]
         [Produces("application/json")]
@@ -65,8 +65,8 @@ namespace ZakYip.Singulation.Host.Controllers
                 return BadRequest(ApiResponse<object>.Invalid("请求已取消"));
             }
 
-            // 中文日志：收到关闭请求
-            _logger.LogInformation("收到关闭请求，将在后台停止所有轴并退出应用。");
+            // 中文日志：收到重启请求
+            _logger.LogInformation("收到重启请求，将在后台停止所有轴并退出应用。");
 
             // 后台异步执行，彻底与请求线程解耦，防止异常影响调用方
             _ = Task.Run(async () =>

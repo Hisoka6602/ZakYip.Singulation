@@ -563,7 +563,8 @@ namespace ZakYip.Singulation.Host.Controllers {
                 LastErrorMessage = d?.LastErrorMessage,
                 MaxLinearMmps = d?.MaxLinearMmps.HasValue == true ? (double?)d.MaxLinearMmps.Value : null,
                 MaxAccelMmps2 = d?.MaxAccelMmps2.HasValue == true ? (double?)d.MaxAccelMmps2.Value : null,
-                MaxDecelMmps2 = d?.MaxDecelMmps2.HasValue == true ? (double?)d.MaxDecelMmps2.Value : null
+                MaxDecelMmps2 = d?.MaxDecelMmps2.HasValue == true ? (double?)d.MaxDecelMmps2.Value : null,
+                AxisType = d.AxisType
             };
         }
 
@@ -607,6 +608,9 @@ namespace ZakYip.Singulation.Host.Controllers {
             if (req.Mechanics is { RollerDiameterMm: not null, GearRatio: not null, Ppr: not null }) {
                 ok &= await Safe(() => d.UpdateMechanicsAsync(req.Mechanics.RollerDiameterMm.Value,
                     req.Mechanics.GearRatio.Value, req.Mechanics.Ppr.Value, ct));
+            }
+            if (req.AxisType.HasValue) {
+                d.AxisType = req.AxisType.Value;
             }
 
             return ok;

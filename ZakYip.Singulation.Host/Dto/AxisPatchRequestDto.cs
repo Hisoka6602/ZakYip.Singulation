@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Host.Dto {
 
@@ -34,6 +35,11 @@ namespace ZakYip.Singulation.Host.Dto {
         /// 机械参数更新对象。
         /// </summary>
         public MechanicsPatch? Mechanics { get; init; }
+
+        /// <summary>
+        /// 轴类型，用于区分分离轴（Main）和疏散轴（Eject）。
+        /// </summary>
+        public AxisType? AxisType { get; init; }
 
         /// <summary>
         /// 限幅参数更新片段。

@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Drivers.Enums;
+using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
@@ -104,6 +105,12 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         /// <para>值为 null 表示未配置或不可用。</para>
         /// </summary>
         decimal? MaxDecelMmps2 { get; }
+
+        /// <summary>
+        /// 轴类型，用于区分分离轴（Main）和疏散轴（Eject）。
+        /// 默认值为 Main（分离轴）。
+        /// </summary>
+        AxisType AxisType { get; set; }
 
         /// <summary>
         /// 写入目标转速(mm/s)
