@@ -109,36 +109,63 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// 用于 nmc_write_rxpdo/nmc_read_txpdo 调用时的 bitLen 参数。
         /// </summary>
         internal static class BitLen {
-            public const int ControlWord = 16; // 0x6040
-            public const int StatusWord = 16; // 0x6041
-            public const int ModeOfOperation = 8;  // 0x6060
-            public const int TargetVelocity = 32; // 0x60FF
-            public const int ProfileAcceleration = 32; // 0x6083
-            public const int ProfileDeceleration = 32; // 0x6084
-            public const int ActualVelocity = 32;      // 0x606C
+            /// <summary>控制字 (0x6040) 的位宽：16位</summary>
+            public const int ControlWord = 16;
+
+            /// <summary>状态字 (0x6041) 的位宽：16位</summary>
+            public const int StatusWord = 16;
+
+            /// <summary>操作模式 (0x6060) 的位宽：8位</summary>
+            public const int ModeOfOperation = 8;
+
+            /// <summary>目标速度 (0x60FF) 的位宽：32位</summary>
+            public const int TargetVelocity = 32;
+
+            /// <summary>Profile加速度 (0x6083) 的位宽：32位</summary>
+            public const int ProfileAcceleration = 32;
+
+            /// <summary>Profile减速度 (0x6084) 的位宽：32位</summary>
+            public const int ProfileDeceleration = 32;
+
+            /// <summary>实际速度 (0x606C) 的位宽：32位</summary>
+            public const int ActualVelocity = 32;
+
+            /// <summary>Feed Constant (0x6092) 的位宽：32位。用于读取分子/分母定义轴一圈对应的脉冲量</summary>
             public const int FeedConstant = 32;
-            //FeedConstant
-            // 0x6091, 0x6092 分子/分母一般也是 32bit
         }
 
         /// <summary>
         /// 常用的 ControlWord 值（402 状态机命令）。
         /// </summary>
         internal static class ControlWord {
-            public const ushort Clear = 0x0000; // 拉回0
-            public const ushort FaultReset = 0x0080; // 清故障
-            public const ushort Shutdown = 0x0006; // 进入 Ready to Switch On
-            public const ushort SwitchOn = 0x0007; // 进入 Switched On
-            public const ushort EnableOperation = 0x000F; // 进入 Operation Enabled
+            /// <summary>清零控制字 (0x0000)：将控制字拉回0，用于初始化状态机</summary>
+            public const ushort Clear = 0x0000;
+
+            /// <summary>故障复位 (0x0080)：清除驱动器故障状态，bit7=1</summary>
+            public const ushort FaultReset = 0x0080;
+
+            /// <summary>关机指令 (0x0006)：进入 Ready to Switch On 状态，bit1=1, bit2=1</summary>
+            public const ushort Shutdown = 0x0006;
+
+            /// <summary>开机指令 (0x0007)：进入 Switched On 状态，bit0=1, bit1=1, bit2=1</summary>
+            public const ushort SwitchOn = 0x0007;
+
+            /// <summary>使能运行 (0x000F)：进入 Operation Enabled 状态，bit0-3=1，允许轴运动</summary>
+            public const ushort EnableOperation = 0x000F;
         }
 
         /// <summary>
         /// 常用 ModeOfOperation 值（0x6060）。
         /// </summary>
         internal static class Mode {
-            public const byte ProfileVelocity = 3; // PV 模式 (速度)
-            public const byte ProfilePosition = 1; // PP 模式 (位置)
-            public const byte Homing = 6; // HM 模式 (回零)
+            /// <summary>速度模式 (Profile Velocity, PV)：值为3，基于目标速度控制</summary>
+            public const byte ProfileVelocity = 3;
+
+            /// <summary>位置模式 (Profile Position, PP)：值为1，基于目标位置控制</summary>
+            public const byte ProfilePosition = 1;
+
+            /// <summary>回零模式 (Homing, HM)：值为6，执行回零动作</summary>
+            public const byte Homing = 6;
         }
 
         /// <summary>
@@ -147,9 +174,16 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         /// 实际值可按现场调优。
         /// </summary>
         internal static class DelayMs {
+            /// <summary>故障复位后的延时（毫秒）：10ms，等待驱动器清除故障状态</summary>
             public const int AfterFaultReset = 10;
+
+            /// <summary>清零控制字后的延时（毫秒）：5ms，等待控制字生效</summary>
             public const int AfterClear = 5;
+
+            /// <summary>设置操作模式后的延时（毫秒）：5ms，等待模式切换完成</summary>
             public const int AfterSetMode = 5;
+
+            /// <summary>状态机命令之间的延时（毫秒）：10ms，避免状态转换过快</summary>
             public const int BetweenStateCmds = 10;
         }
     }

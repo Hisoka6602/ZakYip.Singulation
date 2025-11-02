@@ -440,22 +440,31 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     return true;
                 }
 
-                // 0) 清除报警 → 清零
+                // 0) 读取当前 ControlWord 状态，判断是否需要完整的状态机序列
+                var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort currentControlWord, suppressLog: true);
+                if (readRet == 0)
+                {
+                    Debug.WriteLine($"[Enable] 使能前 ControlWord 当前值: 0x{currentControlWord:X4}");
+                    // 检查 SwitchOn 位 (bit0)：如果已经开机，可以跳过部分步骤
+                    // 但为了安全起见，仍执行完整序列
+                }
+
+                // 1) 清除报警 → 清零
                 await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.FaultReset, LeadshineProtocolMap.DelayMs.AfterFaultReset);
                 await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Clear, LeadshineProtocolMap.DelayMs.AfterClear);
 
-                // 1) 设置模式：速度模式 (PV=3)
+                // 2) 设置模式：速度模式 (PV=3)
                 var m = WriteRxPdo(LeadshineProtocolMap.Index.ModeOfOperation, LeadshineProtocolMap.Mode.ProfileVelocity);
                 if (m != 0)
                 { throw new InvalidOperationException("Set Mode=PV failed"); }
                 await Task.Delay(LeadshineProtocolMap.DelayMs.AfterSetMode, cancellationToken);
 
-                // 2) 402 状态机三步
+                // 3) 402 状态机三步
                 await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
                 await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
                 await WriteCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
 
-                // 3) 强制读取 PPR（未取到禁止写速度）
+                // 4) 强制读取 PPR（未取到禁止写速度）
                 if (!Volatile.Read(ref _sPprReady))
                 {
                     var ppr = await ReadAxisPulsesPerRevAsync(cancellationToken);
@@ -484,7 +493,19 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             {
                 await ThrottleAsync(cancellationToken);
 
+                // 0) 读取当前 ControlWord 状态，判断是否需要禁用
+                var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort currentControlWord, suppressLog: true);
+                if (readRet == 0)
+                {
+                    Debug.WriteLine($"[Disable] 禁用前 ControlWord 当前值: 0x{currentControlWord:X4}");
+                    // 检查 SwitchOn 位 (bit0)：如果已经关机，可以跳过禁用步骤
+                    // 但为了安全起见，仍执行完整序列
+                }
+
+                // 1) 停止运动
                 _ = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, 0, suppressLog: true);
+
+                // 2) QuickStop (ControlWord bit2=1, bit1=1)
                 var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, (ushort)0x0002);
                 if (ret != 0)
                 {
@@ -493,6 +514,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 }
                 await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
 
+                // 3) Shutdown 进入 Ready to Switch On
                 var cw = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.Shutdown);
                 if (cw != 0)
                 {
@@ -797,6 +819,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             value = default!;
             var bitLen = index switch
             {
+                var i when i == LeadshineProtocolMap.Index.ControlWord => (ushort)LeadshineProtocolMap.BitLen.ControlWord,
                 var i when i == LeadshineProtocolMap.Index.StatusWord => (ushort)LeadshineProtocolMap.BitLen.StatusWord,
                 var i when i == LeadshineProtocolMap.Index.ModeOfOperation => (ushort)LeadshineProtocolMap.BitLen.ModeOfOperation,
                 var i when i == LeadshineProtocolMap.Index.ActualVelocity => (ushort)LeadshineProtocolMap.BitLen.ActualVelocity,
