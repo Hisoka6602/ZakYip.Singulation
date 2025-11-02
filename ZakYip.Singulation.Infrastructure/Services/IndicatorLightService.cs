@@ -73,9 +73,10 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 try {
                     await _ioLinkageService.OnStateChangedAsync(newState, ct).ConfigureAwait(false);
                 }
-                catch (Exception ex) {
-                    _logger.LogError(ex, "调用 IO 联动服务时发生异常");
+                catch (OperationCanceledException ocex) {
+                    _logger.LogWarning(ocex, "IO 联动服务操作被取消");
                 }
+                // 如果有其他已知异常类型，可以在此添加额外的 catch 块
             }
         }
 
