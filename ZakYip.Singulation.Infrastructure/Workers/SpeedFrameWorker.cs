@@ -31,6 +31,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private readonly IRealtimeNotifier _rt;
         private readonly IAxisLayoutStore _axisLayoutStore;
         private readonly IFrameGuard _frameGuard;
+        private readonly ICabinetPipeline _cabinetPipeline;
         private readonly IndicatorLightService? _indicatorLightService;
 
         public SpeedFrameWorker(
@@ -41,6 +42,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             IRealtimeNotifier rt,
             IAxisLayoutStore axisLayoutStore,
             IFrameGuard frameGuard,
+            ICabinetPipeline cabinetPipeline,
             IndicatorLightService? indicatorLightService = null) {
             _log = log;
             _hub = hub;
@@ -49,6 +51,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _rt = rt;
             _axisLayoutStore = axisLayoutStore;
             _frameGuard = frameGuard;
+            _cabinetPipeline = cabinetPipeline;
             _indicatorLightService = indicatorLightService;
         }
 
@@ -60,6 +63,12 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             using (unsub) {
                 await foreach (var mem in reader.ReadAllAsync(stoppingToken)) {
                     try {
+                        // 【关键修复】本地模式下不处理上游数据，也不改变运行状态
+                        if (!_cabinetPipeline.IsRemoteMode) {
+                            _log.LogDebug("【本地模式】忽略上游速度数据，不处理也不改变运行状态");
+                            continue;
+                        }
+                        
                         var sw = Stopwatch.StartNew();
                         if (!_codec.TryDecodeSpeed(mem.Span, out var speedSet))
                             continue;

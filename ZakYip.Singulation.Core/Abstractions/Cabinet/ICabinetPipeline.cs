@@ -10,6 +10,11 @@ namespace ZakYip.Singulation.Core.Abstractions.Cabinet {
     /// </summary>
     public interface ICabinetPipeline {
         CabinetIsolationState State { get; }
+        
+        /// <summary>
+        /// 获取当前是否为远程模式。true=远程模式，false=本地模式。
+        /// </summary>
+        bool IsRemoteMode { get; }
 
         event EventHandler<CabinetStateChangedEventArgs>? StateChanged;
         event EventHandler<CabinetTriggerEventArgs>? StartRequested;
