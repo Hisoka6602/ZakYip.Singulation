@@ -130,24 +130,40 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                         _logger.LogInformation("启动时读取远程/本地模式 IO 状态：{Mode}", modeText);
                         
                         // 触发初始模式事件，让 CabinetPipeline 知道当前模式
-                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = isRemoteMode, Description = $"启动时检测到{modeText}" });
+                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { 
+                            IsRemoteMode = isRemoteMode, 
+                            Description = $"启动时检测到{modeText}",
+                            IsInitialDetection = true 
+                        });
                     }
                     else {
                         // 超时，使用默认值
                         _logger.LogWarning("启动时读取远程/本地模式 IO 超时（控制器可能未初始化），默认为本地模式");
                         _lastRemoteLocalModeState = false; // 默认本地模式
-                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取超时，默认为本地模式" });
+                        RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { 
+                            IsRemoteMode = false, 
+                            Description = "启动时读取超时，默认为本地模式",
+                            IsInitialDetection = true 
+                        });
                     }
                 }
                 catch (TaskCanceledException ex) {
                     _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 任务被取消，默认为本地模式");
                     _lastRemoteLocalModeState = false; // 默认本地模式
-                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取任务被取消，默认为本地模式" });
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { 
+                        IsRemoteMode = false, 
+                        Description = "启动时读取任务被取消，默认为本地模式",
+                        IsInitialDetection = true 
+                    });
                 }
                 catch (TimeoutException ex) {
                     _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 超时异常，默认为本地模式");
                     _lastRemoteLocalModeState = false; // 默认本地模式
-                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取超时异常，默认为本地模式" });
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { 
+                        IsRemoteMode = false, 
+                        Description = "启动时读取超时异常，默认为本地模式",
+                        IsInitialDetection = true 
+                    });
                 }
                 catch (Exception ex) when (
                     ex is DllNotFoundException ||
@@ -158,13 +174,21 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     // 硬件库加载或调用失败（DLL缺失、P/Invoke入口点错误、架构不匹配等）
                     _logger.LogWarning(ex, "启动时读取远程/本地模式 IO 失败（硬件库异常），默认为本地模式");
                     _lastRemoteLocalModeState = false; // 默认本地模式
-                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "启动时读取失败（硬件库异常），默认为本地模式" });
+                    RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { 
+                        IsRemoteMode = false, 
+                        Description = "启动时读取失败（硬件库异常），默认为本地模式",
+                        IsInitialDetection = true 
+                    });
                 }
             }
             else {
                 _logger.LogInformation("远程/本地模式 IO 未配置，默认为本地模式");
                 _lastRemoteLocalModeState = false; // 默认本地模式
-                RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = false, Description = "未配置 IO，默认为本地模式" });
+                RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { 
+                    IsRemoteMode = false, 
+                    Description = "未配置 IO，默认为本地模式",
+                    IsInitialDetection = true 
+                });
             }
 
             _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -250,7 +274,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                         if (isRemoteMode != _lastRemoteLocalModeState) {
                             var modeText = isRemoteMode ? "远程模式" : "本地模式";
                             _logger.LogInformation("检测到远程/本地模式切换：{Mode}", modeText);
-                            RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { IsRemoteMode = isRemoteMode, Description = $"切换到{modeText}" });
+                            RemoteLocalModeChanged?.Invoke(this, new RemoteLocalModeChangedEventArgs { 
+                                IsRemoteMode = isRemoteMode, 
+                                Description = $"切换到{modeText}",
+                                IsInitialDetection = false 
+                            });
                             _lastRemoteLocalModeState = isRemoteMode;
                         }
                     }

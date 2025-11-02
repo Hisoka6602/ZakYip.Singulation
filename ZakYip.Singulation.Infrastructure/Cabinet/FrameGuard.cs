@@ -96,14 +96,13 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 return new FrameGuardDecision(false, set, false, "duplicate");
             }
 
-            // 如果处于降级状态，缩放速度值
-            if (state == CabinetIsolationState.Degraded) {
-                var scaled = Scale(set, _options.DegradeScale, out var delta);
-                if (delta > 0)
-                    SingulationMetrics.Instance.SpeedDelta.Record(delta);
-                return new FrameGuardDecision(true, scaled, true, "degraded");
-            }
-
+            // 【关键修复】移除速度降级逻辑
+            // 无论系统处于何种状态（包括降级状态），速度都不应该被缩放。
+            // 速度必须始终保持与预期速度一致，不能偏离。
+            //
+            // 说明：降级状态（Degraded）仍然会被检测和记录（如心跳超时、轴故障等），
+            // 但不再自动缩放速度。系统应该通过其他机制（如告警、日志、指示灯等）
+            // 通知操作员注意降级状态，由操作员或上层控制系统决定是否调整速度。
             return new FrameGuardDecision(true, set, false, null);
         }
 
@@ -143,35 +142,6 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
             }
             SingulationMetrics.Instance.FrameProcessedCounter.Add(1);
             return true;
-        }
-
-        /// <summary>
-        /// 按指定系数缩放速度集合（用于降级模式）。
-        /// </summary>
-        /// <param name="set">原始速度集合。</param>
-        /// <param name="factor">缩放系数（0-1之间）。</param>
-        /// <param name="delta">输出平均速度差值。</param>
-        /// <returns>缩放后的速度集合。</returns>
-        private SpeedSet Scale(SpeedSet set, decimal factor, out double delta) {
-            if (factor <= 0m) factor = 0.1m;
-            var main = set.MainMmps ?? Array.Empty<int>();
-            var eject = set.EjectMmps ?? Array.Empty<int>();
-            var scaledMain = new int[main.Count];
-            var scaledEject = new int[eject.Count];
-            decimal diffSum = 0m;
-            for (var i = 0; i < main.Count; i++) {
-                var scaled = (int)Math.Round(main[i] * factor, MidpointRounding.AwayFromZero);
-                diffSum += Math.Abs(main[i] - scaled);
-                scaledMain[i] = scaled;
-            }
-            for (var i = 0; i < eject.Count; i++) {
-                var scaled = (int)Math.Round(eject[i] * factor, MidpointRounding.AwayFromZero);
-                diffSum += Math.Abs(eject[i] - scaled);
-                scaledEject[i] = scaled;
-            }
-            var count = main.Count + eject.Count;
-            delta = count > 0 ? (double)(diffSum / count) : 0d;
-            return new SpeedSet(set.TimestampUtc, set.Sequence, scaledMain, scaledEject);
         }
 
         /// <summary>

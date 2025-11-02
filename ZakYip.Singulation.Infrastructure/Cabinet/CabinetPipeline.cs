@@ -104,17 +104,14 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 module.ResetRequested += (_, e) => Enqueue(CabinetOperation.Trigger(CabinetCommand.Reset, CabinetTriggerKind.ResetButton, e.Description, true));
                 module.RemoteLocalModeChanged += async (_, e) => {
                     bool previousMode;
-                    bool isInitialMode = false;
                     lock (_modeLock) {
                         previousMode = _isRemoteMode;
-                        // 检测是否是初始模式（仅当初始模式为本地模式，即_isRemoteMode初始为false时，两者都是false才说明是第一次设置。若初始为远程模式，则此判断不成立。）
-                        isInitialMode = !previousMode && !_isRemoteMode;
                         _isRemoteMode = e.IsRemoteMode;
                     }
                     
                     var modeText = e.IsRemoteMode ? "远程模式" : "本地模式";
                     
-                    if (isInitialMode) {
+                    if (e.IsInitialDetection) {
                         _log.LogInformation("【远程/本地模式初始化】检测到初始模式为 {Mode}", modeText);
                     } else {
                         _log.LogInformation("【远程/本地模式切换】从 {PrevMode} 切换到 {NewMode}", 
@@ -124,26 +121,26 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     // 根据切换方向执行不同操作
                     try {
                         // 切换远程/本地模式前，先将所有轴的速度设置为0
-                        _log.LogInformation("【远程/本地模式{Action}】设置所有轴速度为0", isInitialMode ? "初始化" : "切换");
+                        _log.LogInformation("【远程/本地模式{Action}】设置所有轴速度为0", e.IsInitialDetection ? "初始化" : "切换");
                         await _axisController.WriteSpeedAllAsync(0m, CancellationToken.None).ConfigureAwait(false);
                         
                         // 重置速度缓存，确保下次速度设置能够正确写入
-                        _log.LogInformation("【远程/本地模式{Action}】重置速度缓存", isInitialMode ? "初始化" : "切换");
+                        _log.LogInformation("【远程/本地模式{Action}】重置速度缓存", e.IsInitialDetection ? "初始化" : "切换");
                         _axisController.ResetLastSpeeds();
                         
                         if (e.IsRemoteMode) {
                             // 远程模式：自动调用使能（无论是初始化还是切换）
-                            _log.LogInformation("【远程/本地模式{Action}】检测到远程模式，自动调用使能", isInitialMode ? "初始化" : "切换");
+                            _log.LogInformation("【远程/本地模式{Action}】检测到远程模式，自动调用使能", e.IsInitialDetection ? "初始化" : "切换");
                             await _axisController.EnableAllAsync(CancellationToken.None).ConfigureAwait(false);
-                            _log.LogInformation("【远程/本地模式{Action}】自动使能完成，等待远程速度推送", isInitialMode ? "初始化" : "切换");
+                            _log.LogInformation("【远程/本地模式{Action}】自动使能完成，等待远程速度推送", e.IsInitialDetection ? "初始化" : "切换");
                         } else {
                             // 本地模式：调用禁用使能（无论是初始化还是切换）
-                            _log.LogInformation("【远程/本地模式{Action}】检测到本地模式，调用禁用使能", isInitialMode ? "初始化" : "切换");
+                            _log.LogInformation("【远程/本地模式{Action}】检测到本地模式，调用禁用使能", e.IsInitialDetection ? "初始化" : "切换");
                             await _axisController.DisableAllAsync(CancellationToken.None).ConfigureAwait(false);
-                            _log.LogInformation("【远程/本地模式{Action}】禁用使能完成", isInitialMode ? "初始化" : "切换");
+                            _log.LogInformation("【远程/本地模式{Action}】禁用使能完成", e.IsInitialDetection ? "初始化" : "切换");
                         }
                     } catch (Exception ex) {
-                        _log.LogError(ex, "【远程/本地模式{Action}】执行自动操作失败", isInitialMode ? "初始化" : "切换");
+                        _log.LogError(ex, "【远程/本地模式{Action}】执行自动操作失败", e.IsInitialDetection ? "初始化" : "切换");
                     }
                 };
             }
