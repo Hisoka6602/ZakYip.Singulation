@@ -75,8 +75,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     return;
                 }
 
-                // 获取所有轴的实时速度
-                var speeds = _axisController.RealtimeSpeedsMmps;
+                // 获取所有轴的目标速度（用于速度联动判断）
+                var speeds = _axisController.TargetSpeedsMmps;
 
                 // 处理每个联动组
                 for (int groupIndex = 0; groupIndex < options.LinkageGroups.Count; groupIndex++) {

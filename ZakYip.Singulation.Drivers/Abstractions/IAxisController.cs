@@ -39,6 +39,13 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         IReadOnlyList<IAxisDrive> Drives { get; }
 
         /// <summary>
+        /// 所有轴的目标速度（mm/s）。
+        /// <para>索引与 <see cref="Drives"/> 一致，值对应各轴的 <see cref="IAxisDrive.LastTargetMmps"/>。</para>
+        /// <para>值为 null 表示该轴尚未下发过速度命令。</para>
+        /// </summary>
+        IReadOnlyList<decimal?> TargetSpeedsMmps { get; }
+
+        /// <summary>
         /// 所有轴的实时速度反馈（mm/s）。
         /// <para>索引与 <see cref="Drives"/> 一致，值对应各轴的 <see cref="IAxisDrive.LastFeedbackMmps"/>。</para>
         /// <para>值为 null 表示该轴尚未收到反馈。</para>
