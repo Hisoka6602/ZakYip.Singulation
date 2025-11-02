@@ -53,6 +53,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "速度联动服务异常");
+                throw;
             }
 
             _logger.LogInformation("速度联动服务已停止");
