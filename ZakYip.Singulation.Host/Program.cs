@@ -141,7 +141,7 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- SignalR ----------
         services.AddSingulationSignalR();
         // ---------- 配置存储 ----------
-        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineCabinetIo().AddLiteDbIoStatusMonitor().AddLiteDbIoLinkage();
+        services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineCabinetIo().AddLiteDbIoStatusMonitor().AddLiteDbIoLinkage().AddLiteDbSpeedLinkage();
         // ---------- 设备相关注入 ----------
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
@@ -190,6 +190,9 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ---------- IO 联动服务 ----------
         services.AddSingleton<IoLinkageService>();
+
+        // ---------- 速度联动服务 ----------
+        services.AddHostedService<SpeedLinkageService>();
 
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));

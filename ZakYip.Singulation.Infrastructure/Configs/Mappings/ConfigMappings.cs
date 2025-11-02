@@ -228,6 +228,28 @@ namespace ZakYip.Singulation.Infrastructure.Configs.Mappings {
             }).ToList()
         };
 
+        // ====== 新增：SpeedLinkageOptions ======
+        public static SpeedLinkageOptions ToOptions(this SpeedLinkageOptionsDoc d) => new() {
+            Enabled = d.Enabled,
+            LinkageGroups = d.LinkageGroups.Select(g => new SpeedLinkageGroup {
+                AxisIds = g.AxisIds.ToList(),
+                IoPoints = g.IoPoints.Select(p => new SpeedLinkageIoPoint {
+                    BitNumber = p.BitNumber,
+                    LevelWhenStopped = (Core.Enums.TriggerLevel)p.LevelWhenStopped
+                }).ToList()
+            }).ToList()
+        };
+
+        public static SpeedLinkageOptionsDoc ToDoc(this SpeedLinkageOptions o) => new() {
+            Enabled = o.Enabled,
+            LinkageGroups = o.LinkageGroups.Select(g => new SpeedLinkageGroupDoc {
+                AxisIds = g.AxisIds.ToList(),
+                IoPoints = g.IoPoints.Select(p => new SpeedLinkageIoPointDoc {
+                    BitNumber = p.BitNumber,
+                    LevelWhenStopped = (int)p.LevelWhenStopped
+                }).ToList()
+            }).ToList()
+        };
         /// <summary>
         /// 生成“模板级别”的 DriverOptions：已带 Card/Port，NodeId 留 0（让控制器在按轴创建时再映射）。
         /// </summary>

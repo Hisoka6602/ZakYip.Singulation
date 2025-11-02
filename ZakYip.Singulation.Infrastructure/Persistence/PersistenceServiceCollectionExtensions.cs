@@ -62,5 +62,11 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             services.AddSingleton<IIoLinkageOptionsStore, LiteDbIoLinkageOptionsStore>();
             return services;
         }
+
+        /// <summary>注册速度联动配置存储（与设置共享同一 LiteDB）。</summary>
+        public static IServiceCollection AddLiteDbSpeedLinkage(this IServiceCollection services) {
+            services.AddSingleton<ISpeedLinkageOptionsStore, LiteDbSpeedLinkageOptionsStore>();
+            return services;
+        }
     }
 }

@@ -1,0 +1,184 @@
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Configs;
+using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Host.Dto;
+using Swashbuckle.AspNetCore.Annotations;
+
+namespace ZakYip.Singulation.Host.Controllers {
+
+    /// <summary>
+    /// 速度联动配置控制器
+    /// </summary>
+    /// <remarks>
+    /// 提供速度联动配置的查询和更新接口。
+    /// 配置包括多个联动组，每组定义一组轴和要联动的 IO 端口。
+    /// 当组内所有轴速度从非0降到0时，设置指定IO为指定电平；
+    /// 当所有轴速度从0提升到非0时，设置相反电平。
+    /// </remarks>
+    [ApiController]
+    [Route("api/io-linkage/speed")]
+    public sealed class SpeedLinkageController : ControllerBase {
+        private readonly ILogger<SpeedLinkageController> _logger;
+        private readonly ISpeedLinkageOptionsStore _store;
+
+        public SpeedLinkageController(
+            ILogger<SpeedLinkageController> logger,
+            ISpeedLinkageOptionsStore store) {
+            _logger = logger;
+            _store = store;
+        }
+
+        /// <summary>
+        /// 获取速度联动配置
+        /// </summary>
+        /// <remarks>
+        /// 获取当前的速度联动配置信息。
+        /// 包含启用状态和联动组列表。
+        /// 
+        /// **使用示例**：
+        /// 
+        /// ```
+        /// GET /api/io-linkage/speed/configs
+        /// ```
+        /// 
+        /// **返回示例**：
+        /// ```json
+        /// {
+        ///   "enabled": true,
+        ///   "linkageGroups": [
+        ///     {
+        ///       "axisIds": [1001, 1002],
+        ///       "ioPoints": [
+        ///         { "bitNumber": 3, "levelWhenStopped": 0 },
+        ///         { "bitNumber": 4, "levelWhenStopped": 0 }
+        ///       ]
+        ///     },
+        ///     {
+        ///       "axisIds": [1003, 1004],
+        ///       "ioPoints": [
+        ///         { "bitNumber": 5, "levelWhenStopped": 0 },
+        ///         { "bitNumber": 6, "levelWhenStopped": 0 }
+        ///       ]
+        ///     }
+        ///   ]
+        /// }
+        /// ```
+        /// 
+        /// **注意**：
+        /// - levelWhenStopped: 0 = ActiveHigh (高电平), 1 = ActiveLow (低电平)
+        /// - 当所有轴停止时设置为 levelWhenStopped，运动时设置为相反电平
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>速度联动配置对象</returns>
+        /// <response code="200">获取配置成功</response>
+        [HttpGet("configs")]
+        [SwaggerOperation(
+            Summary = "获取速度联动配置",
+            Description = "获取当前的速度联动配置信息，包含启用状态和联动组列表。")]
+        [ProducesResponseType(typeof(ApiResponse<SpeedLinkageOptions>), 200)]
+        [Produces("application/json")]
+        public async Task<ApiResponse<SpeedLinkageOptions>> GetConfigAsync(CancellationToken ct) {
+            var options = await _store.GetAsync(ct);
+            return ApiResponse<SpeedLinkageOptions>.Success(options);
+        }
+
+        /// <summary>
+        /// 更新速度联动配置
+        /// </summary>
+        /// <remarks>
+        /// 保存或更新速度联动配置信息。
+        /// 配置更新后会持久化保存到数据库，并立即生效。
+        /// 
+        /// **使用示例**：
+        /// 
+        /// 配置两个联动组，当轴1001和1002都停止时，将IO 3和4设为高电平；
+        /// 当轴1003和1004都停止时，将IO 5和6设为高电平：
+        /// ```json
+        /// PUT /api/io-linkage/speed/configs
+        /// {
+        ///   "enabled": true,
+        ///   "linkageGroups": [
+        ///     {
+        ///       "axisIds": [1001, 1002],
+        ///       "ioPoints": [
+        ///         { "bitNumber": 3, "levelWhenStopped": 0 },
+        ///         { "bitNumber": 4, "levelWhenStopped": 0 }
+        ///       ]
+        ///     },
+        ///     {
+        ///       "axisIds": [1003, 1004],
+        ///       "ioPoints": [
+        ///         { "bitNumber": 5, "levelWhenStopped": 0 },
+        ///         { "bitNumber": 6, "levelWhenStopped": 0 }
+        ///       ]
+        ///     }
+        ///   ]
+        /// }
+        /// ```
+        /// 
+        /// **注意事项**：
+        /// - 轴ID必须与实际控制器中的轴ID对应
+        /// - IO 端口编号从 0 开始，范围为 0-1023
+        /// - levelWhenStopped 值：0 表示 ActiveHigh（高电平），1 表示 ActiveLow（低电平）
+        /// - 如果需要禁用速度联动，请设置 enabled 为 false
+        /// - 配置会立即生效，无需重启服务
+        /// </remarks>
+        /// <param name="options">速度联动配置对象</param>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">配置已保存</response>
+        /// <response code="400">配置验证失败</response>
+        [HttpPut("configs")]
+        [SwaggerOperation(
+            Summary = "更新速度联动配置",
+            Description = "保存或更新速度联动配置信息。配置更新后会持久化保存到数据库，并立即生效。")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<string>), 400)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        public async Task<ActionResult<ApiResponse<string>>> UpdateConfigAsync(
+            [FromBody] SpeedLinkageOptions options,
+            CancellationToken ct) {
+            
+            // 验证配置
+            if (!ModelState.IsValid) {
+                _logger.LogWarning("速度联动配置验证失败");
+                return BadRequest(ApiResponse<string>.Invalid("配置验证失败"));
+            }
+            
+            // 保存到数据库
+            await _store.SaveAsync(options, ct);
+            
+            _logger.LogInformation(
+                "速度联动配置已更新：启用={Enabled}, 联动组数={GroupCount}",
+                options.Enabled,
+                options.LinkageGroups.Count);
+            
+            return ApiResponse<string>.Success("配置已保存并立即生效");
+        }
+
+        /// <summary>
+        /// 删除速度联动配置
+        /// </summary>
+        /// <remarks>
+        /// 删除当前的速度联动配置，恢复到默认配置状态（空联动组列表）。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>操作结果</returns>
+        /// <response code="200">配置已删除</response>
+        [HttpDelete("configs")]
+        [SwaggerOperation(
+            Summary = "删除速度联动配置",
+            Description = "删除当前的速度联动配置，恢复到默认配置状态（空联动组列表）。")]
+        [ProducesResponseType(typeof(ApiResponse<string>), 200)]
+        [Produces("application/json")]
+        public async Task<ApiResponse<string>> DeleteConfigAsync(CancellationToken ct) {
+            await _store.DeleteAsync(ct);
+            _logger.LogInformation("速度联动配置已删除，将使用默认配置");
+            return ApiResponse<string>.Success("配置已删除，将使用默认配置");
+        }
+    }
+}
