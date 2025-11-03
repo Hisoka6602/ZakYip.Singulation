@@ -462,7 +462,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 {
                     Debug.WriteLine($"[Enable] 初始 StatusWord: 0x{statusWord:X4}");
                     
-                    // 如果 Fault 位（bit3, 0-indexed，即第4位）为 1，表示有故障，需要清除
+                    // 如果 Fault 位（bit3）为 1，表示有故障，需要清除
                     if ((statusWord & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
                     {
                         Debug.WriteLine("[Enable] 检测到故障状态，执行 FaultReset");
