@@ -7,6 +7,11 @@
 		<UserSecretsId>dotnet-ZakYip.Singulation.Host-641983ce-770e-47bd-8472-ba30b8701e8c</UserSecretsId>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>$(NoWarn);1591</NoWarn>
+		<!-- 发布裁剪配置 -->
+		<PublishTrimmed>true</PublishTrimmed>
+		<TrimMode>partial</TrimMode>
+		<EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+		<SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
 	</PropertyGroup>
 
 	<ItemGroup>
