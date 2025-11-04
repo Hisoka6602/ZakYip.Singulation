@@ -13,7 +13,8 @@ namespace ZakYip.Singulation.Tests.TestHelpers {
         public bool HasError { get; set; } = false;
 
         public SystemRuntimeStatus Snapshot() {
-            // 返回最小化的运行时状态快照，满足测试需求
+            // 返回默认状态的运行时快照对象
+            // 测试场景中通常不关注快照的具体内容，仅需要满足接口要求
             return new SystemRuntimeStatus();
         }
 
