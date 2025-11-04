@@ -41,7 +41,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         // 用于同步 SDK 调用的锁
         private static readonly object _sdkCallLock = new object();
         
-        // 内存池
+        // 内存池（用于缓存预热）
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
         
         // Stopwatch 用于高精度计时
@@ -256,7 +256,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                             // 强制 2ms 安全间隔
                             EnforceSafetyInterval();
                             
-                            var ret = WriteRxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, req.Value);
+                            var ret = LeadshinePdoHelpers.WriteRxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, req.Value);
                             results[i] = new LeadshineBatchPdoOperations.BatchWriteResult(req.Index, ret);
                             
                             if (ret == 0) {
@@ -325,7 +325,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                         var success = await circuitBreaker.ExecuteAsync(async (ctx) => {
                             EnforceSafetyInterval();
                             
-                            var ret = ReadTxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, out var data);
+                            var ret = LeadshinePdoHelpers.ReadTxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, out var data);
                             results[i] = new LeadshineBatchPdoOperations.BatchReadResult(req.Index, ret, data);
                             
                             if (ret == 0) {
@@ -382,85 +382,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
             return allResults.ToArray();
         }
         
-        /// <summary>
-        /// 使用内存池写入单个 RxPDO（内部方法）。
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private static short WriteRxPdoWithPool(
-            ushort cardNo,
-            ushort portNum,
-            ushort nodeId,
-            ushort index,
-            byte subIndex,
-            ushort bitLength,
-            object value) {
-            
-            var byteLength = (bitLength + 7) / 8;
-            var buffer = BufferPool.Rent(byteLength);
-            
-            try {
-                switch (value) {
-                    case int i32:
-                        ByteUtils.WriteInt32LittleEndian(buffer.AsSpan(0, 4), i32);
-                        break;
-                    case uint u32:
-                        ByteUtils.WriteUInt32LittleEndian(buffer.AsSpan(0, 4), u32);
-                        break;
-                    case short i16:
-                        ByteUtils.WriteInt16LittleEndian(buffer.AsSpan(0, 2), i16);
-                        break;
-                    case ushort u16:
-                        ByteUtils.WriteUInt16LittleEndian(buffer.AsSpan(0, 2), u16);
-                        break;
-                    case byte b8:
-                        buffer[0] = b8;
-                        break;
-                    case sbyte s8:
-                        buffer[0] = unchecked((byte)s8);
-                        break;
-                    default:
-                        return -2;
-                }
-                
-                return LTDMC.nmc_write_rxpdo(cardNo, portNum, nodeId, index, subIndex, bitLength, buffer);
-            }
-            finally {
-                BufferPool.Return(buffer, clearArray: false);
-            }
-        }
-        
-        /// <summary>
-        /// 使用内存池读取单个 TxPDO（内部方法）。
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private static short ReadTxPdoWithPool(
-            ushort cardNo,
-            ushort portNum,
-            ushort nodeId,
-            ushort index,
-            byte subIndex,
-            ushort bitLength,
-            out byte[]? data) {
-            
-            var byteLength = (bitLength + 7) / 8;
-            var buffer = BufferPool.Rent(byteLength);
-            
-            try {
-                var ret = LTDMC.nmc_read_txpdo(cardNo, portNum, nodeId, index, subIndex, bitLength, buffer);
-                
-                if (ret == 0) {
-                    data = new byte[byteLength];
-                    Array.Copy(buffer, data, byteLength);
-                } else {
-                    data = null;
-                }
-                
-                return ret;
-            }
-            finally {
-                BufferPool.Return(buffer, clearArray: false);
-            }
-        }
         
         /// <summary>
         /// 获取批量操作的详细诊断信息。

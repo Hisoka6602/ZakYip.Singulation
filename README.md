@@ -2,6 +2,72 @@
 
 ## 🎯 最新更新（2025-11-04）
 
+### ✅ 2025-11-04 代码重构：消除重复代码和提取供应商工具类
+
+本次更新重点优化代码质量，消除重复代码，提取供应商特定的工具方法：
+
+#### 1. **创建 LeadshineConversions 工具类** 🔧
+- **新文件**：`LeadshineConversions.cs`
+- **功能**：雷赛驱动器专用单位换算工具类
+- **核心方法**：
+  - `ComputeLinearPerRevolution` - 计算每转线位移 Lpr（丝杠导程或滚筒周长）
+  - `LinearToLoadPps` - 通用转换：线速度/线加速度 → 负载侧脉冲频率/脉冲加速度
+  - `LoadPpsToLinear` - 通用转换：负载侧脉冲 → 线速度/线加速度
+  - `MmpsToLoadPps`, `LoadPpsToMmps` - 便捷方法：速度转换
+  - `Mmps2ToLoadPps2`, `LoadPps2ToMmps2` - 便捷方法：加速度转换
+- **优势**：
+  - 消除了 LeadshineLtdmcAxisDrive 中 4 个重复意义的转换方法
+  - 将速度和加速度转换统一为 2 个通用方法 + 4 个便捷重载
+  - 提供清晰的供应商特定命名（Leadshine）
+
+#### 2. **创建 LeadshinePdoHelpers 工具类** 🛠️
+- **新文件**：`LeadshinePdoHelpers.cs`
+- **功能**：雷赛 PDO 操作辅助工具类
+- **核心方法**：
+  - `WriteRxPdoWithPool` - 使用内存池写入单个 RxPDO
+  - `ReadTxPdoWithPool` - 使用内存池读取单个 TxPDO
+- **消除重复**：
+  - 从 `LeadshineBatchPdoOperations.cs` 提取重复代码（~82 行）
+  - 从 `LeadshineBatchOperationsEnhanced.cs` 提取重复代码（~82 行）
+  - 共计消除 ~164 行完全相同的重复代码
+- **优势**：
+  - DRY 原则：避免在多个批量操作类中重复相同的 PDO 读写逻辑
+  - 统一内存池管理：所有 PDO 操作使用相同的缓冲区租用/归还逻辑
+  - 更易维护：修改 PDO 操作逻辑只需在一处更新
+
+#### 3. **创建 LeadshineHelpers 工具类** 🔧
+- **新文件**：`LeadshineHelpers.cs`
+- **功能**：雷赛通用辅助工具类，集中小工具方法
+- **核心方法**：
+  - `FireEachNonBlocking` - 非阻塞事件广播（消除重复实现）
+  - `ToStopwatchTicks` - TimeSpan 转 Stopwatch ticks
+  - `EvState` - 事件状态封装结构体
+- **消除重复**：
+  - 之前 `FireEachNonBlocking` 在 LeadshineLtdmcAxisDrive 和 AxisEventAggregator 中有重复实现
+  - 提取到统一位置，两处共享使用
+- **优势**：
+  - 小工具方法集中管理
+  - 避免在多个类中重复相同的工具逻辑
+  - 提供统一的事件广播和时间转换机制
+
+#### 4. **重构统计** 📊
+- **新增文件**：3 个工具类（332 行可复用代码）
+  - LeadshineConversions.cs - 单位换算（112 行）
+  - LeadshinePdoHelpers.cs - PDO 读写（143 行）
+  - LeadshineHelpers.cs - 通用工具（77 行）
+- **修改文件**：5 个（消除 ~240 行重复代码）
+- **净收益**：代码行数略有增加，但可维护性和可复用性大幅提升
+
+#### 5. **代码质量改进** ✅
+- ✅ 消除重复代码：4 个转换方法 + 2 个 PDO 方法 + 1 个事件广播方法的重复
+- ✅ 供应商命名规范：所有工具类文件以供应商命名（Leadshine）
+- ✅ DRY 原则：避免重复实现相同功能
+- ✅ 单一职责：每个工具类专注于特定领域（转换 vs PDO 操作 vs 通用工具）
+- ✅ 可测试性：工具方法提取为静态公共方法，便于单元测试
+- ✅ **工具集中**：小工具方法集中到专门的工具类，便于查找和复用
+
+---
+
 ### ✅ 2025-11-04 代码质量优化和测试基础设施改进
 
 本次更新重点优化代码质量和扩展测试基础设施：

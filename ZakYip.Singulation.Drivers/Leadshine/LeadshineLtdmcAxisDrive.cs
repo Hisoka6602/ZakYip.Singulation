@@ -166,7 +166,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                         if (ppr > 0)
                         {
                             var lpr = GetLinearPerRevolutionMm();
-                            return LoadAccelPpsToMmps2(accelPps2, ppr, lpr);
+                            return LeadshineConversions.LoadPps2ToMmps2(accelPps2, ppr, lpr);
                         }
                     }
                 }
@@ -198,7 +198,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                         if (ppr > 0)
                         {
                             var lpr = GetLinearPerRevolutionMm();
-                            return LoadAccelPpsToMmps2(decelPps2, ppr, lpr);
+                            return LeadshineConversions.LoadPps2ToMmps2(decelPps2, ppr, lpr);
                         }
                     }
                 }
@@ -239,54 +239,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private decimal GetLinearPerRevolutionMm()
         {
-            // 若存在丝杠导程，优先采用；否则采用滚筒直径换算周长。
-            if (_opts.ScrewPitchMm > 0m)
-                return _opts.ScrewPitchMm;
-            return (decimal)Math.PI * _opts.PulleyPitchDiameterMm;
-        }
-
-        /// <summary>线速度（mm/s）→ 负载侧 pps：pps = (mm/s ÷ Lpr) × PPR ÷ gearRatio。</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static decimal MmpsToLoadPps(decimal mmps, decimal lprMm, int ppr, decimal gearRatio)
-        {
-            if (mmps == 0m || lprMm <= 0m || ppr <= 0 || gearRatio <= 0m)
-                return 0m;
-            var revPerSecLoad = mmps / lprMm;
-            var ppsLoad = revPerSecLoad * ppr / gearRatio;
-            return ppsLoad;
-        }
-
-        /// <summary>线加速度（mm/s²）→ 负载侧 pps²：pps² = (mm/s² ÷ Lpr) × PPR ÷ gearRatio。</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static decimal Mmps2ToLoadPps2(decimal mmps2, decimal lprMm, int ppr, decimal gearRatio)
-        {
-            if (mmps2 <= 0m || lprMm <= 0m || ppr <= 0 || gearRatio <= 0m)
-                return 0m;
-            var revPerSec2Load = mmps2 / lprMm;
-            var pps2Load = revPerSec2Load * ppr / gearRatio;
-            return pps2Load;
-        }
-
-        /// <summary>负载侧 pps → 线速度（mm/s）：mm/s = (pps ÷ PPR) × Lpr。</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static decimal LoadPpsToMmps(int ppsLoad, int ppr, decimal lprMm)
-        {
-            if (ppr <= 0 || lprMm <= 0m)
-                return 0m;
-            var revPerSecLoad = (decimal)ppsLoad / ppr;
-            var mmps = revPerSecLoad * lprMm;
-            return mmps;
-        }
-
-        /// <summary>负载侧 pps² → 线加速度（mm/s²）：mm/s² = (pps² ÷ PPR) × Lpr。</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static decimal LoadAccelPpsToMmps2(uint pps2Load, int ppr, decimal lprMm)
-        {
-            if (ppr <= 0 || lprMm <= 0m)
-                return 0m;
-            var revPerSec2Load = (decimal)pps2Load / ppr;
-            var mmps2 = revPerSec2Load * lprMm;
-            return mmps2;
+            return LeadshineConversions.ComputeLinearPerRevolution(_opts.ScrewPitchMm, _opts.PulleyPitchDiameterMm);
         }
 
         // ---------------- 核心接口：外部永远传 mm/s ----------------
@@ -307,7 +260,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             var lpr = GetLinearPerRevolutionMm(); // Lpr
 
             // —— 统一几何口径：直接计算负载侧 pps ——（显式包含 Math.PI 或 ScrewPitchMm）
-            var loadPps = MmpsToLoadPps(mmPerSec, lpr, ppr, _opts.GearRatio);
+            var loadPps = LeadshineConversions.MmpsToLoadPps(mmPerSec, lpr, ppr, _opts.GearRatio);
             var deviceVal = (int)Math.Round(loadPps);
 
             // 方向
@@ -348,8 +301,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             var lpr = GetLinearPerRevolutionMm();
 
             // —— 直接几何口径：mm/s² → pps²(load) ——
-            var accPps2Load = Mmps2ToLoadPps2(accelMmPerSec2, lpr, ppr, _opts.GearRatio);
-            var decPps2Load = Mmps2ToLoadPps2(decelMmPerSec2, lpr, ppr, _opts.GearRatio);
+            var accPps2Load = LeadshineConversions.Mmps2ToLoadPps2(accelMmPerSec2, lpr, ppr, _opts.GearRatio);
+            var decPps2Load = LeadshineConversions.Mmps2ToLoadPps2(decelMmPerSec2, lpr, ppr, _opts.GearRatio);
 
             var accDev = MathUtils.ClampToUInt32(accPps2Load);
             var decDev = MathUtils.ClampToUInt32(decPps2Load);
@@ -471,7 +424,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             catch { /* 静默忽略 */ }
 
             var lpr = GetLinearPerRevolutionMm();
-            var mmps = (ppr > 0) ? LoadPpsToMmps(loadPpsVal, ppr, lpr) : 0m;
+            var mmps = (ppr > 0) ? LeadshineConversions.LoadPpsToMmps(loadPpsVal, ppr, lpr) : 0m;
 
             // —— 维持事件中 Rpm 的含义与旧版一致：电机侧 rpm ——
             var rpmVal = 0m;
@@ -997,24 +950,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         }
 
         // ---- 事件广播：逐订阅者、非阻塞、与调用方隔离 ----
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void FireEachNonBlocking<T>(EventHandler<T>? multicast, object sender, T args)
-        {
-            if (multicast is null)
-                return;
-            foreach (var d in multicast.GetInvocationList())
-            {
-                var h = (EventHandler<T>)d;
-                var state = new EvState<T>(sender, h, args);
-                ThreadPool.UnsafeQueueUserWorkItem(static s =>
-                {
-                    var st = (EvState<T>)s!;
-                    try
-                    { st.Handler(st.Sender, st.Args); }
-                    catch { /* 静默隔离 */ }
-                }, state, preferLocal: true);
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ValueTask<int> GetPprCachedAsync(CancellationToken ct)
@@ -1039,13 +974,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
             // 事件中速度（mm/s）：采用几何直达口径（与 PingAsync 一致）
             var lpr = GetLinearPerRevolutionMm();
-            var speedMmps = (pulsesPerRev > 0) ? LoadPpsToMmps(loadPpsVal, pulsesPerRev, lpr) : 0m;
+            var speedMmps = (pulsesPerRev > 0) ? LeadshineConversions.LoadPpsToMmps(loadPpsVal, pulsesPerRev, lpr) : 0m;
 
             LastFeedbackMmps = speedMmps;
 
             var pps = (decimal)loadPpsVal; // 事件中直接使用负载侧 pps
 
-            FireEachNonBlocking(SpeedFeedback, this,
+            LeadshineHelpers.FireEachNonBlocking(SpeedFeedback, this,
                 new AxisSpeedFeedbackEventArgs
                 {
                     Axis = Axis,
@@ -1073,12 +1008,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static long ToSwTicks(TimeSpan t) => (long)Math.Round(t.TotalSeconds * Stopwatch.Frequency);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool ShouldPublishFeedbackMmps(decimal mmps, long nowStamp)
         {
-            var minGap = ToSwTicks(_feedbackMinInterval);
+            var minGap = LeadshineHelpers.ToStopwatchTicks(_feedbackMinInterval);
             var last = Volatile.Read(ref _lastFbStamp);
             if (nowStamp - last < minGap)
                 return false;
@@ -1105,23 +1037,23 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         // —— 便捷事件触发 ——
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnAxisFaulted(Exception ex) =>
-            FireEachNonBlocking(AxisFaulted, this, new AxisErrorEventArgs { Axis = Axis, Exception = ex });
+            LeadshineHelpers.FireEachNonBlocking(AxisFaulted, this, new AxisErrorEventArgs { Axis = Axis, Exception = ex });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnDriverNotLoaded(string lib, string msg) =>
-            FireEachNonBlocking(DriverNotLoaded, this, new DriverNotLoadedEventArgs { LibraryName = lib, Message = msg });
+            LeadshineHelpers.FireEachNonBlocking(DriverNotLoaded, this, new DriverNotLoadedEventArgs { LibraryName = lib, Message = msg });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnAxisDisconnected(string reason) =>
-            FireEachNonBlocking(AxisDisconnected, this, new AxisDisconnectedEventArgs { Axis = Axis, Reason = reason });
+            LeadshineHelpers.FireEachNonBlocking(AxisDisconnected, this, new AxisDisconnectedEventArgs { Axis = Axis, Reason = reason });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnCommandIssued(AxisCommandIssuedEventArgs e) =>
-            FireEachNonBlocking(CommandIssued, this, e);
+            LeadshineHelpers.FireEachNonBlocking(CommandIssued, this, e);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnCommandIssued(string function, string argListWithSpaces, int result, string? note = null) =>
-            FireEachNonBlocking(CommandIssued, this, new AxisCommandIssuedEventArgs
+            LeadshineHelpers.FireEachNonBlocking(CommandIssued, this, new AxisCommandIssuedEventArgs
             {
                 Axis = Axis,
                 Invocation = $"{function}( {argListWithSpaces} )",
