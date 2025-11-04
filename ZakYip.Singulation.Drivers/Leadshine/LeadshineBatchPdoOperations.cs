@@ -18,8 +18,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
     /// </para>
     /// </summary>
     public static class LeadshineBatchPdoOperations {
-        
-        private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
 
         /// <summary>
         /// 批量写入 RxPDO 操作的请求结构。
@@ -127,7 +125,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     }
 
                     var req = requests[i];
-                    var ret = WriteRxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, req.Value);
+                    var ret = LeadshinePdoHelpers.WriteRxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, req.Value);
                     results[i] = new BatchWriteResult(req.Index, ret);
                 }
             }, ct).ConfigureAwait(false);
@@ -170,99 +168,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                     }
 
                     var req = requests[i];
-                    var ret = ReadTxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, out var data);
+                    var ret = LeadshinePdoHelpers.ReadTxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, out var data);
                     results[i] = new BatchReadResult(req.Index, ret, data);
                 }
             }, ct).ConfigureAwait(false);
 
             return results;
-        }
-
-        /// <summary>
-        /// 使用内存池写入单个 RxPDO（内部方法）。
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private static short WriteRxPdoWithPool(
-            ushort cardNo,
-            ushort portNum,
-            ushort nodeId,
-            ushort index,
-            byte subIndex,
-            ushort bitLength,
-            object value) {
-            
-            var byteLength = (bitLength + 7) / 8;
-            var buffer = BufferPool.Rent(byteLength);
-            
-            try {
-                // 将值写入缓冲区
-                switch (value) {
-                    case int i32:
-                        ByteUtils.WriteInt32LittleEndian(buffer.AsSpan(0, 4), i32);
-                        break;
-                    case uint u32:
-                        ByteUtils.WriteUInt32LittleEndian(buffer.AsSpan(0, 4), u32);
-                        break;
-                    case short i16:
-                        ByteUtils.WriteInt16LittleEndian(buffer.AsSpan(0, 2), i16);
-                        break;
-                    case ushort u16:
-                        ByteUtils.WriteUInt16LittleEndian(buffer.AsSpan(0, 2), u16);
-                        break;
-                    case byte b8:
-                        buffer[0] = b8;
-                        break;
-                    case sbyte s8:
-                        buffer[0] = unchecked((byte)s8);
-                        break;
-                    default:
-                        return -2; // 不支持的类型
-                }
-
-                // 调用底层 SDK
-                return LTDMC.nmc_write_rxpdo(cardNo, portNum, nodeId, index, subIndex, bitLength, buffer);
-            }
-            finally {
-                // 归还缓冲区到池
-                BufferPool.Return(buffer, clearArray: false);
-            }
-        }
-
-        /// <summary>
-        /// 使用内存池读取单个 TxPDO（内部方法）。
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private static short ReadTxPdoWithPool(
-            ushort cardNo,
-            ushort portNum,
-            ushort nodeId,
-            ushort index,
-            byte subIndex,
-            ushort bitLength,
-            out byte[]? data) {
-            
-            var byteLength = (bitLength + 7) / 8;
-            var buffer = BufferPool.Rent(byteLength);
-            
-            try {
-                // 调用底层 SDK
-                var ret = LTDMC.nmc_read_txpdo(cardNo, portNum, nodeId, index, subIndex, bitLength, buffer);
-                
-                if (ret == 0) {
-                    // 成功：复制数据到新数组
-                    data = new byte[byteLength];
-                    Array.Copy(buffer, data, byteLength);
-                } else {
-                    // 失败：返回 null
-                    data = null;
-                }
-                
-                return ret;
-            }
-            finally {
-                // 归还缓冲区到池
-                BufferPool.Return(buffer, clearArray: false);
-            }
         }
 
         /// <summary>
