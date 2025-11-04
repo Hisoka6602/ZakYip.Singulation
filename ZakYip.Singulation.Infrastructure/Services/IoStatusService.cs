@@ -60,21 +60,24 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
             await InitializeAsync(ct);
 
-            var response = new IoStatusResponseDto();
+            var inputIos = Enumerable.Range(inputStart, inputCount)
+                .Select(ReadInputBit)
+                .ToList();
 
-            // 读取输入 IO
-            response.InputIos.AddRange(
-                Enumerable.Range(inputStart, inputCount)
-                    .Select(ReadInputBit));
+            var outputIos = Enumerable.Range(outputStart, outputCount)
+                .Select(ReadOutputBit)
+                .ToList();
 
-            // 读取输出 IO
-            response.OutputIos.AddRange(
-                Enumerable.Range(outputStart, outputCount)
-                    .Select(ReadOutputBit));
+            var allIos = inputIos.Concat(outputIos);
+            var validCount = allIos.Count(io => io.IsValid);
+            var errorCount = allIos.Count(io => !io.IsValid);
 
-            var allIos = response.InputIos.Concat(response.OutputIos);
-            response.ValidCount = allIos.Count(io => io.IsValid);
-            response.ErrorCount = allIos.Count(io => !io.IsValid);
+            var response = new IoStatusResponseDto {
+                InputIos = inputIos,
+                OutputIos = outputIos,
+                ValidCount = validCount,
+                ErrorCount = errorCount
+            };
 
             return response;
         }

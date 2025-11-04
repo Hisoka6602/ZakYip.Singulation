@@ -5,16 +5,16 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
     /// <summary>
     /// IO 状态查询响应。
     /// </summary>
-    public sealed class IoStatusResponseDto {
+    public sealed record class IoStatusResponseDto {
         /// <summary>
         /// 输入 IO 状态列表。
         /// </summary>
-        public List<IoStatusDto> InputIos { get; set; } = new();
+        public List<IoStatusDto> InputIos { get; init; } = new();
 
         /// <summary>
         /// 输出 IO 状态列表。
         /// </summary>
-        public List<IoStatusDto> OutputIos { get; set; } = new();
+        public List<IoStatusDto> OutputIos { get; init; } = new();
 
         /// <summary>
         /// 总 IO 数量。
@@ -24,11 +24,11 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
         /// <summary>
         /// 成功读取的 IO 数量。
         /// </summary>
-        public int ValidCount { get; set; }
+        public int ValidCount { get; init; }
 
         /// <summary>
         /// 读取失败的 IO 数量。
         /// </summary>
-        public int ErrorCount { get; set; }
+        public int ErrorCount { get; init; }
     }
 }
