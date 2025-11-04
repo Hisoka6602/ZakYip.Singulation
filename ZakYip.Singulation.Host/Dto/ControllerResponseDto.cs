@@ -20,5 +20,11 @@ namespace ZakYip.Singulation.Host.Dto {
         /// 最后一次初始化是否成功。
         /// </summary>
         public bool Initialized { get; init; }
+
+        /// <summary>
+        /// 所有轴的PPR（每转脉冲数）值数组，去重后返回。
+        /// 如果所有轴都是同一个PPR则只返回一个元素，如果有不同的则返回多个不重复的。
+        /// </summary>
+        public int[]? Pps { get; init; }
     }
 }

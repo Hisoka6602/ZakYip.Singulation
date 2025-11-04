@@ -154,6 +154,28 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             {
                 if (!HasValidMechanicsConfig())
                     return null;
+                
+                // 尝试从SDK读取加速度值 (0x6083)
+                try
+                {
+                    var ret = ReadTxPdo(LeadshineProtocolMap.Index.ProfileAcceleration, out uint accelPps2, suppressLog: true);
+                    if (ret == 0 && accelPps2 > 0)
+                    {
+                        // 将负载侧 pps² 转换为 mm/s²
+                        var ppr = Volatile.Read(ref _sPpr);
+                        if (ppr > 0)
+                        {
+                            var lpr = GetLinearPerRevolutionMm();
+                            return LoadAccelPpsToMmps2(accelPps2, ppr, lpr);
+                        }
+                    }
+                }
+                catch
+                {
+                    // 如果读取失败，回退到配置值
+                }
+                
+                // 回退：使用配置的最大值
                 return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxAccelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             }
         }
@@ -164,6 +186,28 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             {
                 if (!HasValidMechanicsConfig())
                     return null;
+                
+                // 尝试从SDK读取减速度值 (0x6084)
+                try
+                {
+                    var ret = ReadTxPdo(LeadshineProtocolMap.Index.ProfileDeceleration, out uint decelPps2, suppressLog: true);
+                    if (ret == 0 && decelPps2 > 0)
+                    {
+                        // 将负载侧 pps² 转换为 mm/s²
+                        var ppr = Volatile.Read(ref _sPpr);
+                        if (ppr > 0)
+                        {
+                            var lpr = GetLinearPerRevolutionMm();
+                            return LoadAccelPpsToMmps2(decelPps2, ppr, lpr);
+                        }
+                    }
+                }
+                catch
+                {
+                    // 如果读取失败，回退到配置值
+                }
+                
+                // 回退：使用配置的最大值
                 return AxisRpm.RpmPerSecToMmPerSec2(_opts.MaxDecelRpmPerSec, _opts.PulleyPitchDiameterMm, _opts.GearRatio, _opts.ScrewPitchMm);
             }
         }
@@ -173,6 +217,21 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// 默认值为 Main（分离轴）。
         /// </summary>
         public AxisType AxisType { get; set; } = AxisType.Main;
+
+        /// <summary>
+        /// 每转脉冲数（Pulses Per Revolution）。
+        /// <para>值为 null 或 0 表示未初始化或不可用。</para>
+        /// </summary>
+        public int? Ppr
+        {
+            get
+            {
+                var ready = Volatile.Read(ref _sPprReady);
+                if (!ready) return null;
+                var v = Volatile.Read(ref _sPpr);
+                return v > 0 ? v : null;
+            }
+        }
 
         // ---------------- 几何换算核心（本类私有） ----------------
 
@@ -217,6 +276,17 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             var revPerSecLoad = (decimal)ppsLoad / ppr;
             var mmps = revPerSecLoad * lprMm;
             return mmps;
+        }
+
+        /// <summary>负载侧 pps² → 线加速度（mm/s²）：mm/s² = (pps² ÷ PPR) × Lpr。</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static decimal LoadAccelPpsToMmps2(uint pps2Load, int ppr, decimal lprMm)
+        {
+            if (ppr <= 0 || lprMm <= 0m)
+                return 0m;
+            var revPerSec2Load = (decimal)pps2Load / ppr;
+            var mmps2 = revPerSec2Load * lprMm;
+            return mmps2;
         }
 
         // ---------------- 核心接口：外部永远传 mm/s ----------------
@@ -872,6 +942,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 var i when i == LeadshineProtocolMap.Index.StatusWord => (ushort)LeadshineProtocolMap.BitLen.StatusWord,
                 var i when i == LeadshineProtocolMap.Index.ModeOfOperation => (ushort)LeadshineProtocolMap.BitLen.ModeOfOperation,
                 var i when i == LeadshineProtocolMap.Index.ActualVelocity => (ushort)LeadshineProtocolMap.BitLen.ActualVelocity,
+                var i when i == LeadshineProtocolMap.Index.ProfileAcceleration => (ushort)LeadshineProtocolMap.BitLen.ProfileAcceleration,
+                var i when i == LeadshineProtocolMap.Index.ProfileDeceleration => (ushort)LeadshineProtocolMap.BitLen.ProfileDeceleration,
                 var i when i == LeadshineProtocolMap.Index.FeedConstant => 32,
                 var i when i == LeadshineProtocolMap.Index.GearRatio => 32,
                 _ => 0

@@ -113,6 +113,12 @@ namespace ZakYip.Singulation.Drivers.Abstractions {
         AxisType AxisType { get; set; }
 
         /// <summary>
+        /// 每转脉冲数（Pulses Per Revolution）。
+        /// <para>值为 null 或 0 表示未初始化或不可用。</para>
+        /// </summary>
+        int? Ppr { get; }
+
+        /// <summary>
         /// 写入目标转速(mm/s)
         /// </summary>
         /// <param name="mmPerSec"></param>
