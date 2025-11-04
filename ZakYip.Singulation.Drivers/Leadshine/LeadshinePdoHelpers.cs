@@ -18,6 +18,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
 
         /// <summary>
+        /// 将位长度转换为字节长度。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int GetByteLength(ushort bitLength) => (bitLength + 7) / 8;
+
+        /// <summary>
         /// 使用内存池写入单个 RxPDO（内部方法）。
         /// </summary>
         /// <param name="cardNo">控制卡号</param>
@@ -38,7 +44,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             ushort bitLength,
             object value)
         {
-            var byteLength = (bitLength + 7) / 8;
+            var byteLength = GetByteLength(bitLength);
             var buffer = BufferPool.Rent(byteLength);
 
             try
@@ -99,7 +105,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             ushort bitLength,
             out byte[]? data)
         {
-            var byteLength = (bitLength + 7) / 8;
+            var byteLength = GetByteLength(bitLength);
             var buffer = BufferPool.Rent(byteLength);
 
             try

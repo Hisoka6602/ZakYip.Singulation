@@ -19,6 +19,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine
     public static class LeadshineConversions
     {
         /// <summary>
+        /// 验证转换参数是否有效。
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsValidConversionParameters(decimal lprMm, int ppr, decimal gearRatio)
+            => lprMm > 0m && ppr > 0 && gearRatio > 0m;
+
+        /// <summary>
         /// 计算每转线位移 Lpr（mm/turn）。
         /// <para>丝杠导程优先；若未提供，则使用滚筒直径计算周长。</para>
         /// </summary>
@@ -47,7 +54,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static decimal LinearToLoadPps(decimal linearValue, decimal lprMm, int ppr, decimal gearRatio)
         {
-            if (linearValue == 0m || lprMm <= 0m || ppr <= 0 || gearRatio <= 0m)
+            if (linearValue == 0m || !IsValidConversionParameters(lprMm, ppr, gearRatio))
                 return 0m;
             var revPerSecLoad = linearValue / lprMm;
             var ppsLoad = revPerSecLoad * ppr / gearRatio;
