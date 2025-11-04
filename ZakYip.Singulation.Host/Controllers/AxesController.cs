@@ -196,10 +196,21 @@ namespace ZakYip.Singulation.Host.Controllers {
         public async Task<ActionResult<ControllerResponseDto>> GetController(CancellationToken ct) {
             var count = await _axisController.Bus.GetAxisCountAsync(ct);
             var err = await _axisController.Bus.GetErrorCodeAsync(ct);
+            
+            // 收集所有轴的PPR值并去重
+            var ppsArray = _axisController.Drives
+                .Select(d => d.Ppr)
+                .Where(ppr => ppr.HasValue)
+                .Select(ppr => ppr!.Value)
+                .Distinct()
+                .OrderBy(ppr => ppr)
+                .ToArray();
+            
             var data = new ControllerResponseDto {
                 AxisCount = count,
                 ErrorCode = err,
-                Initialized = count > 0 && err == 0
+                Initialized = count > 0 && err == 0,
+                Pps = ppsArray.Length > 0 ? ppsArray : null
             };
             return Ok(ApiResponse<ControllerResponseDto>.Success(data, "获取控制器状态成功"));
         }
