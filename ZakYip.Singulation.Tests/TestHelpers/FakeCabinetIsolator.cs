@@ -13,24 +13,33 @@ namespace ZakYip.Singulation.Tests.TestHelpers {
         public bool IsIsolated => false;
         public CabinetTriggerKind LastTriggerKind { get; private set; }
         public string? LastTriggerReason { get; private set; }
+        public int WriteCount { get; private set; }
 
         public event EventHandler<CabinetStateChangedEventArgs>? StateChanged;
 
         public bool TryTrip(CabinetTriggerKind kind, string reason) {
             LastTriggerKind = kind;
             LastTriggerReason = reason;
+            WriteCount++;
             return true;
         }
 
         public bool TryEnterDegraded(CabinetTriggerKind kind, string reason) {
             LastTriggerKind = kind;
             LastTriggerReason = reason;
+            WriteCount++;
             return true;
         }
 
 
-        public bool TryRecoverFromDegraded(string reason) => true;
+        public bool TryRecoverFromDegraded(string reason) {
+            WriteCount++;
+            return true;
+        }
 
-        public bool TryResetIsolation(string reason, CancellationToken ct = default) => true;
+        public bool TryResetIsolation(string reason, CancellationToken ct = default) {
+            WriteCount++;
+            return true;
+        }
     }
 }

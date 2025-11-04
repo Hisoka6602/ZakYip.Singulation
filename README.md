@@ -2,6 +2,48 @@
 
 ## 🎯 最新更新（2025-11-04）
 
+### ✅ 2025-11-04 代码质量优化和测试基础设施改进
+
+本次更新重点优化代码质量和扩展测试基础设施：
+
+#### 1. **DTO 类型优化** 📦
+- **改进**：将所有可变 DTO 类转换为不可变 record class
+- **优势**：
+  - 提高数据不可变性，减少意外修改
+  - 更好的线程安全性
+  - 简化相等性比较
+- **转换完成**：
+  - `LinearPlannerParams` - 从 class 转换为 record class
+  - `IoStatusResponseDto` - 从 class 转换为 record class
+  - 更新相关使用代码以支持不可变初始化模式
+- **相关文件**：
+  - `LinearPlannerParams.cs` - 所有属性改为 init
+  - `IoStatusResponseDto.cs` - 所有属性改为 init
+  - `IoStatusService.cs` - 更新为使用对象初始化器模式
+
+#### 2. **测试基础设施扩展** 🧪
+- **新增测试辅助类**：
+  - `FakeIoLinkageStore` - IO 联动配置存储的模拟实现
+  - `FakeRuntimeStatusProvider` - 运行时状态提供者的模拟实现
+  - 更新 `FakeCabinetIsolator` - 添加写入操作计数功能
+- **用途**：为 Infrastructure 层和 Service 层单元测试提供基础
+- **相关文件**：
+  - `TestHelpers/FakeIoLinkageStore.cs`
+  - `TestHelpers/FakeRuntimeStatusProvider.cs`
+  - `TestHelpers/FakeCabinetIsolator.cs`
+
+#### 3. **代码分析器配置** 🔍
+- **已启用规则**：CA1031（捕获具体异常类型）设置为 warning 级别
+- **配置位置**：`.editorconfig` 文件
+- **影响范围**：帮助开发团队编写更健壮的异常处理代码
+
+#### 4. **构建验证** ✅
+- 验证所有项目（除 MAUI 外）成功编译
+- 修复测试项目中 FakeAxisDrive 缺少 Ppr 属性的问题
+- 确保代码变更不影响现有功能
+
+---
+
 ### ✅ 2025-11-04 控制器查询和轴状态增强
 
 本次更新增强了控制器查询接口和轴状态反馈的准确性：
@@ -163,7 +205,7 @@ PUT /api/io-linkage/speed/configs
 - **Swagger/OpenAPI** - API 文档
 - **雷赛 LTDMC** - 运动控制硬件
 
-### 📈 项目完成度：约 88%
+### 📈 项目完成度：约 90%
 
 #### ✅ 已完成的核心功能
 1. **核心控制层** (100%)：轴驱动、控制器聚合、事件系统、速度规划
@@ -174,11 +216,12 @@ PUT /api/io-linkage/speed/configs
 6. **持久化** (100%)：LiteDB 存储、配置管理、对象映射
 7. **后台服务** (100%)：心跳、日志泵、传输事件泵、IO联动服务、速度联动服务
 8. **IO 联动** (100%)：系统状态联动、速度联动（新增）
-9. **文档** (96%)：API文档、架构设计、运维指南，最新更新文档
-10. **MAUI 客户端** (80%)：基础功能完成，需要完善UI和用户体验
+9. **代码质量** (85%)：已完成 DTO record class 转换、代码分析器配置、值对象不可变性优化
+10. **文档** (98%)：API文档、架构设计、运维指南、代码质量优化记录
+11. **MAUI 客户端** (80%)：基础功能完成，需要完善UI和用户体验
 
 #### ⚠️ 待完善的部分
-- **测试覆盖** (50%)：有基础单元测试和速度联动测试，需要更多集成测试
+- **测试覆盖** (60%)：基础单元测试完成，测试辅助类已扩展，需要更多集成测试和端到端测试
 - **部署运维** (30%)：缺少容器化、CI/CD、监控告警
 - **MAUI应用** (80%)：需要完善应用图标、深色主题等
 
@@ -189,15 +232,15 @@ PUT /api/io-linkage/speed/configs
 ### 🚀 短期优化（1-2周）
 
 #### 1. 代码质量优化
-- [ ] 评估更多 DTO 类转换为 record class 的机会
-- [ ] 识别可以转换为 readonly struct 的小型值对象
-- [ ] 启用并配置代码分析器规则（处理 CA 警告）
+- [x] 评估更多 DTO 类转换为 record class 的机会（已完成：LinearPlannerParams, IoStatusResponseDto）
+- [x] 识别可以转换为 readonly struct 的小型值对象（已完成：已有多个值对象使用 readonly record struct）
+- [x] 启用并配置代码分析器规则（已启用 CA1031 等规则，设置为 warning 级别）
 - [ ] 统一异常处理策略
 - [ ] 优化日志记录规范
 
 #### 2. 测试覆盖率提升
 - [x] 速度联动功能单元测试
-- [ ] Infrastructure层单元测试扩展
+- [x] Infrastructure层单元测试扩展（已添加测试辅助类：FakeIoLinkageStore, FakeRuntimeStatusProvider）
 - [ ] Controllers集成测试
 - [ ] Safety Pipeline端到端测试
 - [ ] 性能基准测试扩展

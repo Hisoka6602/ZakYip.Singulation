@@ -469,6 +469,7 @@ namespace ZakYip.Singulation.Tests {
         public decimal? MaxAccelMmps2 => 500m;
         public decimal? MaxDecelMmps2 => 500m;
         public AxisType AxisType { get; set; } = AxisType.Main;
+        public int? Ppr => 10000;
 
         public ValueTask WriteSpeedAsync(AxisRpm rpm, CancellationToken ct = default) {
             LastTargetMmps = rpm.Value;
