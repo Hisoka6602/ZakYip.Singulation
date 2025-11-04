@@ -166,7 +166,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                         if (ppr > 0)
                         {
                             var lpr = GetLinearPerRevolutionMm();
-                            return LoadAccelPpsToMmps2(accelPps2, ppr, lpr);
+                            return LeadshineConversions.LoadPps2ToMmps2(accelPps2, ppr, lpr);
                         }
                     }
                 }
@@ -198,7 +198,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                         if (ppr > 0)
                         {
                             var lpr = GetLinearPerRevolutionMm();
-                            return LoadAccelPpsToMmps2(decelPps2, ppr, lpr);
+                            return LeadshineConversions.LoadPps2ToMmps2(decelPps2, ppr, lpr);
                         }
                     }
                 }
@@ -239,54 +239,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private decimal GetLinearPerRevolutionMm()
         {
-            // 若存在丝杠导程，优先采用；否则采用滚筒直径换算周长。
-            if (_opts.ScrewPitchMm > 0m)
-                return _opts.ScrewPitchMm;
-            return (decimal)Math.PI * _opts.PulleyPitchDiameterMm;
-        }
-
-        /// <summary>线速度（mm/s）→ 负载侧 pps：pps = (mm/s ÷ Lpr) × PPR ÷ gearRatio。</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static decimal MmpsToLoadPps(decimal mmps, decimal lprMm, int ppr, decimal gearRatio)
-        {
-            if (mmps == 0m || lprMm <= 0m || ppr <= 0 || gearRatio <= 0m)
-                return 0m;
-            var revPerSecLoad = mmps / lprMm;
-            var ppsLoad = revPerSecLoad * ppr / gearRatio;
-            return ppsLoad;
-        }
-
-        /// <summary>线加速度（mm/s²）→ 负载侧 pps²：pps² = (mm/s² ÷ Lpr) × PPR ÷ gearRatio。</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static decimal Mmps2ToLoadPps2(decimal mmps2, decimal lprMm, int ppr, decimal gearRatio)
-        {
-            if (mmps2 <= 0m || lprMm <= 0m || ppr <= 0 || gearRatio <= 0m)
-                return 0m;
-            var revPerSec2Load = mmps2 / lprMm;
-            var pps2Load = revPerSec2Load * ppr / gearRatio;
-            return pps2Load;
-        }
-
-        /// <summary>负载侧 pps → 线速度（mm/s）：mm/s = (pps ÷ PPR) × Lpr。</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static decimal LoadPpsToMmps(int ppsLoad, int ppr, decimal lprMm)
-        {
-            if (ppr <= 0 || lprMm <= 0m)
-                return 0m;
-            var revPerSecLoad = (decimal)ppsLoad / ppr;
-            var mmps = revPerSecLoad * lprMm;
-            return mmps;
-        }
-
-        /// <summary>负载侧 pps² → 线加速度（mm/s²）：mm/s² = (pps² ÷ PPR) × Lpr。</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static decimal LoadAccelPpsToMmps2(uint pps2Load, int ppr, decimal lprMm)
-        {
-            if (ppr <= 0 || lprMm <= 0m)
-                return 0m;
-            var revPerSec2Load = (decimal)pps2Load / ppr;
-            var mmps2 = revPerSec2Load * lprMm;
-            return mmps2;
+            return LeadshineConversions.ComputeLinearPerRevolution(_opts.ScrewPitchMm, _opts.PulleyPitchDiameterMm);
         }
 
         // ---------------- 核心接口：外部永远传 mm/s ----------------
@@ -307,7 +260,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             var lpr = GetLinearPerRevolutionMm(); // Lpr
 
             // —— 统一几何口径：直接计算负载侧 pps ——（显式包含 Math.PI 或 ScrewPitchMm）
-            var loadPps = MmpsToLoadPps(mmPerSec, lpr, ppr, _opts.GearRatio);
+            var loadPps = LeadshineConversions.MmpsToLoadPps(mmPerSec, lpr, ppr, _opts.GearRatio);
             var deviceVal = (int)Math.Round(loadPps);
 
             // 方向
@@ -348,8 +301,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             var lpr = GetLinearPerRevolutionMm();
 
             // —— 直接几何口径：mm/s² → pps²(load) ——
-            var accPps2Load = Mmps2ToLoadPps2(accelMmPerSec2, lpr, ppr, _opts.GearRatio);
-            var decPps2Load = Mmps2ToLoadPps2(decelMmPerSec2, lpr, ppr, _opts.GearRatio);
+            var accPps2Load = LeadshineConversions.Mmps2ToLoadPps2(accelMmPerSec2, lpr, ppr, _opts.GearRatio);
+            var decPps2Load = LeadshineConversions.Mmps2ToLoadPps2(decelMmPerSec2, lpr, ppr, _opts.GearRatio);
 
             var accDev = MathUtils.ClampToUInt32(accPps2Load);
             var decDev = MathUtils.ClampToUInt32(decPps2Load);
@@ -471,7 +424,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             catch { /* 静默忽略 */ }
 
             var lpr = GetLinearPerRevolutionMm();
-            var mmps = (ppr > 0) ? LoadPpsToMmps(loadPpsVal, ppr, lpr) : 0m;
+            var mmps = (ppr > 0) ? LeadshineConversions.LoadPpsToMmps(loadPpsVal, ppr, lpr) : 0m;
 
             // —— 维持事件中 Rpm 的含义与旧版一致：电机侧 rpm ——
             var rpmVal = 0m;
@@ -1039,7 +992,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
             // 事件中速度（mm/s）：采用几何直达口径（与 PingAsync 一致）
             var lpr = GetLinearPerRevolutionMm();
-            var speedMmps = (pulsesPerRev > 0) ? LoadPpsToMmps(loadPpsVal, pulsesPerRev, lpr) : 0m;
+            var speedMmps = (pulsesPerRev > 0) ? LeadshineConversions.LoadPpsToMmps(loadPpsVal, pulsesPerRev, lpr) : 0m;
 
             LastFeedbackMmps = speedMmps;
 
