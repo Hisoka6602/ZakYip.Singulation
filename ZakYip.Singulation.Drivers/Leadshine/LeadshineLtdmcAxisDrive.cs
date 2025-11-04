@@ -950,24 +950,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         }
 
         // ---- 事件广播：逐订阅者、非阻塞、与调用方隔离 ----
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void FireEachNonBlocking<T>(EventHandler<T>? multicast, object sender, T args)
-        {
-            if (multicast is null)
-                return;
-            foreach (var d in multicast.GetInvocationList())
-            {
-                var h = (EventHandler<T>)d;
-                var state = new EvState<T>(sender, h, args);
-                ThreadPool.UnsafeQueueUserWorkItem(static s =>
-                {
-                    var st = (EvState<T>)s!;
-                    try
-                    { st.Handler(st.Sender, st.Args); }
-                    catch { /* 静默隔离 */ }
-                }, state, preferLocal: true);
-            }
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private ValueTask<int> GetPprCachedAsync(CancellationToken ct)
@@ -998,7 +980,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
             var pps = (decimal)loadPpsVal; // 事件中直接使用负载侧 pps
 
-            FireEachNonBlocking(SpeedFeedback, this,
+            LeadshineHelpers.FireEachNonBlocking(SpeedFeedback, this,
                 new AxisSpeedFeedbackEventArgs
                 {
                     Axis = Axis,
@@ -1026,12 +1008,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static long ToSwTicks(TimeSpan t) => (long)Math.Round(t.TotalSeconds * Stopwatch.Frequency);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool ShouldPublishFeedbackMmps(decimal mmps, long nowStamp)
         {
-            var minGap = ToSwTicks(_feedbackMinInterval);
+            var minGap = LeadshineHelpers.ToStopwatchTicks(_feedbackMinInterval);
             var last = Volatile.Read(ref _lastFbStamp);
             if (nowStamp - last < minGap)
                 return false;
@@ -1058,23 +1037,23 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         // —— 便捷事件触发 ——
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnAxisFaulted(Exception ex) =>
-            FireEachNonBlocking(AxisFaulted, this, new AxisErrorEventArgs { Axis = Axis, Exception = ex });
+            LeadshineHelpers.FireEachNonBlocking(AxisFaulted, this, new AxisErrorEventArgs { Axis = Axis, Exception = ex });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnDriverNotLoaded(string lib, string msg) =>
-            FireEachNonBlocking(DriverNotLoaded, this, new DriverNotLoadedEventArgs { LibraryName = lib, Message = msg });
+            LeadshineHelpers.FireEachNonBlocking(DriverNotLoaded, this, new DriverNotLoadedEventArgs { LibraryName = lib, Message = msg });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnAxisDisconnected(string reason) =>
-            FireEachNonBlocking(AxisDisconnected, this, new AxisDisconnectedEventArgs { Axis = Axis, Reason = reason });
+            LeadshineHelpers.FireEachNonBlocking(AxisDisconnected, this, new AxisDisconnectedEventArgs { Axis = Axis, Reason = reason });
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnCommandIssued(AxisCommandIssuedEventArgs e) =>
-            FireEachNonBlocking(CommandIssued, this, e);
+            LeadshineHelpers.FireEachNonBlocking(CommandIssued, this, e);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void OnCommandIssued(string function, string argListWithSpaces, int result, string? note = null) =>
-            FireEachNonBlocking(CommandIssued, this, new AxisCommandIssuedEventArgs
+            LeadshineHelpers.FireEachNonBlocking(CommandIssued, this, new AxisCommandIssuedEventArgs
             {
                 Axis = Axis,
                 Invocation = $"{function}( {argListWithSpaces} )",
