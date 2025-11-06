@@ -1,0 +1,35 @@
+name: Delete All Branches Except Master
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  delete-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Delete all branches except master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get all remote branches except master
+          git fetch --all
+          
+          # List all branches to be deleted
+          echo "Branches to be deleted:"
+          git branch -r | grep -v 'HEAD' | grep -v 'master' | sed 's/origin\///' || true
+          
+          # Delete each branch except master
+          for branch in $(git branch -r | grep -v 'HEAD' | grep -v 'master' | sed 's/origin\///'); do
+            echo "Deleting branch: $branch"
+            git push origin --delete "$branch" || echo "Failed to delete $branch"
+          done
+          
+          echo "Branch cleanup completed!"
