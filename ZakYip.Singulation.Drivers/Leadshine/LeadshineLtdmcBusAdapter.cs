@@ -310,7 +310,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
             var success = await Safe(async () =>
             {
-                // Execute cold reset and check return value
+                // 执行冷复位并检查返回值
                 LTDMC.dmc_cool_reset(_cardNo);
                 var rc = LTDMC.dmc_board_close();
                 if (rc != 0)

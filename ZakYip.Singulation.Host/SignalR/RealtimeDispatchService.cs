@@ -102,7 +102,7 @@ namespace ZakYip.Singulation.Host.SignalR {
                     }
                 }
                 catch (HubException hex) {
-                    // Hub 级别错误
+                    // Hub 级别错误（已是中文，保留）
                     _logger.LogError(hex, "Hub error broadcasting to {Channel}", item.Channel);
                     _messagesFailed++;
                     RecordFailure(item.Channel);

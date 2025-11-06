@@ -42,10 +42,10 @@ internal static class Program {
         // ===== 组装 DI 容器 =====
         var services = new ServiceCollection();
 
-        // 事件聚合器（把多轴事件统一转发）
+        // 事件聚合器（把多轴事件统一转发，已是中文）
         services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
 
-        // Registry：把厂商名映射到对应的 IAxisDrive 工厂
+        // Registry：把厂商名映射到对应的 IAxisDrive 工厂（已是中文）
 
         services.AddSingleton<IDriveRegistry>(sp => {
             var r = new DefaultDriveRegistry();
@@ -55,10 +55,10 @@ internal static class Program {
             return r;
         });
 
-        // BusAdapter：控制器/总线级操作（初始化、读轴数、冷复位等）
+        // BusAdapter：控制器/总线级操作（初始化、读轴数、冷复位等，已是中文）
         services.AddSingleton<IBusAdapter>(sp => new LeadshineLtdmcBusAdapter(cardNo, portNo, controllerIp));
 
-        // 轴群编排器：用 Bus + Registry 批量创建/管理多根轴
+        // 轴群编排器：用 Bus + Registry 批量创建/管理多根轴（已是中文）
         services.AddSingleton<IAxisController, AxisController>();
 
         var provider = services.BuildServiceProvider();

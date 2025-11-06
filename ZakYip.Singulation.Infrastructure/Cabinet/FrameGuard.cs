@@ -64,7 +64,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
             _internalCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             
-            // Check if heartbeat port is 0, if so skip heartbeat monitoring
+            // 检查心跳端口是否为0，如果是则跳过心跳监控
             var upstreamOptions = await _upstreamOptionsStore.GetAsync(ct).ConfigureAwait(false);
             if (upstreamOptions.HeartbeatPort == 0) {
                 _log.LogInformation("Heartbeat port is 0, skipping heartbeat timeout monitoring.");

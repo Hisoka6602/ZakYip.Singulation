@@ -69,7 +69,7 @@ public class NotificationService
             
             Notifications.Add(notification);
             
-            // Auto-remove after duration
+            // 持续时间后自动移除
             await Task.Delay(TimeSpan.FromSeconds(durationSeconds));
             Notifications.Remove(notification);
         });

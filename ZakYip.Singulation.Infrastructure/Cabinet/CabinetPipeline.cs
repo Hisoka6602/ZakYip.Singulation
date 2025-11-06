@@ -273,7 +273,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     await Task.Delay(pollInterval, linkedCts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) {
-                    // Expected during shutdown
+                    // 关闭期间预期的取消
                     break;
                 }
                 catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested) {

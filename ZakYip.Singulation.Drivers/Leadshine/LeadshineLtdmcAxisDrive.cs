@@ -924,9 +924,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     typeof(T) == typeof(short) ? BitConverter.ToInt16(buf, 0) :
                     typeof(T) == typeof(uint) ? BitConverter.ToUInt32(buf, 0) :
                     typeof(T) == typeof(int) ? BitConverter.ToInt32(buf, 0) :
-                    // When T is byte[], we return a new array copy for safety.
-                    // Previous behavior may have returned the rented buffer directly, but this is unsafe with ArrayPool.
-                    // Callers expecting the original buffer reference may be affected by this change.
+                    // 当 T 是 byte[] 时，为安全起见返回新数组副本
+                    // 之前的行为可能直接返回租用的缓冲区，但这对于 ArrayPool 是不安全的
+                    // 期望原始缓冲区引用的调用者可能会受此更改影响
                     typeof(T) == typeof(byte[]) ? buf.AsSpan(0, byteLen).ToArray() : null;
 
                 if (boxed is null)

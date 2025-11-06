@@ -270,7 +270,7 @@ public class SafetyApiService
     }
 }
 
-// DTO Classes
+// DTO 类
 
 public class DecoderOptions
 {

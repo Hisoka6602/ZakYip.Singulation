@@ -232,12 +232,12 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
                 => Task.FromResult(_options);
 
             public Task SaveAsync(UpstreamOptions dto, CancellationToken ct = default) {
-                // No-op for tests
+                // 测试用空操作
                 return Task.CompletedTask;
             }
 
             public Task DeleteAsync(CancellationToken ct = default) {
-                // No-op for tests
+                // 测试用空操作
                 return Task.CompletedTask;
             }
         }

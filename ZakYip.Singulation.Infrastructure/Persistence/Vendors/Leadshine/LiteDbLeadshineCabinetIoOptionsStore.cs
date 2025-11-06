@@ -48,7 +48,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine {
                 // 返回默认值
                 return Task.FromResult(new LeadshineCabinetIoOptions());
             }
-            // Let other exceptions propagate
+            // 让其他异常继续传播
         }
 
         public Task SaveAsync(LeadshineCabinetIoOptions options, CancellationToken ct = default)

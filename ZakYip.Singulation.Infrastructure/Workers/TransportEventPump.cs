@@ -96,7 +96,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             }
 
             // 从传输管理器获取所有已创建的传输（跳过端口 <= 0 的传输）
-            // Explicitly map transport names to their instances to avoid index-based errors
+            // 显式映射传输名称到实例以避免基于索引的错误
             var speedTransport = _transportManager.SpeedTransport;
             if (speedTransport != null) {
                 _transports.Add(("speed", speedTransport));
@@ -113,7 +113,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 _log.LogInformation("Transport '{Name}' resolved successfully", "heartbeat");
             }
 
-            // Ensure essential transports are present
+            // 确保必需的传输存在
             var essentialTransports = new[] { "speed" }; // Add more keys if needed
             foreach (var essential in essentialTransports)
             {
@@ -400,8 +400,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         }
 
         // ========== 事件处理：轴侧 ==========
-        // Note: Axis event logging uses structured logging instead of LoggerMessage
-        // due to technical limitations with AxisId value object conversion in source generator
+        // 注意：轴事件日志使用结构化日志而非 LoggerMessage
+        // 因为源生成器在转换 AxisId 值对象时存在技术限制
         private void ProcessAxisEvent(AxisEvent ev) {
             switch (ev.Type) {
                 case AxisEventType.Faulted:
