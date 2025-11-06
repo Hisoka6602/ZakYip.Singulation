@@ -61,7 +61,7 @@ var host = Host.CreateDefaultBuilder(args)
                 // options.Filters.Add<LogRequestResponseAttribute>(); // 请求响应日志（如后续需要）
             })
             .AddJsonOptions(options => {
-                // System.Text.Json 基础设置（备用，已是中文）
+                // System.Text.Json 基础设置（备用）
                 options.JsonSerializerOptions.Encoder = JavaScriptEncoder.Create(UnicodeRanges.All);
             })
             .AddNewtonsoftJson(options => {
@@ -151,7 +151,7 @@ var host = Host.CreateDefaultBuilder(args)
             return r;
         });
 
-        // Program.cs / DI 注册处（已是中文）
+        // Program.cs / DI 注册处
         // 注意：这里只创建 BusAdapter 实例，不调用 InitializeAsync
         // 初始化由 AxisBootstrapper 后台服务异步完成，避免阻塞 Kestrel 启动
         services.AddSingleton<IBusAdapter>(sp => {

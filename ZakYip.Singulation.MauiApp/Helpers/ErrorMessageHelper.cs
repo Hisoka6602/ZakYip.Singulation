@@ -28,7 +28,7 @@ public static class ErrorMessageHelper
         if (lowerMessage.Contains("network") && lowerMessage.Contains("unreachable"))
             return "网络不可达，请检查网络连接";
         
-        // HTTP 状态码（已是中文）
+        // HTTP 状态码
         if (lowerMessage.Contains("404") || lowerMessage.Contains("not found"))
             return "请求的资源不存在";
         
@@ -44,15 +44,15 @@ public static class ErrorMessageHelper
         if (lowerMessage.Contains("503") || lowerMessage.Contains("service unavailable"))
             return "服务暂时不可用，请稍后重试";
         
-        // SignalR 相关错误（已是中文）
+        // SignalR 相关错误
         if (lowerMessage.Contains("signalr") || lowerMessage.Contains("hub"))
             return "实时连接失败，请检查网络";
         
-        // UDP 相关错误（已是中文）
+        // UDP 相关错误
         if (lowerMessage.Contains("udp") || lowerMessage.Contains("broadcast"))
             return "网络发现失败，请尝试手动配置";
         
-        // 数据解析错误（已是中文）
+        // 数据解析错误
         if (lowerMessage.Contains("json") || lowerMessage.Contains("deserialize"))
             return "数据格式错误，请联系技术支持";
         
