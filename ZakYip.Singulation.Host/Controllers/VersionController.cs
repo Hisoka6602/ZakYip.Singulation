@@ -60,8 +60,8 @@ namespace ZakYip.Singulation.Host.Controllers {
         [Produces("application/json")]
         public async Task<ActionResult<ApiResponse<VersionResponseDto>>> GetVersion(CancellationToken ct) {
             try {
-                // 获取当前程序集版本
-                var assembly = Assembly.GetExecutingAssembly();
+                // 获取当前程序集版本（使用入口程序集获取主应用版本）
+                var assembly = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
                 var version = assembly.GetName().Version?.ToString() ?? "1.0.0";
 
                 // 获取轴驱动厂商名称

@@ -252,7 +252,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                         var req = requests[i];
                         
                         // 使用断路器和重试机制
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
                         var success = await circuitBreaker.ExecuteAsync(async (ctx) => {
+#pragma warning restore CS1998
                             // 强制 2ms 安全间隔
                             EnforceSafetyInterval();
                             
@@ -261,9 +263,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                             
                             if (ret == 0) {
                                 successCount++;
-                                return await ValueTask.FromResult(true);
+                                return true;
                             }
-                            return await ValueTask.FromResult(false);
+                            return false;
                         }, ct);
                     }
                     
@@ -322,7 +324,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                         
                         var req = requests[i];
                         
+#pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
                         var success = await circuitBreaker.ExecuteAsync(async (ctx) => {
+#pragma warning restore CS1998
                             EnforceSafetyInterval();
                             
                             var ret = LeadshinePdoHelpers.ReadTxPdoWithPool(cardNo, portNum, nodeId, req.Index, req.SubIndex, req.BitLength, out var data);
@@ -330,9 +334,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                             
                             if (ret == 0) {
                                 successCount++;
-                                return await ValueTask.FromResult(true);
+                                return true;
                             }
-                            return await ValueTask.FromResult(false);
+                            return false;
                         }, ct);
                     }
                     
