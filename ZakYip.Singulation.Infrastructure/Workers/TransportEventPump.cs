@@ -406,12 +406,12 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             switch (ev.Type) {
                 case AxisEventType.Faulted:
                     _log.LogError(ev.Exception, "[{Source}] axis faulted (axis={Axis}), Reason({Reason}), Exception({Exception})", 
-                        ev.Source, ev.AxisId.Value, ev.Reason ?? string.Empty, ev.Exception);
+                        ev.Source, ev.AxisId?.Value ?? -1, ev.Reason ?? string.Empty, ev.Exception);
                     break;
 
                 case AxisEventType.Disconnected:
                     _log.LogWarning("[{Source}] axis disconnected (axis={Axis}) reason={Reason}", 
-                        ev.Source, ev.AxisId.Value, ev.Reason ?? string.Empty);
+                        ev.Source, ev.AxisId?.Value ?? -1, ev.Reason ?? string.Empty);
                     break;
 
                 case AxisEventType.DriverNotLoaded:

@@ -68,7 +68,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         /// <remarks>
         /// 保存或更新上游 TCP 连接的配置信息。
         /// 配置更新后会持久化保存，并自动触发连接热更新（停止旧连接，使用新配置创建并启动新连接）。
-        /// 端口 <= 0 的传输将被跳过，不会创建连接。
+        /// 端口小于等于0的传输将被跳过，不会创建连接。
         /// </remarks>
         /// <param name="dto">上游配置对象</param>
         /// <param name="ct">取消令牌</param>
