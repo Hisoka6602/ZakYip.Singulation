@@ -19,15 +19,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Configure git authentication
+          git config --global url."https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          
           # Get all remote branches except master
           git fetch --all
           
           # List all branches to be deleted
           echo "Branches to be deleted:"
-          git branch -r | grep -v 'HEAD' | grep -v 'master' | sed 's/origin\///' || true
+          git branch -r | grep -v 'HEAD' | grep -vE 'origin/(master)$' | sed 's/origin\///' || true
           
           # Delete each branch except master
-          for branch in $(git branch -r | grep -v 'HEAD' | grep -v 'master' | sed 's/origin\///'); do
+          for branch in $(git branch -r | grep -v 'HEAD' | grep -vE 'origin/(master)$' | sed 's/origin\///'); do
             echo "Deleting branch: $branch"
             git push origin --delete "$branch" || echo "Failed to delete $branch"
           done
