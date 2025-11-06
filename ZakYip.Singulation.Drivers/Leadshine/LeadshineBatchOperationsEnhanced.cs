@@ -261,9 +261,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                             
                             if (ret == 0) {
                                 successCount++;
-                                return true;
+                                return await ValueTask.FromResult(true);
                             }
-                            return false;
+                            return await ValueTask.FromResult(false);
                         }, ct);
                     }
                     
@@ -330,9 +330,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                             
                             if (ret == 0) {
                                 successCount++;
-                                return true;
+                                return await ValueTask.FromResult(true);
                             }
-                            return false;
+                            return await ValueTask.FromResult(false);
                         }, ct);
                     }
                     

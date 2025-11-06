@@ -13,6 +13,7 @@ namespace ZakYip.Singulation.Host.Controllers {
     [ApiController]
     [Route("api/[controller]")]
     public sealed class VersionController : ControllerBase {
+        private const string UnknownVendor = "unknown";
         private readonly IControllerOptionsStore _controllerStore;
         private readonly IUpstreamCodec _codec;
         private readonly ILogger<VersionController> _logger;
@@ -65,11 +66,11 @@ namespace ZakYip.Singulation.Host.Controllers {
 
                 // 获取轴驱动厂商名称
                 var controllerOptions = await _controllerStore.GetAsync(ct);
-                var axisVendor = controllerOptions.Vendor?.Trim().ToLowerInvariant() ?? "unknown";
+                var axisVendor = controllerOptions.Vendor?.Trim().ToLowerInvariant() ?? UnknownVendor;
 
                 // 获取上游数据厂商名称（从编解码器类型名称推导）
                 var codecType = _codec.GetType().Name;
-                var upstreamVendor = codecType.Replace("Codec", "", StringComparison.OrdinalIgnoreCase).ToLowerInvariant();
+                var upstreamVendor = ExtractVendorFromCodecType(codecType);
 
                 var versionInfo = new VersionResponseDto {
                     Version = version,
@@ -83,6 +84,30 @@ namespace ZakYip.Singulation.Host.Controllers {
                 _logger.LogError(ex, "获取版本信息失败");
                 return StatusCode(500, ApiResponse<VersionResponseDto>.Fail("获取版本信息失败"));
             }
+        }
+
+        /// <summary>
+        /// 从编解码器类型名称中提取厂商名称
+        /// </summary>
+        /// <param name="codecTypeName">编解码器类型名称，例如 "HuararyCodec"</param>
+        /// <returns>厂商名称，例如 "huarary"</returns>
+        private static string ExtractVendorFromCodecType(string codecTypeName) {
+            if (string.IsNullOrWhiteSpace(codecTypeName)) {
+                return UnknownVendor;
+            }
+
+            // 移除类型名称中的"Codec"后缀（不区分大小写）
+            var vendorName = codecTypeName;
+            if (vendorName.EndsWith("Codec", StringComparison.OrdinalIgnoreCase)) {
+                vendorName = vendorName.Substring(0, vendorName.Length - 5);
+            }
+
+            // 如果移除后为空或只有空白字符，返回unknown
+            if (string.IsNullOrWhiteSpace(vendorName)) {
+                return UnknownVendor;
+            }
+
+            return vendorName.ToLowerInvariant();
         }
     }
 }
