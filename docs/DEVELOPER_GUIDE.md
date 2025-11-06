@@ -804,6 +804,11 @@ public async Task<AxisInfo> GetAxisCachedAsync(string axisId)
 
 ## 10. 参考资源
 
+### 10.1 项目文档
+- [异常处理最佳实践](./EXCEPTION_HANDLING_BEST_PRACTICES.md) - 统一异常处理策略和重试机制
+- [日志记录最佳实践](./LOGGING_BEST_PRACTICES.md) - 日志级别标准和性能优化
+
+### 10.2 外部资源
 - [C# 编码规范](https://docs.microsoft.com/dotnet/csharp/fundamentals/coding-style/coding-conventions)
 - [ASP.NET Core 最佳实践](https://docs.microsoft.com/aspnet/core/fundamentals/best-practices)
 - [异步编程模式](https://docs.microsoft.com/dotnet/standard/asynchronous-programming-patterns/)
@@ -811,6 +816,6 @@ public async Task<AxisInfo> GetAxisCachedAsync(string axisId)
 
 ---
 
-**文档版本**：1.0  
-**最后更新**：2025-10-19  
+**文档版本**：1.1  
+**最后更新**：2025-11-06  
 **维护者**：ZakYip.Singulation 开发团队

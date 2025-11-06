@@ -30,7 +30,7 @@ namespace ZakYip.Singulation.Tests {
                 0, 0, 1, Array.Empty<LeadshineBatchPdoOperations.BatchWriteRequest>());
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(0, results.Length, "Results length should be 0");
+            MiniAssert.Equal(0, results!.Length, "Results length should be 0");
         }
 
         [MiniFact]
@@ -39,7 +39,7 @@ namespace ZakYip.Singulation.Tests {
                 0, 0, 1, Array.Empty<LeadshineBatchPdoOperations.BatchReadRequest>());
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(0, results.Length, "Results length should be 0");
+            MiniAssert.Equal(0, results!.Length, "Results length should be 0");
         }
 
         [MiniFact]
@@ -57,7 +57,7 @@ namespace ZakYip.Singulation.Tests {
 
             MiniAssert.True(results != null, "Results should not be null");
             // 由于立即取消，可能所有结果都是取消状态（返回码 -999）
-            MiniAssert.True(results.All(r => r.ReturnCode == -999 || r.ReturnCode != 0), 
+            MiniAssert.True(results!.All(r => r.ReturnCode == -999 || r.ReturnCode != 0), 
                 "All results should be cancelled or failed");
         }
 
@@ -75,7 +75,7 @@ namespace ZakYip.Singulation.Tests {
                 0, 0, 1, requests, cts.Token);
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.True(results.All(r => r.ReturnCode == -999 || r.ReturnCode != 0), 
+            MiniAssert.True(results!.All(r => r.ReturnCode == -999 || r.ReturnCode != 0), 
                 "All results should be cancelled or failed");
         }
 
@@ -90,7 +90,7 @@ namespace ZakYip.Singulation.Tests {
                 0, 0, 1, requests);
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(100, results.Length, "Should process all 100 requests");
+            MiniAssert.Equal(100, results!.Length, "Should process all 100 requests");
         }
 
         [MiniFact]
@@ -108,7 +108,7 @@ namespace ZakYip.Singulation.Tests {
             sw.Stop();
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(3, results.Length, "Should have 3 results");
+            MiniAssert.Equal(3, results!.Length, "Should have 3 results");
             
             // 至少应该有 2ms * 3 = 6ms 的延迟（实际会更多因为还有其他开销）
             // 但在没有硬件的情况下，SDK 调用会失败并立即返回，所以这个测试可能不准确
@@ -151,7 +151,7 @@ namespace ZakYip.Singulation.Tests {
 
             var str = diagnostics.ToString();
             MiniAssert.True(str != null, "ToString should not return null");
-            MiniAssert.True(str.Contains("Batch Diagnostics"), "Should contain 'Batch Diagnostics'");
+            MiniAssert.True(str!.Contains("Batch Diagnostics"), "Should contain 'Batch Diagnostics'");
             MiniAssert.True(str.Contains("Total Requests: 2"), "Should contain total requests");
             MiniAssert.True(str.Contains("Success: 1"), "Should contain success count");
         }
@@ -186,7 +186,7 @@ namespace ZakYip.Singulation.Tests {
                     0, 0, 1, requests);
                 
                 MiniAssert.True(results != null, "Results should not be null even on failure");
-                MiniAssert.Equal(1, results.Length, "Should have 1 result");
+                MiniAssert.Equal(1, results!.Length, "Should have 1 result");
             } catch (Exception ex) {
                 // 即使有异常，也应该是预期的（断路器或其他）
                 MiniAssert.True(true, $"Exception is expected without hardware: {ex.Message}");
@@ -207,7 +207,7 @@ namespace ZakYip.Singulation.Tests {
                 0, 0, 1, requests);
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(30, results.Length, "Should process all 30 requests");
+            MiniAssert.Equal(30, results!.Length, "Should process all 30 requests");
         }
 
         [MiniFact]

@@ -104,7 +104,7 @@ namespace ZakYip.Singulation.Tests {
                 0, 0, 1, Array.Empty<LeadshineBatchPdoOperations.BatchWriteRequest>());
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(0, results.Length, "Results length should be 0");
+            MiniAssert.Equal(0, results!.Length, "Results length should be 0");
         }
 
         [MiniFact]
@@ -113,7 +113,7 @@ namespace ZakYip.Singulation.Tests {
                 0, 0, 1, Array.Empty<LeadshineBatchPdoOperations.BatchReadRequest>());
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(0, results.Length, "Results length should be 0");
+            MiniAssert.Equal(0, results!.Length, "Results length should be 0");
         }
 
         [MiniFact]
@@ -132,7 +132,7 @@ namespace ZakYip.Singulation.Tests {
 
             MiniAssert.True(results != null, "Results should not be null");
             // 由于立即取消，可能所有结果都是取消状态（返回码 -999）
-            MiniAssert.True(results.All(r => r.ReturnCode == -999 || r.ReturnCode != 0), "All results should be cancelled or failed");
+            MiniAssert.True(results!.All(r => r.ReturnCode == -999 || r.ReturnCode != 0), "All results should be cancelled or failed");
         }
 
         [MiniFact]
@@ -151,7 +151,7 @@ namespace ZakYip.Singulation.Tests {
 
             MiniAssert.True(results != null, "Results should not be null");
             // 由于立即取消，可能所有结果都是取消状态（返回码 -999）
-            MiniAssert.True(results.All(r => r.ReturnCode == -999 || r.ReturnCode != 0), "All results should be cancelled or failed");
+            MiniAssert.True(results!.All(r => r.ReturnCode == -999 || r.ReturnCode != 0), "All results should be cancelled or failed");
         }
 
         [MiniFact]
@@ -168,7 +168,7 @@ namespace ZakYip.Singulation.Tests {
             var results = await adapter.BatchWriteMultipleAxesAsync(nodeIds, requests);
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(3, results.Count, "Results count should be 3");
+            MiniAssert.Equal(3, results!.Count, "Results count should be 3");
             MiniAssert.True(results.ContainsKey(1), "Results should contain key 1");
             MiniAssert.True(results.ContainsKey(2), "Results should contain key 2");
             MiniAssert.True(results.ContainsKey(3), "Results should contain key 3");
@@ -187,7 +187,7 @@ namespace ZakYip.Singulation.Tests {
             var results = await adapter.BatchReadMultipleAxesAsync(nodeIds, requests);
 
             MiniAssert.True(results != null, "Results should not be null");
-            MiniAssert.Equal(2, results.Count, "Results count should be 2");
+            MiniAssert.Equal(2, results!.Count, "Results count should be 2");
             MiniAssert.True(results.ContainsKey(1), "Results should contain key 1");
             MiniAssert.True(results.ContainsKey(2), "Results should contain key 2");
         }
