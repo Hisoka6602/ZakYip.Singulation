@@ -5,7 +5,7 @@ using System.ComponentModel;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
-namespace ZakYip.Singulation.Transport.Enums {
+namespace ZakYip.Singulation.Core.Enums {
 
     public enum TransportStatus {
 

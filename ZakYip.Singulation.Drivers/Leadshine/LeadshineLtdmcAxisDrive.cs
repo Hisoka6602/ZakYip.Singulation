@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using ZakYip.Singulation.Core.Utils;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
-using ZakYip.Singulation.Drivers.Enums;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Health;

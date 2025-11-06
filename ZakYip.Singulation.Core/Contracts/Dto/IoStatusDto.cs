@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Core.Contracts.Dto {
 
@@ -30,33 +31,5 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
         /// 错误信息（如果读取失败）。
         /// </summary>
         public string? ErrorMessage { get; init; }
-    }
-
-    /// <summary>
-    /// IO 类型枚举。
-    /// </summary>
-    [Description("IO 类型")]
-    public enum IoType {
-        /// <summary>输入 IO</summary>
-        [Description("输入")]
-        Input = 0,
-
-        /// <summary>输出 IO</summary>
-        [Description("输出")]
-        Output = 1
-    }
-
-    /// <summary>
-    /// IO 状态枚举。
-    /// </summary>
-    [Description("IO 状态")]
-    public enum IoState {
-        /// <summary>低电平</summary>
-        [Description("低电平")]
-        Low = 0,
-
-        /// <summary>高电平</summary>
-        [Description("高电平")]
-        High = 1
     }
 }

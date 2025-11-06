@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Contracts;
 using csLTDMC;

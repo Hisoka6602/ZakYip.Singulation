@@ -4,7 +4,7 @@ using System.Text;
 using System.Buffers;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Protocol.Enums;
+using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Dto;
 
 namespace ZakYip.Singulation.Protocol.Abstractions {

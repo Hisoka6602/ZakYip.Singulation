@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 
-namespace ZakYip.Singulation.Protocol.Enums {
+namespace ZakYip.Singulation.Core.Enums {
 
     /// <summary>
     /// 上游协议控制命令字。

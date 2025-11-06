@@ -6,7 +6,6 @@ using TouchSocket.Sockets;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
-using ZakYip.Singulation.Transport.Enums;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
 

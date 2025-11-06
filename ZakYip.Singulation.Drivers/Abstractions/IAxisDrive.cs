@@ -3,7 +3,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Drivers.Enums;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
