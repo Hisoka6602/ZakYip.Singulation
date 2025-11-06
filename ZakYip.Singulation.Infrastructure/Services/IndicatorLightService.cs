@@ -159,8 +159,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
             try {
                 // 根据 triggerLevel 决定电平逻辑
-                // XOR logic: state = on ^ (triggerLevel == ActiveLow)
-                // Truth table:
+                // 异或逻辑：state = on ^ (triggerLevel == ActiveLow)
+                // 真值表：
                 //   on | triggerLevel | state
                 //  ----+--------------+------
                 //   T  | ActiveHigh   |  1 (高电平亮灯)

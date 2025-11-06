@@ -171,18 +171,18 @@ namespace ZakYip.Singulation.Drivers.Common {
                 return;
             }
 
-            // Distribute speeds based on AxisType
+            // 根据轴类型分配速度
             var mainIndex = 0;
             var ejectIndex = 0;
 
-            // Only write speed if it has changed from the last known value
+            // 仅当速度与上次已知值不同时才写入
             for (var i = 0; i < totalAx; i++) {
                 if (ct.IsCancellationRequested) return;
                 
                 decimal newSpeed = 0m;
                 var drive = _drives[i];
                 
-                // Assign speed based on axis type
+                // 根据轴类型分配速度
                 if (drive.AxisType == Core.Enums.AxisType.Main && mainIndex < main.Count) {
                     newSpeed = (decimal)main[mainIndex];
                     mainIndex++;
@@ -193,7 +193,7 @@ namespace ZakYip.Singulation.Drivers.Common {
                 
                 var lastSpeed = _lastSpeeds[i];
                 
-                // Write speed only if it's different from the last written speed
+                // 仅当速度与上次写入的速度不同时才写入
                 if (!lastSpeed.HasValue || lastSpeed.Value != newSpeed) {
                     try {
                         await drive.WriteSpeedAsync(newSpeed, ct);

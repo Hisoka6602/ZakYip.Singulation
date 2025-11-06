@@ -35,7 +35,7 @@ public class GlobalExceptionHandlerMiddleware
         }
         catch (Exception ex)
         {
-            // Rethrow critical exceptions that should not be handled
+            // 重新抛出不应处理的关键异常
             if (ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException)
             {
                 throw;
