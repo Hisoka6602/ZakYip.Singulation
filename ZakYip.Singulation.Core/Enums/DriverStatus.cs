@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
-namespace ZakYip.Singulation.Drivers.Enums {
+namespace ZakYip.Singulation.Core.Enums {
     /// <summary>
     /// 轴驱动的运行状态（互斥态）。用于对外可观测的“生命体征”。
     /// </summary>

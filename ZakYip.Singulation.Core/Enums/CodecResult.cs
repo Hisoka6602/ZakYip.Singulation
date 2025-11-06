@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace ZakYip.Singulation.Protocol.Enums {
+namespace ZakYip.Singulation.Core.Enums {
 
     /// <summary>
     /// 编解码结果。

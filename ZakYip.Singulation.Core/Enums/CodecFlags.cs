@@ -1,7 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 
-namespace ZakYip.Singulation.Protocol.Enums {
+namespace ZakYip.Singulation.Core.Enums {
 
     /// <summary>
     /// 编解码标志位（位域标记）。

@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using ZakYip.Singulation.Drivers.Enums;
 using ZakYip.Singulation.Core.Enums;
 
 namespace ZakYip.Singulation.Host.Dto {

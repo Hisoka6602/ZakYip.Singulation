@@ -8,6 +8,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
+using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Infrastructure.Cabinet;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Infrastructure.Runtime;
@@ -346,9 +347,9 @@ try {
     // 阻止电脑睡眠/熄屏（仅限 Windows）
     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
         PowerGuard.SetThreadExecutionState(
-            PowerGuard.EXECUTION_STATE.ES_CONTINUOUS |
-            PowerGuard.EXECUTION_STATE.ES_SYSTEM_REQUIRED |
-            PowerGuard.EXECUTION_STATE.ES_DISPLAY_REQUIRED);
+            EXECUTION_STATE.ES_CONTINUOUS |
+            EXECUTION_STATE.ES_SYSTEM_REQUIRED |
+            EXECUTION_STATE.ES_DISPLAY_REQUIRED);
     }
     host.Run();
 }
@@ -357,6 +358,6 @@ catch (Exception e) {
 }
 finally {
     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-        PowerGuard.SetThreadExecutionState(PowerGuard.EXECUTION_STATE.ES_CONTINUOUS);
+        PowerGuard.SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS);
     }
 }

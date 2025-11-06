@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using ZakYip.Singulation.Drivers.Enums;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Core.Contracts.Dto;
