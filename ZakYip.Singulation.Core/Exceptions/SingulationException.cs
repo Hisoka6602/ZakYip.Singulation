@@ -21,6 +21,18 @@ public abstract class SingulationException : Exception
     public bool IsRetryable { get; protected set; }
 
     /// <summary>
+    /// 最大重试次数
+    /// Maximum number of retry attempts
+    /// </summary>
+    public int MaxRetryAttempts { get; protected set; }
+
+    /// <summary>
+    /// 重试延迟基数（毫秒），用于指数退避策略
+    /// Base retry delay in milliseconds for exponential backoff strategy
+    /// </summary>
+    public int RetryDelayMilliseconds { get; protected set; }
+
+    /// <summary>
     /// 构造函数
     /// </summary>
     /// <param name="errorCode">错误代码</param>
@@ -30,6 +42,8 @@ public abstract class SingulationException : Exception
     {
         ErrorCode = errorCode ?? throw new ArgumentNullException(nameof(errorCode));
         IsRetryable = false;
+        MaxRetryAttempts = 3;
+        RetryDelayMilliseconds = 100;
     }
 
     /// <summary>
@@ -43,5 +57,7 @@ public abstract class SingulationException : Exception
     {
         ErrorCode = errorCode ?? throw new ArgumentNullException(nameof(errorCode));
         IsRetryable = false;
+        MaxRetryAttempts = 3;
+        RetryDelayMilliseconds = 100;
     }
 }

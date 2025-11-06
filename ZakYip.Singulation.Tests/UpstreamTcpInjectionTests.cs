@@ -89,7 +89,7 @@ namespace ZakYip.Singulation.Tests {
             
             // Assert: 验证传输确实被创建
             MiniAssert.True(speedTransport is not null, "speed transport should be created with custom config");
-            MiniAssert.Equal(6001, speedTransport.RemotePort, "speed transport should use configured port");
+            MiniAssert.Equal(6001, speedTransport!.RemotePort, "speed transport should use configured port");
             MiniAssert.Equal(false, speedTransport.IsServer, "speed transport should be client mode");
 
             // 清理
@@ -127,7 +127,7 @@ namespace ZakYip.Singulation.Tests {
             
             // Assert: 验证传输是服务器模式
             MiniAssert.True(speedTransport is not null, "speed transport should be created in server mode");
-            MiniAssert.Equal(true, speedTransport.IsServer, "speed transport should be server mode");
+            MiniAssert.Equal(true, speedTransport!.IsServer, "speed transport should be server mode");
             MiniAssert.Equal(7001, speedTransport.RemotePort, "speed transport should use configured port");
 
             // 清理
@@ -164,7 +164,7 @@ namespace ZakYip.Singulation.Tests {
             // 获取初始传输
             var initialSpeedTransport = sp.GetKeyedService<IByteTransport>("speed");
             MiniAssert.True(initialSpeedTransport is not null, "initial speed transport should exist");
-            MiniAssert.Equal(5001, initialSpeedTransport.RemotePort, "initial port should be 5001");
+            MiniAssert.Equal(5001, initialSpeedTransport!.RemotePort, "initial port should be 5001");
 
             // Act: 执行热更新
             var newConfig = new UpstreamOptions {
@@ -179,7 +179,7 @@ namespace ZakYip.Singulation.Tests {
             // Assert: 验证传输已更新
             var updatedSpeedTransport = sp.GetKeyedService<IByteTransport>("speed");
             MiniAssert.True(updatedSpeedTransport is not null, "updated speed transport should exist");
-            MiniAssert.Equal(8001, updatedSpeedTransport.RemotePort, "port should be updated to 8001");
+            MiniAssert.Equal(8001, updatedSpeedTransport!.RemotePort, "port should be updated to 8001");
             MiniAssert.Equal("192.168.1.200", updatedSpeedTransport.RemoteIp, "host should be updated to 192.168.1.200");
 
             // 清理

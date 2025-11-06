@@ -66,7 +66,7 @@ namespace ZakYip.Singulation.Tests {
             // Assert: 验证响应包含传输信息
             MiniAssert.True(response.Result, "GetConnectionsAsync should succeed");
             MiniAssert.True(response.Data is not null, "Data should not be null");
-            MiniAssert.True(response.Data.Items.Count == 3, $"Should have 3 transports, but got {response.Data.Items.Count}");
+            MiniAssert.True(response.Data!.Items.Count == 3, $"Should have 3 transports, but got {response.Data.Items.Count}");
             MiniAssert.True(response.Data.Enabled, "Enabled should be true");
 
             // 验证每个传输的基本信息
@@ -198,7 +198,7 @@ namespace ZakYip.Singulation.Tests {
             // Assert: 验证只有一个传输（speed）
             MiniAssert.True(response.Result, "GetConnectionsAsync should succeed");
             MiniAssert.True(response.Data is not null, "Data should not be null");
-            MiniAssert.True(response.Data.Items.Count == 1, $"Should have only 1 transport (speed), but got {response.Data.Items.Count}");
+            MiniAssert.True(response.Data!.Items.Count == 1, $"Should have only 1 transport (speed), but got {response.Data.Items.Count}");
             MiniAssert.True(response.Data.Items.Any(t => t.Port == 5001), "Should have speed transport on port 5001");
             MiniAssert.False(response.Data.Items.Any(t => t.Port == 0), "Should not have transport on port 0");
             MiniAssert.False(response.Data.Items.Any(t => t.Port == -1), "Should not have transport on port -1");
