@@ -99,7 +99,7 @@ namespace ZakYip.Singulation.Host.Controllers {
             // 移除类型名称中的"Codec"后缀（不区分大小写）
             var vendorName = codecTypeName;
             if (vendorName.EndsWith("Codec", StringComparison.OrdinalIgnoreCase)) {
-                vendorName = vendorName.Substring(0, vendorName.Length - 5);
+                vendorName = vendorName[..^5];
             }
 
             // 如果移除后为空或只有空白字符，返回unknown
