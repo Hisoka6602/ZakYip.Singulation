@@ -8,6 +8,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.SignalR;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Infrastructure.Cabinet;
 using ZakYip.Singulation.Core.Configs;
@@ -204,7 +205,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<ConfigurationImportExportService>();
 
         // ---------- 监控和诊断服务 ----------
-        services.AddSingleton<IPprChangeRecordStore, LiteDbPprChangeRecordStore>();
+        // 注意：不支持历史查询功能（如 PPR 历史），仅使用 LiteDB 存储配置项
         services.AddSingleton<SystemHealthMonitorService>(sp => new SystemHealthMonitorService(
             sp.GetRequiredService<ILogger<SystemHealthMonitorService>>(),
             sp.GetRequiredService<IAxisController>(),
@@ -215,12 +216,6 @@ var host = Host.CreateDefaultBuilder(args)
             sp.GetRequiredService<IAxisController>(),
             sp.GetRequiredService<IHubContext<MonitoringHub>>()));
         services.AddHostedService(sp => sp.GetRequiredService<RealtimeAxisDataService>());
-        services.AddSingleton<PprChangeMonitorService>(sp => new PprChangeMonitorService(
-            sp.GetRequiredService<ILogger<PprChangeMonitorService>>(),
-            sp.GetRequiredService<IAxisController>(),
-            sp.GetRequiredService<IPprChangeRecordStore>(),
-            sp.GetRequiredService<IHubContext<MonitoringHub>>()));
-        services.AddHostedService(sp => sp.GetRequiredService<PprChangeMonitorService>());
         services.AddSingleton<FaultDiagnosisService>();
 
         // ---------- 安全 ----------

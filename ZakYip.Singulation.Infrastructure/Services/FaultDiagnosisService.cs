@@ -34,8 +34,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// </summary>
         public async Task<FaultDiagnosisDto?> DiagnoseAxisAsync(string axisId, CancellationToken ct = default) {
             try {
-                var drive = _axisController.GetAllDrives()
-                    .FirstOrDefault(d => d.AxisId.ToString() == axisId);
+                var drive = _axisController.Drives
+                    .FirstOrDefault(d => d.Axis.ToString() == axisId);
 
                 if (drive == null) {
                     return new FaultDiagnosisDto {
@@ -62,7 +62,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             var results = new List<FaultDiagnosisDto>();
 
             try {
-                var drives = _axisController.GetAllDrives().ToList();
+                var drives = _axisController.Drives.ToList();
 
                 foreach (var drive in drives) {
                     var diagnosis = DiagnoseAxisDrive(drive);
@@ -92,10 +92,10 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         private FaultDiagnosisDto? DiagnoseAxisDrive(IAxisDrive drive) {
-            var axisId = drive.AxisId.ToString();
+            var axisId = drive.Axis.ToString();
 
             // 1. 检查驱动状态
-            if (drive.Status == DriverStatus.Disconnected) {
+            if (drive.Status == DriverStatus.Disconnected || drive.Status == DriverStatus.Faulted) {
                 return new FaultDiagnosisDto {
                     AxisId = axisId,
                     FaultType = "AXIS_DISCONNECTED",
@@ -119,16 +119,16 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 };
             }
 
-            if (drive.Status == DriverStatus.Error) {
-                // 2. 检查错误码
+            // 2. 检查错误码
+            if (drive.LastErrorCode != 0) {
                 var errorCode = drive.LastErrorCode;
                 var errorMsg = drive.LastErrorMessage;
 
                 // 先查询知识库
                 var knowledgeResult = QueryKnowledgeBase(errorCode, axisId);
                 if (knowledgeResult != null) {
-                    knowledgeResult.ErrorMessage = errorMsg;
-                    return knowledgeResult;
+                    // 添加驱动器的原始错误消息
+                    return knowledgeResult with { ErrorMessage = errorMsg };
                 }
 
                 // 通用错误诊断
@@ -150,7 +150,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         "清除驱动器报警后重试"
                     },
                     DiagnosedAt = DateTime.Now,
-                    ErrorCode = errorCode
+                    ErrorCode = errorCode,
+                    ErrorMessage = errorMsg
                 };
             }
 

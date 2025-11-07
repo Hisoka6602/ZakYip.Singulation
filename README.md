@@ -2,9 +2,84 @@
 
 ## 🎯 最新更新（2025-11-07）
 
+### ✅ 2025-11-07 架构优化和文档完善
+
+本次更新重点优化系统架构，提升代码质量，并完善文档：
+
+#### 1. **异常处理策略统一** 🔧
+- **新增自定义异常类**：
+  - `AxisOperationException` - 轴操作异常，包含轴ID、操作名称、尝试值等上下文
+  - `SafetyViolationException` - 安全违规异常，包含违规规则和系统状态
+- **异常分类**：
+  - 瞬时故障（可重试）：`HardwareCommunicationException`, `TransportException`
+  - 永久故障（不可重试）：`ConfigurationException`, `ValidationException`, `SafetyViolationException`
+- **智能重试机制**：
+  - 基于 `IsRetryable` 属性的自动重试
+  - 指数退避策略（RetryDelayMilliseconds）
+  - 可配置的最大重试次数（MaxRetryAttempts）
+- **相关文档**：
+  - `docs/EXCEPTION_HANDLING_BEST_PRACTICES.md` - 异常处理最佳实践（含代码示例）
+
+#### 2. **设备厂商集成指南** 📖
+- **文档**：`docs/DEVICE_VENDOR_INTEGRATION_GUIDE.md`
+- **内容**：
+  - 详细说明如何集成新的设备厂商（倍福、西门子、联诚等）
+  - 核心接口说明：`IAxisDrive`, `IAxisController`, `IBusAdapter`
+  - 完整的实现步骤和代码示例
+  - 单位转换和协议映射指南
+  - 测试策略和最佳实践
+- **架构优势**：
+  - 通过接口抽象实现设备驱动完全解耦
+  - 应用层仅依赖接口，不依赖具体实现
+  - 易于扩展新厂商，无需修改现有代码
+
+#### 3. **上游数据源集成指南** 📖
+- **文档**：`docs/UPSTREAM_PROTOCOL_INTEGRATION_GUIDE.md`
+- **内容**：
+  - 详细说明如何集成新的上游数据源（海康威视、自研系统等）
+  - 核心接口说明：`IUpstreamCodec`
+  - JSON 和二进制协议的完整实现示例
+  - 编解码器注册和配置方法
+  - 数据流向图和测试策略
+- **架构优势**：
+  - 通过协议抽象层实现上游数据源完全解耦
+  - 支持多种协议格式（JSON、XML、二进制等）
+  - 易于切换和扩展数据源
+
+#### 4. **移除历史查询功能** 🗑️
+- **设计决策**：本项目不支持任何历史数据查询功能
+- **原因**：
+  - 历史数据查询需要更强大的数据库（如 PostgreSQL、InfluxDB）
+  - 本项目定位为轻量级控制系统，仅使用 LiteDB 存储配置项
+  - 避免系统复杂度增加和性能开销
+- **已移除功能**：
+  - ~~PPR 变化历史记录和查询~~
+  - ~~PPR 异常检测和告警历史~~
+  - ~~LiteDbPprChangeRecordStore 持久化存储~~
+  - ~~PprMonitoringController REST API~~
+- **LiteDB 用途**：
+  - ✅ 控制器配置存储（`ControllerOptions`）
+  - ✅ 速度联动配置存储（`SpeedLinkageOptions`）
+  - ✅ IO 联动配置存储（`IoLinkageOptions`）
+  - ✅ 驱动参数模板存储
+  - ❌ ~~不再用于存储历史数据~~
+
+#### 5. **文档完善** 📚
+- **新增文档**：
+  - `DEVICE_VENDOR_INTEGRATION_GUIDE.md` - 设备厂商集成指南
+  - `UPSTREAM_PROTOCOL_INTEGRATION_GUIDE.md` - 上游协议集成指南
+  - `EXCEPTION_HANDLING_BEST_PRACTICES.md` - 异常处理最佳实践
+- **更新文档**：
+  - `README.md` - 移除 PPR 历史相关内容，添加架构说明和未来规划
+  - 所有文档使用中文，便于团队协作
+
+---
+
 ### ✅ 2025-11-07 监控和诊断增强
 
 本次更新增加了全面的实时监控和智能故障诊断功能，提升系统的可观测性和故障排查效率：
+
+#### 1. **实时监控仪表板** 📊
 
 #### 1. **实时监控仪表板** 📊
 - **SignalR 实时推送**：
@@ -27,24 +102,6 @@
   - `RealtimeAxisDataDto.cs` - 实时轴数据 DTO
   - `SystemHealthDto.cs` - 系统健康度 DTO
 
-#### 2. **PPR 变化监控** 🔍
-- **自动检测 PPR 变化**：
-  - `PprChangeMonitorService` - 每10秒检查所有轴的 PPR 值
-  - 自动检测 PPR 值变化并记录详细信息
-  - 智能推断变化原因（传动比调整、细分数调整、硬件更换等）
-- **异常检测和告警**：
-  - 变化幅度超过 50% 标记为异常
-  - PPR 值不在常见值范围（1000, 2000, 4000, 8000, 10000 等）标记为异常
-  - 异常变化实时推送告警到所有客户端
-- **历史记录持久化**：
-  - `LiteDbPprChangeRecordStore` - 基于 LiteDB 的持久化存储
-  - 记录旧值、新值、变化原因、变化时间、是否异常
-  - 支持按轴 ID 查询、查询所有记录、查询异常记录
-- **相关文件**：
-  - `PprChangeMonitorService.cs` - PPR 监控服务
-  - `LiteDbPprChangeRecordStore.cs` - 存储实现
-  - `PprChangeRecordDto.cs` - PPR 变化记录 DTO
-  - `PprMonitoringController.cs` - REST API 控制器
 
 #### 3. **智能故障诊断** 🛠️
 - **自动故障诊断**：
@@ -76,11 +133,6 @@
 - `GET /api/monitoring/diagnose/all` - 扫描所有轴并返回故障列表
 - `GET /api/monitoring/knowledge-base/{errorCode}` - 查询故障知识库
 
-**PPR 监控相关** (`/api/pprmonitoring/`):
-- `GET /api/pprmonitoring/history/{axisId}` - 获取指定轴的 PPR 变化历史
-- `GET /api/pprmonitoring/history?skip=0&take=100` - 分页获取所有 PPR 变化记录
-- `GET /api/pprmonitoring/anomalies` - 获取异常 PPR 变化记录
-- `DELETE /api/pprmonitoring/cleanup?beforeDate={date}` - 清理旧记录
 
 **SignalR Hub** (`/hubs/monitoring`):
 - `SubscribeAxisData(axisId?)` - 订阅轴实时数据
@@ -94,9 +146,6 @@
 **SignalR 推送事件**:
 - `ReceiveAxisData` - 接收轴实时数据（RealtimeAxisDataDto）
 - `ReceiveHealthData` - 接收系统健康度数据（SystemHealthDto）
-- `ReceivePprChange` - 接收 PPR 变化通知（PprChangeRecordDto）
-- `ReceivePprAnomalyAlert` - 接收 PPR 异常告警
-
 #### 5. **使用示例** 📝
 
 **订阅实时轴数据** (SignalR 客户端):
@@ -128,23 +177,12 @@ GET /api/monitoring/diagnose/all
 GET /api/monitoring/knowledge-base/18
 ```
 
-**查询 PPR 变化历史** (REST API):
-```bash
-# 获取轴 1001 的 PPR 变化历史
-GET /api/pprmonitoring/history/1001
-
-# 获取所有异常 PPR 变化
-GET /api/pprmonitoring/anomalies
-
-# 清理 30 天前的记录
 DELETE /api/pprmonitoring/cleanup?beforeDate=2024-10-08
 ```
 
 #### 6. **优势** ✨
 - ✅ 实时监控：5Hz 轴数据更新，5秒健康度刷新
 - ✅ 智能诊断：自动识别常见故障，提供解决方案
-- ✅ 异常告警：PPR 异常变化自动推送告警
-- ✅ 历史追溯：完整的 PPR 变化历史记录
 - ✅ 知识库集成：7 种常见故障的详细说明和建议
 - ✅ 低开销：使用 SignalR 推送，避免频繁轮询
 - ✅ 灵活订阅：支持按需订阅特定轴或全部数据
@@ -538,13 +576,24 @@ GET /api/configurations/template/download?type=SpeedLinkage
 - [x] 识别可以转换为 readonly struct 的小型值对象（已完成：已有多个值对象使用 readonly record struct）
 - [x] 启用并配置代码分析器规则（已启用 CA1031 等规则，设置为 warning 级别）
 - [x] 统一注释语言为中文（已完成：所有源代码英文注释已翻译为中文）
-- [ ] **统一异常处理策略** ⚡ 紧急
-  - 定义异常处理最佳实践文档（包含示例代码）
-  - 审查所有 catch 块，避免捕获通用 Exception
-  - 在所有层级实施一致的异常处理模式
-  - 添加自定义业务异常类型（AxisOperationException, SafetyViolationException 等）
-  - 实现异常分类和智能重试策略（区分瞬时故障和永久故障）
-  - 添加异常聚合和上报机制
+- [x] **统一异常处理策略** ✅ **已完成**
+  - [x] 定义异常处理最佳实践文档（`docs/EXCEPTION_HANDLING_BEST_PRACTICES.md`）
+  - [x] 添加自定义业务异常类型（`AxisOperationException`, `SafetyViolationException`）
+  - [x] 实现异常分类和智能重试策略（通过 `IsRetryable` 属性）
+  - [ ] 审查所有 catch 块，避免捕获通用 Exception（需要代码审查）
+  - [ ] 添加异常聚合和上报机制（待实现）
+- [x] **设备接口解耦** ✅ **已完成**
+  - [x] 创建设备厂商集成指南（`docs/DEVICE_VENDOR_INTEGRATION_GUIDE.md`）
+  - [x] 说明如何集成倍福、西门子、联诚等新厂商
+  - [x] 提供完整的实现步骤和代码示例
+- [x] **上游数据接口解耦** ✅ **已完成**
+  - [x] 创建上游协议集成指南（`docs/UPSTREAM_PROTOCOL_INTEGRATION_GUIDE.md`）
+  - [x] 说明如何集成海康威视、自研系统等新数据源
+  - [x] 提供 JSON 和二进制协议的实现示例
+- [x] **移除历史查询支持** ✅ **已完成**
+  - [x] 移除 PPR 历史监控和存储功能
+  - [x] 明确 LiteDB 仅用于配置存储，不用于历史数据
+  - [x] 更新 README 说明设计决策
 - [ ] **优化日志记录规范** ⚡ 紧急
   - 统一日志级别使用标准（Debug/Info/Warning/Error/Critical）
   - 为高频操作实施日志采样策略（如每100次记录一次）
@@ -642,9 +691,6 @@ GET /api/configurations/template/download?type=SpeedLinkage
     - [x] 轴速度、位置实时曲线图（SignalR 推送）
     - [x] IO 状态实时变化可视化  
     - [x] 系统健康度评分（基于错误率、响应时间等）
-  - [x] PPR变化监控
-    - [x] 检测和记录 PPR 值的变化
-    - [x] 记录变化历史和原因（配置更新、硬件替换）
     - [x] 提供异常检测和告警
   - [x] 智能故障诊断
     - [x] 实现常见故障的自动诊断规则（7种常见故障）

@@ -94,10 +94,10 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         private SystemHealthDto CalculateSystemHealth() {
-            var drives = _axisController.GetAllDrives().ToList();
+            var drives = _axisController.Drives.ToList();
             var totalCount = drives.Count;
-            var onlineCount = drives.Count(d => d.Status == DriverStatus.Ready || d.Status == DriverStatus.Enabled);
-            var faultedCount = drives.Count(d => d.Status == DriverStatus.Error || d.Status == DriverStatus.Disconnected);
+            var onlineCount = drives.Count(d => d.Status == DriverStatus.Connected || d.Status == DriverStatus.Initializing);
+            var faultedCount = drives.Count(d => d.Status == DriverStatus.Faulted || d.Status == DriverStatus.Disconnected);
 
             double avgResponseTime;
             double errorRate;
