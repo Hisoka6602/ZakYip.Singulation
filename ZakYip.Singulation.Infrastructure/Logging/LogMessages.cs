@@ -534,4 +534,35 @@ public static partial class LogMessages
         long totalCount,
         int samplingRate);
 
+    // ==================== System Health Monitoring Logs ====================
+
+    [LoggerMessage(
+        EventId = 14001,
+        Level = LogLevel.Warning,
+        Message = "系统健康度下降: 评分={Score}, 等级={Level}, 在线轴={OnlineCount}/{TotalCount}")]
+    public static partial void SystemHealthDegraded(
+        this ILogger logger,
+        double score,
+        string level,
+        int onlineCount,
+        int totalCount);
+
+    [LoggerMessage(
+        EventId = 14002,
+        Level = LogLevel.Critical,
+        Message = "系统健康严重告警: 评分={Score}, 故障轴={FaultedCount}, 错误率={ErrorRate:P2}")]
+    public static partial void SystemHealthCritical(
+        this ILogger logger,
+        double score,
+        int faultedCount,
+        double errorRate);
+
+    [LoggerMessage(
+        EventId = 14003,
+        Level = LogLevel.Information,
+        Message = "系统健康度优秀: 评分={Score}, 所有轴正常")]
+    public static partial void SystemHealthExcellent(
+        this ILogger logger,
+        double score);
+
 }
