@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Extensions.Caching.Memory;
 using System.Threading;
 using System.Threading.Tasks;
 using LiteDB;
@@ -53,11 +54,13 @@ namespace ZakYip.Singulation.Tests {
         [MiniFact]
         public async Task ControllerOptionsStore_HandlesNormalOperation() {
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var isolator = new RecordingSafetyIsolator();
             var store = new LiteDbControllerOptionsStore(
                 db,
                 NullLogger<LiteDbControllerOptionsStore>.Instance,
-                isolator);
+                isolator,
+                cache);
 
             var result = await store.GetAsync();
 

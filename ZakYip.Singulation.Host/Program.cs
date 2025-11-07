@@ -120,6 +120,9 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- Health Checks ----------
         services.AddHealthChecks();
 
+        // ---------- Memory Cache ----------
+        services.AddMemoryCache();
+
         // ---------- Swagger ----------
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();

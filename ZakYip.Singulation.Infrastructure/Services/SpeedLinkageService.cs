@@ -93,10 +93,21 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     BuildAxisIdToDriveCache();
                 }
 
+                // 收集所有需要执行的 IO 写入操作
+                var ioWrites = new List<(int BitNumber, IoState State)>();
+
                 // 处理每个联动组
                 for (int groupIndex = 0; groupIndex < options.LinkageGroups.Count; groupIndex++) {
                     var group = options.LinkageGroups[groupIndex];
-                    await ProcessGroupAsync(groupIndex, group, ct);
+                    var writes = ProcessGroup(groupIndex, group);
+                    if (writes != null) {
+                        ioWrites.AddRange(writes);
+                    }
+                }
+
+                // 批量并行执行所有 IO 写入操作，提高性能
+                if (ioWrites.Count > 0) {
+                    await ApplyIoWritesBatchAsync(ioWrites, ct);
                 }
             }
             catch (OperationCanceledException) {
@@ -124,12 +135,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         /// <summary>
-        /// 处理单个联动组。
+        /// 处理单个联动组，返回需要执行的 IO 写入操作。
         /// </summary>
-        private async Task ProcessGroupAsync(
+        private List<(int BitNumber, IoState State)>? ProcessGroup(
             int groupIndex,
-            SpeedLinkageGroup group,
-            CancellationToken ct) {
+            SpeedLinkageGroup group) {
 
             // 检查组内所有轴是否都已停止
             // 使用缓存的字典查找，避免每次都使用LINQ查询，提升性能
@@ -157,7 +167,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 _groupStoppedStates.TryGetValue(groupIndex, out previouslyStopped);
             }
 
-            // 如果状态发生变化，应用 IO 联动
+            // 如果状态发生变化，准备 IO 写入操作
             if (allStopped != previouslyStopped) {
                 lock (_stateLock) {
                     _groupStoppedStates[groupIndex] = allStopped;
@@ -170,25 +180,9 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     previouslyStopped ? "已停止" : "运动中",
                     allStopped ? "已停止" : "运动中");
 
-                // 应用 IO 联动
-                await ApplyGroupIoAsync(groupIndex, group, allStopped, ct);
-            }
-        }
-
-        /// <summary>
-        /// 应用组的 IO 联动。
-        /// </summary>
-        private async Task ApplyGroupIoAsync(
-            int groupIndex,
-            SpeedLinkageGroup group,
-            bool allStopped,
-            CancellationToken ct) {
-
-            int successCount = 0;
-            int failCount = 0;
-
-            foreach (var ioPoint in group.IoPoints) {
-                try {
+                // 收集该组的 IO 写入操作
+                var writes = new List<(int BitNumber, IoState State)>();
+                foreach (var ioPoint in group.IoPoints) {
                     // 确定目标电平：
                     // - allStopped=true：使用 LevelWhenStopped
                     // - allStopped=false：使用相反电平
@@ -203,38 +197,54 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         ? IoState.High 
                         : IoState.Low;
 
-                    var (success, message) = await _ioStatusService.WriteOutputBitAsync(
-                        ioPoint.BitNumber,
-                        ioState,
-                        ct);
-
-                    if (success) {
-                        successCount++;
-                        // 移除成功时的调试日志，避免日志过多
-                    } else {
-                        failCount++;
-                        _logger.LogWarning(
-                            "速度联动组 {GroupIndex}：IO {BitNumber} 设置失败，原因：{Message}",
-                            groupIndex,
-                            ioPoint.BitNumber,
-                            message);
-                    }
+                    writes.Add((ioPoint.BitNumber, ioState));
                 }
-                catch (Exception ex) {
-                    failCount++;
-                    _logger.LogError(
-                        ex,
-                        "速度联动组 {GroupIndex}：IO {BitNumber} 设置异常",
-                        groupIndex,
-                        ioPoint.BitNumber);
-                }
+                return writes;
             }
 
-            // 仅在有失败时记录详细信息，成功时使用调试级别
+            return null;
+        }
+
+        /// <summary>
+        /// 批量并行执行 IO 写入操作，提高性能。
+        /// </summary>
+        private async Task ApplyIoWritesBatchAsync(
+            List<(int BitNumber, IoState State)> writes,
+            CancellationToken ct) {
+
+            // 使用 Task.WhenAll 并行执行所有写入操作
+            var tasks = writes.Select(async write => {
+                try {
+                    var (success, message) = await _ioStatusService.WriteOutputBitAsync(
+                        write.BitNumber,
+                        write.State,
+                        ct);
+
+                    if (!success) {
+                        _logger.LogWarning(
+                            "批量 IO 写入：IO {BitNumber} 设置失败，原因：{Message}",
+                            write.BitNumber,
+                            message);
+                        return false;
+                    }
+                    return true;
+                }
+                catch (Exception ex) {
+                    _logger.LogError(
+                        ex,
+                        "批量 IO 写入：IO {BitNumber} 设置异常",
+                        write.BitNumber);
+                    return false;
+                }
+            });
+
+            var results = await Task.WhenAll(tasks);
+            var successCount = results.Count(r => r);
+            var failCount = results.Count(r => !r);
+
             if (failCount > 0) {
                 _logger.LogWarning(
-                    "速度联动组 {GroupIndex} IO设置完成：成功={Success}，失败={Fail}",
-                    groupIndex,
+                    "批量 IO 写入完成：成功={Success}，失败={Fail}",
                     successCount,
                     failCount);
             }

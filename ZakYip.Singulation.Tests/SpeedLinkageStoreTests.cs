@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using LiteDB;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Enums;
@@ -18,10 +19,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanSaveAndRetrieveConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbSpeedLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbSpeedLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建测试配置
             var options = new SpeedLinkageOptions {
@@ -72,10 +75,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task ReturnsDefaultWhenNotFound() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbSpeedLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbSpeedLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 读取配置（应返回默认值）
             var retrieved = await store.GetAsync();
@@ -89,10 +94,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanUpdateExistingConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbSpeedLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbSpeedLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建初始配置
             var options1 = new SpeedLinkageOptions {
@@ -139,10 +146,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanDeleteConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbSpeedLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbSpeedLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建配置
             var options = new SpeedLinkageOptions {
@@ -173,10 +182,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanHandleEmptyGroups() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbSpeedLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbSpeedLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建空组配置
             var options = new SpeedLinkageOptions {
@@ -197,10 +208,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanHandleManyGroups() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbSpeedLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbSpeedLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建多组配置
             var options = new SpeedLinkageOptions {

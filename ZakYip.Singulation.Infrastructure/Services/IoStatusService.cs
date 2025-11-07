@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,7 +45,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         /// <summary>
-        /// 查询所有 IO 状态。
+        /// 查询所有 IO 状态（使用并行读取优化性能）。
         /// </summary>
         /// <param name="inputStart">输入 IO 起始位号，默认 0</param>
         /// <param name="inputCount">输入 IO 数量，默认 32</param>
@@ -61,26 +62,62 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
             await InitializeAsync(ct);
 
-            var inputIos = Enumerable.Range(inputStart, inputCount)
-                .Select(ReadInputBit)
-                .ToList();
+            // 使用 ArrayPool 减少内存分配
+            var inputBitNumbers = ArrayPool<int>.Shared.Rent(inputCount);
+            var outputBitNumbers = ArrayPool<int>.Shared.Rent(outputCount);
+            
+            try {
+                // 填充位号数组
+                for (int i = 0; i < inputCount; i++) {
+                    inputBitNumbers[i] = inputStart + i;
+                }
+                for (int i = 0; i < outputCount; i++) {
+                    outputBitNumbers[i] = outputStart + i;
+                }
 
-            var outputIos = Enumerable.Range(outputStart, outputCount)
-                .Select(ReadOutputBit)
-                .ToList();
+                // 并行读取输入和输出 IO，提高性能
+                var inputTask = Task.Run(() => {
+                    var results = new IoStatusDto[inputCount];
+                    // 使用并行循环读取输入IO，限制并发度避免资源耗尽
+                    Parallel.For(0, inputCount, new ParallelOptions { MaxDegreeOfParallelism = 8 }, i => {
+                        results[i] = ReadInputBit(inputBitNumbers[i]);
+                    });
+                    return results.ToList();
+                }, ct);
 
-            var allIos = inputIos.Concat(outputIos);
-            var validCount = allIos.Count(io => io.IsValid);
-            var errorCount = allIos.Count(io => !io.IsValid);
+                var outputTask = Task.Run(() => {
+                    var results = new IoStatusDto[outputCount];
+                    // 使用并行循环读取输出IO，限制并发度避免资源耗尽
+                    Parallel.For(0, outputCount, new ParallelOptions { MaxDegreeOfParallelism = 8 }, i => {
+                        results[i] = ReadOutputBit(outputBitNumbers[i]);
+                    });
+                    return results.ToList();
+                }, ct);
 
-            var response = new IoStatusResponseDto {
-                InputIos = inputIos,
-                OutputIos = outputIos,
-                ValidCount = validCount,
-                ErrorCount = errorCount
-            };
+                // 等待两个任务并行完成
+                await Task.WhenAll(inputTask, outputTask);
 
-            return response;
+                var inputIos = inputTask.Result;
+                var outputIos = outputTask.Result;
+
+                var allIos = inputIos.Concat(outputIos);
+                var validCount = allIos.Count(io => io.IsValid);
+                var errorCount = allIos.Count(io => !io.IsValid);
+
+                var response = new IoStatusResponseDto {
+                    InputIos = inputIos,
+                    OutputIos = outputIos,
+                    ValidCount = validCount,
+                    ErrorCount = errorCount
+                };
+
+                return response;
+            }
+            finally {
+                // 归还数组到池中
+                ArrayPool<int>.Shared.Return(inputBitNumbers);
+                ArrayPool<int>.Shared.Return(outputBitNumbers);
+            }
         }
 
         /// <summary>
