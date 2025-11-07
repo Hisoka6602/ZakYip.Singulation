@@ -1,4 +1,5 @@
 using System.Linq;
+using Microsoft.Extensions.Caching.Memory;
 using System.Threading.Tasks;
 using LiteDB;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,10 +19,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanSaveAndRetrieveConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbIoLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbIoLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建测试配置
             var options = new IoLinkageOptions {
@@ -64,10 +67,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task ReturnsDefaultWhenNotFound() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbIoLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbIoLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 读取配置（应返回默认值）
             var retrieved = await store.GetAsync();
@@ -82,10 +87,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanUpdateExistingConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbIoLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbIoLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建初始配置
             var options1 = new IoLinkageOptions {
@@ -124,10 +131,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanDeleteConfig() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbIoLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbIoLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建配置
             var options = new IoLinkageOptions {
@@ -154,10 +163,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanHandleEmptyLists() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbIoLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbIoLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建空列表配置
             var options = new IoLinkageOptions {
@@ -180,10 +191,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task CanHandleManyIoPoints() {
             // 使用内存数据库
             using var db = new LiteDatabase(":memory:");
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbIoLinkageOptionsStore(
                 db,
                 NullLogger<LiteDbIoLinkageOptionsStore>.Instance,
-                new FakeCabinetIsolator());
+                new FakeCabinetIsolator(),
+                cache);
 
             // 创建多 IO 点配置
             var options = new IoLinkageOptions {

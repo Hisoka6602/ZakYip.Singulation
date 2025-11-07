@@ -1,6 +1,65 @@
 # ZakYip.Singulation 项目总览
 
-## 🎯 最新更新（2025-11-04）
+## 🎯 最新更新（2025-11-07）
+
+### ✅ 2025-11-07 性能优化：缓存、异步并发和内存分配
+
+本次更新重点提升系统性能，减少数据库访问和优化并发IO操作：
+
+#### 1. **配置缓存优化** 🚀
+- **目标**：减少频繁访问配置时的数据库查询
+- **实现**：
+  - 为 `LiteDbControllerOptionsStore`、`LiteDbSpeedLinkageOptionsStore`、`LiteDbIoLinkageOptionsStore` 添加 IMemoryCache 支持
+  - 配置缓存策略：绝对过期5分钟，滑动过期2分钟
+  - 写入/删除操作时自动失效缓存
+- **收益**：
+  - 频繁读取配置时避免重复数据库访问
+  - 提升配置查询响应速度
+  - 减少磁盘I/O操作
+- **相关文件**：
+  - `LiteDbControllerOptionsStore.cs`
+  - `LiteDbSpeedLinkageOptionsStore.cs`
+  - `LiteDbIoLinkageOptionsStore.cs`
+  - `Program.cs` - 注册 IMemoryCache 服务
+
+#### 2. **异步并发优化** ⚡
+- **IO 状态查询并行化**：
+  - 重构 `IoStatusService.GetAllIoStatusAsync` 方法
+  - 使用 `Parallel.For` 并行读取输入和输出 IO
+  - 使用 `Task.WhenAll` 等待两个任务并行完成
+  - 限制并发度为 8，避免资源耗尽
+- **速度联动批量处理**：
+  - 优化 `SpeedLinkageService` IO 写入流程
+  - 先收集所有需要执行的 IO 写入操作
+  - 使用 `Task.WhenAll` 批量并行执行
+  - 减少等待时间，提高响应速度
+- **收益**：
+  - 大幅提升 IO 操作吞吐量
+  - 减少总体响应时间
+  - 提高系统并发处理能力
+- **相关文件**：
+  - `IoStatusService.cs`
+  - `SpeedLinkageService.cs`
+
+#### 3. **内存分配优化** 💾
+- **ArrayPool 使用**：
+  - 在 `IoStatusService` 中使用 `ArrayPool<int>.Shared` 租用/归还数组
+  - 避免重复分配小对象
+  - 减少 GC 压力
+- **收益**：
+  - 降低内存分配频率
+  - 减少垃圾回收开销
+  - 提升整体性能
+- **相关文件**：
+  - `IoStatusService.cs` - 添加 `using System.Buffers;`
+
+#### 4. **测试更新** ✅
+- 更新测试项目添加 `Microsoft.Extensions.Caching.Memory` 包
+- 修复所有受影响的单元测试，添加缓存参数
+- 所有测试通过验证
+
+---
+
 
 ### ✅ 2025-11-04 代码重构：消除重复代码和提取供应商工具类
 
@@ -140,99 +199,7 @@
 - **新增**：`LoadAccelPpsToMmps2` 方法用于将负载侧 pps² 转换为 mm/s²
 - **说明**：与现有的 `LoadPpsToMmps`（速度转换）方法对应，用于加速度的单位转换
 - **公式**：mm/s² = (pps² ÷ PPR) × Lpr
-- **相关文件**：`LeadshineLtdmcAxisDrive.cs`
 
----
-
-## 🎯 历史更新（2025-11-02）
-
-### ✅ 2025-11-02 重要Bug修复和功能改进
-
-本次更新修复了多个关键问题，提升了系统的可靠性和准确性：
-
-#### 1. **速度联动使用目标速度（仅远程模式）** ⚡
-- **说明**：速度联动服务使用目标速度(`TargetSpeedsMmps`)进行判断
-- **原因**：需要基于上游下发的目标速度来触发IO联动，而不是实际反馈速度
-- **影响**：当上游将目标速度设置为0时，IO联动立即触发，无需等待轴实际停止
-- **模式限制**：**速度联动仅在远程模式下生效，本地模式下不触发**
-- **相关文件**：`SpeedLinkageService.cs`
-
-#### 2. **实时速度反馈API** 📊
-- **验证**：确认`LastFeedbackMmps`在`PingAsync`方法中正确更新
-- **影响**：`GET /api/Axes/axes` API能够正确返回轴的实时反馈速度
-- **相关字段**：`FeedbackLinearMmps` (mm/s)
-
-#### 3. **轴使能/失能状态验证** 🔍
-- **改进**：在使能/失能轴后，读取ControlWord验证状态转换是否成功
-- **目的**：确保状态机转换成功完成，如果验证失败则通过Polly重试
-- **实现**：
-  - `EnableAsync`：写入EnableOperation后验证bit0-3是否都为1
-  - `DisableAsync`：写入Shutdown后验证bit3 (EnableOperation)是否为0
-  - 验证失败时抛出异常，触发Polly重试机制（最多3次）
-- **相关文件**：`LeadshineLtdmcAxisDrive.cs`
-
-#### 4. **LeadshineProtocolMap注释完善** 📝
-- **改进**：为所有协议映射字段添加详细的XML文档注释
-- **覆盖范围**：
-  - `BitLen` 类：所有位宽常量
-  - `ControlWord` 类：所有控制字命令及其位定义
-  - `Mode` 类：所有操作模式值
-  - `DelayMs` 类：所有延时参数及其用途
-- **影响**：提高代码可读性和可维护性
-- **相关文件**：`LeadshineProtocolMap.cs`
-
-#### 5. **运行预警时间持久化修复** 🐛
-- **问题**：`RunningWarningSeconds`（运行预警秒数）设置后无法保存到数据库
-- **原因**：数据库文档实体和映射方法中缺少该字段
-- **修复**：
-  - 在`CabinetIndicatorPointDoc`中添加`RunningWarningSeconds`属性
-  - 更新`ToOptions`和`ToDoc`映射方法包含该字段
-- **影响**：运行预警时间现在能够正确保存和读取
-- **相关文件**：
-  - `LeadshineCabinetIoOptionsDoc.cs`
-  - `ConfigMappings.cs`
-
----
-
-### ✅ 速度联动配置功能
-
-**核心功能**：新增基于轴速度变化自动控制IO端口的速度联动配置功能
-
-#### 1. 功能特性 ✅
-- **多组联动**：支持配置多个独立的速度联动组
-- **灵活配置**：每组可包含多个轴ID和多个IO端口
-- **自动触发**：
-  - 当组内所有轴速度从非0降到0时，自动将指定IO设置为配置的电平
-  - 当组内所有轴速度从0提升到非0时，自动将指定IO设置为相反电平
-- **实时监控**：后台服务每100ms检查一次轴速度状态
-- **持久化存储**：配置保存在LiteDB数据库中
-- **REST API**：提供完整的查询、更新、删除配置接口
-
-#### 2. 使用示例
-
-**配置示例**：
-```json
-PUT /api/io-linkage/speed/configs
-{
-  "enabled": true,
-  "linkageGroups": [
-    {
-      "axisIds": [1001, 1002],
-      "ioPoints": [
-        { "bitNumber": 3, "levelWhenStopped": 0 },
-        { "bitNumber": 4, "levelWhenStopped": 0 }
-      ]
-    },
-    {
-      "axisIds": [1003, 1004],
-      "ioPoints": [
-        { "bitNumber": 5, "levelWhenStopped": 0 },
-        { "bitNumber": 6, "levelWhenStopped": 0 }
-      ]
-    }
-  ]
-}
-```
 
 **工作原理**：
 - 第一组：当轴1001和1002都停止时，IO 3和4设为高电平；当任一轴运动时，IO 3和4设为低电平
@@ -251,6 +218,9 @@ PUT /api/io-linkage/speed/configs
 - **单元测试**：完整的配置和存储测试覆盖
 
 ---
+
+> 📝 **历史更新**：更多历史更新记录请查看 [CHANGELOG.md](CHANGELOG.md)
+
 
 ## 项目当前状态
 

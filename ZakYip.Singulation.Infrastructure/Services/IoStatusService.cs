@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,7 +45,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         /// <summary>
-        /// 查询所有 IO 状态。
+        /// 查询所有 IO 状态（使用优化的内存分配）。
+        /// 注意：由于硬件API可能不支持并发访问，使用顺序读取确保稳定性。
         /// </summary>
         /// <param name="inputStart">输入 IO 起始位号，默认 0</param>
         /// <param name="inputCount">输入 IO 数量，默认 32</param>
@@ -61,26 +63,55 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
             await InitializeAsync(ct);
 
-            var inputIos = Enumerable.Range(inputStart, inputCount)
-                .Select(ReadInputBit)
-                .ToList();
+            // 使用 ArrayPool 减少内存分配
+            var inputResults = ArrayPool<IoStatusDto>.Shared.Rent(inputCount);
+            var outputResults = ArrayPool<IoStatusDto>.Shared.Rent(outputCount);
+            
+            try {
+                // 顺序读取输入 IO（硬件API可能不支持并发访问）
+                for (int i = 0; i < inputCount; i++) {
+                    inputResults[i] = ReadInputBit(inputStart + i);
+                }
 
-            var outputIos = Enumerable.Range(outputStart, outputCount)
-                .Select(ReadOutputBit)
-                .ToList();
+                // 顺序读取输出 IO
+                for (int i = 0; i < outputCount; i++) {
+                    outputResults[i] = ReadOutputBit(outputStart + i);
+                }
 
-            var allIos = inputIos.Concat(outputIos);
-            var validCount = allIos.Count(io => io.IsValid);
-            var errorCount = allIos.Count(io => !io.IsValid);
+                // 创建输出列表（避免在循环中添加，减少重新分配）
+                var inputIos = new List<IoStatusDto>(inputCount);
+                var outputIos = new List<IoStatusDto>(outputCount);
+                
+                for (int i = 0; i < inputCount; i++) {
+                    inputIos.Add(inputResults[i]);
+                }
+                for (int i = 0; i < outputCount; i++) {
+                    outputIos.Add(outputResults[i]);
+                }
 
-            var response = new IoStatusResponseDto {
-                InputIos = inputIos,
-                OutputIos = outputIos,
-                ValidCount = validCount,
-                ErrorCount = errorCount
-            };
+                var validCount = 0;
+                var errorCount = 0;
+                foreach (var io in inputIos) {
+                    if (io.IsValid) validCount++; else errorCount++;
+                }
+                foreach (var io in outputIos) {
+                    if (io.IsValid) validCount++; else errorCount++;
+                }
 
-            return response;
+                var response = new IoStatusResponseDto {
+                    InputIos = inputIos,
+                    OutputIos = outputIos,
+                    ValidCount = validCount,
+                    ErrorCount = errorCount
+                };
+
+                return response;
+            }
+            finally {
+                // 归还数组到池中
+                ArrayPool<IoStatusDto>.Shared.Return(inputResults);
+                ArrayPool<IoStatusDto>.Shared.Return(outputResults);
+            }
         }
 
         /// <summary>
