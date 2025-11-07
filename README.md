@@ -2,6 +2,155 @@
 
 ## 🎯 最新更新（2025-11-07）
 
+### ✅ 2025-11-07 监控和诊断增强
+
+本次更新增加了全面的实时监控和智能故障诊断功能，提升系统的可观测性和故障排查效率：
+
+#### 1. **实时监控仪表板** 📊
+- **SignalR 实时推送**：
+  - `MonitoringHub` - 新增专用监控数据推送 Hub（路径：`/hubs/monitoring`）
+  - 支持订阅/取消订阅特定轴或所有轴的实时数据
+  - 支持订阅系统健康度、IO 状态变化
+- **轴实时数据广播**：
+  - `RealtimeAxisDataService` - 5Hz 更新频率（每200ms）
+  - 实时推送轴速度、位置、目标速度、使能状态
+  - 支持按轴 ID 订阅或订阅所有轴
+- **系统健康度监控**：
+  - `SystemHealthMonitorService` - 每5秒计算系统健康度
+  - 健康度评分 0-100，综合考虑在线率、故障率、错误率、响应时间
+  - 健康等级：优秀(90-100)、良好(70-90)、警告(40-70)、危急(0-40)
+  - 自动推送健康度变化到订阅客户端
+- **相关文件**：
+  - `MonitoringHub.cs` - SignalR Hub
+  - `RealtimeAxisDataService.cs` - 轴数据广播服务
+  - `SystemHealthMonitorService.cs` - 健康度监控服务
+  - `RealtimeAxisDataDto.cs` - 实时轴数据 DTO
+  - `SystemHealthDto.cs` - 系统健康度 DTO
+
+#### 2. **PPR 变化监控** 🔍
+- **自动检测 PPR 变化**：
+  - `PprChangeMonitorService` - 每10秒检查所有轴的 PPR 值
+  - 自动检测 PPR 值变化并记录详细信息
+  - 智能推断变化原因（传动比调整、细分数调整、硬件更换等）
+- **异常检测和告警**：
+  - 变化幅度超过 50% 标记为异常
+  - PPR 值不在常见值范围（1000, 2000, 4000, 8000, 10000 等）标记为异常
+  - 异常变化实时推送告警到所有客户端
+- **历史记录持久化**：
+  - `LiteDbPprChangeRecordStore` - 基于 LiteDB 的持久化存储
+  - 记录旧值、新值、变化原因、变化时间、是否异常
+  - 支持按轴 ID 查询、查询所有记录、查询异常记录
+- **相关文件**：
+  - `PprChangeMonitorService.cs` - PPR 监控服务
+  - `LiteDbPprChangeRecordStore.cs` - 存储实现
+  - `PprChangeRecordDto.cs` - PPR 变化记录 DTO
+  - `PprMonitoringController.cs` - REST API 控制器
+
+#### 3. **智能故障诊断** 🛠️
+- **自动故障诊断**：
+  - `FaultDiagnosisService` - 智能故障诊断引擎
+  - 支持诊断单个轴或扫描所有轴
+  - 自动识别常见故障模式（断线、使能异常、速度偏差等）
+- **内置故障知识库**：
+  - 7 种常见故障类型预定义规则
+  - 错误码映射：-1（参数错误）、-2（通信故障）、16（过压）、17（欠压）、18（过流）、21（编码器故障）、25（限位）
+  - 每种故障提供详细描述、可能原因列表、解决建议列表
+- **故障严重程度分级**：
+  - Info（信息）、Warning（警告）、Error（错误）、Critical（严重）
+  - 根据故障类型自动分级
+- **故障解决建议**：
+  - 针对每种故障提供 3-5 条具体操作建议
+  - 包含硬件检查、参数调整、配置验证等建议
+  - 帮助快速定位和解决问题
+- **相关文件**：
+  - `FaultDiagnosisService.cs` - 诊断服务（包含知识库）
+  - `FaultDiagnosisDto.cs` - 故障诊断结果 DTO
+  - `FaultDiagnosisEntities.cs` - 故障记录实体
+  - `MonitoringController.cs` - 诊断 API 端点
+
+#### 4. **新增 API 端点** 🌐
+
+**监控相关** (`/api/monitoring/`):
+- `GET /api/monitoring/health` - 获取系统健康度（一次性查询）
+- `GET /api/monitoring/diagnose/{axisId}` - 诊断指定轴的故障
+- `GET /api/monitoring/diagnose/all` - 扫描所有轴并返回故障列表
+- `GET /api/monitoring/knowledge-base/{errorCode}` - 查询故障知识库
+
+**PPR 监控相关** (`/api/pprmonitoring/`):
+- `GET /api/pprmonitoring/history/{axisId}` - 获取指定轴的 PPR 变化历史
+- `GET /api/pprmonitoring/history?skip=0&take=100` - 分页获取所有 PPR 变化记录
+- `GET /api/pprmonitoring/anomalies` - 获取异常 PPR 变化记录
+- `DELETE /api/pprmonitoring/cleanup?beforeDate={date}` - 清理旧记录
+
+**SignalR Hub** (`/hubs/monitoring`):
+- `SubscribeAxisData(axisId?)` - 订阅轴实时数据
+- `UnsubscribeAxisData(axisId?)` - 取消订阅轴数据
+- `SubscribeHealthData()` - 订阅系统健康度
+- `UnsubscribeHealthData()` - 取消订阅健康度
+- `SubscribeIoStatus()` - 订阅 IO 状态变化
+- `UnsubscribeIoStatus()` - 取消订阅 IO 状态
+- `Ping()` - 心跳检测
+
+**SignalR 推送事件**:
+- `ReceiveAxisData` - 接收轴实时数据（RealtimeAxisDataDto）
+- `ReceiveHealthData` - 接收系统健康度数据（SystemHealthDto）
+- `ReceivePprChange` - 接收 PPR 变化通知（PprChangeRecordDto）
+- `ReceivePprAnomalyAlert` - 接收 PPR 异常告警
+
+#### 5. **使用示例** 📝
+
+**订阅实时轴数据** (SignalR 客户端):
+```javascript
+const connection = new signalR.HubConnectionBuilder()
+    .withUrl("/hubs/monitoring")
+    .build();
+
+// 订阅所有轴的实时数据
+await connection.invoke("SubscribeAxisData");
+
+// 接收轴数据
+connection.on("ReceiveAxisData", (data) => {
+    console.log(`轴 ${data.axisId}: 速度=${data.currentSpeedMmps} mm/s, 位置=${data.currentPositionMm} mm`);
+});
+
+await connection.start();
+```
+
+**诊断轴故障** (REST API):
+```bash
+# 诊断单个轴
+GET /api/monitoring/diagnose/1001
+
+# 扫描所有轴
+GET /api/monitoring/diagnose/all
+
+# 查询错误码知识库
+GET /api/monitoring/knowledge-base/18
+```
+
+**查询 PPR 变化历史** (REST API):
+```bash
+# 获取轴 1001 的 PPR 变化历史
+GET /api/pprmonitoring/history/1001
+
+# 获取所有异常 PPR 变化
+GET /api/pprmonitoring/anomalies
+
+# 清理 30 天前的记录
+DELETE /api/pprmonitoring/cleanup?beforeDate=2024-10-08
+```
+
+#### 6. **优势** ✨
+- ✅ 实时监控：5Hz 轴数据更新，5秒健康度刷新
+- ✅ 智能诊断：自动识别常见故障，提供解决方案
+- ✅ 异常告警：PPR 异常变化自动推送告警
+- ✅ 历史追溯：完整的 PPR 变化历史记录
+- ✅ 知识库集成：7 种常见故障的详细说明和建议
+- ✅ 低开销：使用 SignalR 推送，避免频繁轮询
+- ✅ 灵活订阅：支持按需订阅特定轴或全部数据
+
+---
+
 ### ✅ 2025-11-07 配置验证增强和导入导出功能
 
 本次更新增加了全面的配置验证和配置导入导出功能，提升配置管理的便利性和安全性：
@@ -488,19 +637,19 @@ GET /api/configurations/template/download?type=SpeedLinkage
     - 实现配置变更通知机制（IOptionsMonitor）
     - 支持配置即时生效，无需重启服务
     - 提供配置回滚功能
-- [ ] **监控和诊断增强**
-  - 实时监控仪表板
-    - 轴速度、位置实时曲线图（SignalR 推送）
-    - IO 状态实时变化可视化
-    - 系统健康度评分（基于错误率、响应时间等）
-  - PPR变化监控
-    - 检测和记录 PPR 值的变化
-    - 记录变化历史和原因（配置更新、硬件替换）
-    - 提供异常检测和告警
-  - 智能故障诊断
-    - 实现常见故障的自动诊断规则
-    - 提供故障解决建议和操作指引
-    - 集成故障知识库
+- [x] **监控和诊断增强** ✨ **NEW**
+  - [x] 实时监控仪表板
+    - [x] 轴速度、位置实时曲线图（SignalR 推送）
+    - [x] IO 状态实时变化可视化  
+    - [x] 系统健康度评分（基于错误率、响应时间等）
+  - [x] PPR变化监控
+    - [x] 检测和记录 PPR 值的变化
+    - [x] 记录变化历史和原因（配置更新、硬件替换）
+    - [x] 提供异常检测和告警
+  - [x] 智能故障诊断
+    - [x] 实现常见故障的自动诊断规则（7种常见故障）
+    - [x] 提供故障解决建议和操作指引
+    - [x] 集成故障知识库
 - [ ] **批量操作优化**
   - 批量轴参数读取 API
     - 一次性批量读取所有轴的状态参数
