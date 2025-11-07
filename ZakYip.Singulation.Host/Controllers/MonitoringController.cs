@@ -14,14 +14,17 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly ILogger<MonitoringController> _logger;
         private readonly SystemHealthMonitorService _healthMonitor;
         private readonly FaultDiagnosisService _diagnosisService;
+        private readonly ExceptionAggregationService _exceptionAggregation;
 
         public MonitoringController(
             ILogger<MonitoringController> logger,
             SystemHealthMonitorService healthMonitor,
-            FaultDiagnosisService diagnosisService) {
+            FaultDiagnosisService diagnosisService,
+            ExceptionAggregationService exceptionAggregation) {
             _logger = logger;
             _healthMonitor = healthMonitor;
             _diagnosisService = diagnosisService;
+            _exceptionAggregation = exceptionAggregation;
         }
 
         /// <summary>
@@ -166,6 +169,36 @@ namespace ZakYip.Singulation.Host.Controllers {
             catch (Exception ex) {
                 _logger.LogError(ex, "查询知识库失败，错误码: {ErrorCode}", errorCode);
                 return StatusCode(500, ApiResponse<object>.Fail("查询知识库失败"));
+            }
+        }
+
+        /// <summary>
+        /// 获取异常统计信息
+        /// </summary>
+        /// <remarks>
+        /// 返回系统运行期间收集的异常统计信息，包括异常类型、发生次数、首次和最后发生时间等。
+        /// 可用于监控系统稳定性和排查问题。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>异常统计信息列表</returns>
+        /// <response code="200">查询成功</response>
+        [HttpGet("exceptions/statistics")]
+        [SwaggerOperation(
+            Summary = "获取异常统计信息",
+            Description = "返回系统运行期间收集的异常统计信息，包括异常类型、发生次数、首次和最后发生时间等")]
+        [ProducesResponseType(typeof(ApiResponse<IReadOnlyDictionary<string, ExceptionAggregationService.ExceptionStatistics>>), 200)]
+        [Produces("application/json")]
+        public IActionResult GetExceptionStatistics(CancellationToken ct) {
+            try {
+                var statistics = _exceptionAggregation.GetStatistics();
+                
+                return Ok(ApiResponse<IReadOnlyDictionary<string, ExceptionAggregationService.ExceptionStatistics>>.Success(
+                    statistics, 
+                    $"查询成功，共 {statistics.Count} 种异常类型"));
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "获取异常统计信息失败");
+                return StatusCode(500, ApiResponse<object>.Fail("获取异常统计信息失败"));
             }
         }
     }

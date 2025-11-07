@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Exceptions;
 using ZakYip.Singulation.Host.Dto;
+using ZakYip.Singulation.Infrastructure.Services;
 
 namespace ZakYip.Singulation.Host.Middleware;
 
@@ -18,13 +19,16 @@ public class GlobalExceptionHandlerMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionHandlerMiddleware> _logger;
+    private readonly ExceptionAggregationService? _exceptionAggregation;
 
     public GlobalExceptionHandlerMiddleware(
         RequestDelegate next,
-        ILogger<GlobalExceptionHandlerMiddleware> logger)
+        ILogger<GlobalExceptionHandlerMiddleware> logger,
+        ExceptionAggregationService? exceptionAggregation = null)
     {
         _next = next;
         _logger = logger;
+        _exceptionAggregation = exceptionAggregation;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -46,7 +50,10 @@ public class GlobalExceptionHandlerMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        // 记录异常
+        // 记录异常到聚合服务
+        _exceptionAggregation?.RecordException(exception, $"HTTP:{context.Request.Method}:{context.Request.Path}");
+
+        // 记录异常到日志
         LogException(exception);
 
         // 设置响应

@@ -204,17 +204,23 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- 配置导入导出服务 ----------
         services.AddSingleton<ConfigurationImportExportService>();
 
+        // ---------- 异常聚合和上报服务 ----------
+        services.AddSingleton<ExceptionAggregationService>();
+        services.AddHostedService(sp => sp.GetRequiredService<ExceptionAggregationService>());
+
         // ---------- 监控和诊断服务 ----------
         // 注意：不支持历史查询功能（如 PPR 历史），仅使用 LiteDB 存储配置项
         services.AddSingleton<SystemHealthMonitorService>(sp => new SystemHealthMonitorService(
             sp.GetRequiredService<ILogger<SystemHealthMonitorService>>(),
             sp.GetRequiredService<IAxisController>(),
-            sp.GetRequiredService<IHubContext<MonitoringHub>>()));
+            sp.GetRequiredService<IHubContext<MonitoringHub>>(),
+            sp.GetRequiredService<ExceptionAggregationService>()));
         services.AddHostedService(sp => sp.GetRequiredService<SystemHealthMonitorService>());
         services.AddSingleton<RealtimeAxisDataService>(sp => new RealtimeAxisDataService(
             sp.GetRequiredService<ILogger<RealtimeAxisDataService>>(),
             sp.GetRequiredService<IAxisController>(),
-            sp.GetRequiredService<IHubContext<MonitoringHub>>()));
+            sp.GetRequiredService<IHubContext<MonitoringHub>>(),
+            sp.GetRequiredService<ExceptionAggregationService>()));
         services.AddHostedService(sp => sp.GetRequiredService<RealtimeAxisDataService>());
         services.AddSingleton<FaultDiagnosisService>();
 

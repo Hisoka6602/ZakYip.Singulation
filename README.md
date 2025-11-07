@@ -20,6 +20,33 @@
 - **相关文档**：
   - `docs/EXCEPTION_HANDLING_BEST_PRACTICES.md` - 异常处理最佳实践（含代码示例）
 
+#### 1.5. **异常聚合和上报机制** 🎯
+- **异常聚合服务** (`ExceptionAggregationService`)：
+  - 后台服务自动收集和聚合系统运行期间的所有异常
+  - 每5分钟聚合一批异常记录，每15分钟生成统计报告
+  - 支持最多10000条异常队列，自动清理过期数据
+- **异常统计功能**：
+  - 按异常类型和上下文进行分组统计
+  - 记录首次发生时间、最后发生时间、发生次数
+  - 识别高频异常（发生次数>100次）并特别标记
+  - 自动识别可重试异常类型
+- **全局异常处理集成**：
+  - `GlobalExceptionHandlerMiddleware` 自动记录所有HTTP请求异常
+  - 关键服务（`IoLinkageService`、`SystemHealthMonitorService`、`RealtimeAxisDataService`）集成异常记录
+  - 异常记录包含详细上下文信息（请求路径、操作类型等）
+- **异常查询API**：
+  - `GET /api/monitoring/exceptions/statistics` - 查询异常统计信息
+  - 返回异常类型、发生次数、时间范围、是否可重试等信息
+- **使用场景**：
+  - 监控系统稳定性和健康度
+  - 快速识别频繁发生的问题
+  - 辅助故障排查和性能优化
+  - 为告警系统提供数据源
+- **相关文件**：
+  - `ExceptionAggregationService.cs` - 异常聚合后台服务
+  - `GlobalExceptionHandlerMiddleware.cs` - 全局异常处理中间件
+  - `MonitoringController.cs` - 异常统计查询API
+
 #### 2. **设备厂商集成指南** 📖
 - **文档**：`docs/DEVICE_VENDOR_INTEGRATION_GUIDE.md`
 - **内容**：
@@ -132,6 +159,7 @@
 - `GET /api/monitoring/diagnose/{axisId}` - 诊断指定轴的故障
 - `GET /api/monitoring/diagnose/all` - 扫描所有轴并返回故障列表
 - `GET /api/monitoring/knowledge-base/{errorCode}` - 查询故障知识库
+- `GET /api/monitoring/exceptions/statistics` - 获取异常统计信息 ✨ **新增**
 
 
 **SignalR Hub** (`/hubs/monitoring`):
@@ -175,10 +203,39 @@ GET /api/monitoring/diagnose/all
 
 # 查询错误码知识库
 GET /api/monitoring/knowledge-base/18
+
+# 查询异常统计信息 ✨ 新增
+GET /api/monitoring/exceptions/statistics
 ```
 
-DELETE /api/pprmonitoring/cleanup?beforeDate=2024-10-08
+**异常统计响应示例**:
+```json
+{
+  "result": true,
+  "data": {
+    "HardwareCommunicationException:AxisDataBroadcast:Axis1001": {
+      "exceptionType": "HardwareCommunicationException",
+      "context": "AxisDataBroadcast:Axis1001",
+      "count": 15,
+      "firstOccurrence": "2025-11-07T10:00:00Z",
+      "lastOccurrence": "2025-11-07T10:15:00Z",
+      "lastMessage": "读取轴速度失败",
+      "isRetryable": true
+    },
+    "ValidationException:HTTP:POST:/api/axes/speed": {
+      "exceptionType": "ValidationException",
+      "context": "HTTP:POST:/api/axes/speed",
+      "count": 3,
+      "firstOccurrence": "2025-11-07T10:05:00Z",
+      "lastOccurrence": "2025-11-07T10:10:00Z",
+      "lastMessage": "速度值超出范围",
+      "isRetryable": false
+    }
+  },
+  "msg": "查询成功，共 2 种异常类型"
+}
 ```
+
 
 #### 6. **优势** ✨
 - ✅ 实时监控：5Hz 轴数据更新，5秒健康度刷新
@@ -551,8 +608,9 @@ GET /api/configurations/template/download?type=SpeedLinkage
 8. **IO 联动** (100%)：系统状态联动、速度联动（新增）
 9. **代码质量** (85%)：已完成 DTO record class 转换、代码分析器配置、值对象不可变性优化
 10. **配置管理** (100%)：✨**新增** - 配置验证增强、配置导入导出、配置模板、配置迁移工具
-11. **文档** (98%)：API文档、架构设计、运维指南、代码质量优化记录
-12. **MAUI 客户端** (80%)：基础功能完成，需要完善UI和用户体验
+11. **异常处理** (100%)：✨**新增** - 异常聚合服务、全局异常处理、异常统计查询API
+12. **文档** (98%)：API文档、架构设计、运维指南、代码质量优化记录
+13. **MAUI 客户端** (80%)：基础功能完成，需要完善UI和用户体验
 
 #### ⚠️ 待完善的部分
 - **测试覆盖** (75%)：✨ **已新增** - 集成测试框架、Safety Pipeline E2E测试、性能基准测试套件
@@ -587,8 +645,8 @@ GET /api/configurations/template/download?type=SpeedLinkage
   - [x] 定义异常处理最佳实践文档（`docs/EXCEPTION_HANDLING_BEST_PRACTICES.md`）
   - [x] 添加自定义业务异常类型（`AxisOperationException`, `SafetyViolationException`）
   - [x] 实现异常分类和智能重试策略（通过 `IsRetryable` 属性）
+  - [x] 添加异常聚合和上报机制（`ExceptionAggregationService`）✅ **已完成**
   - [ ] 审查所有 catch 块，避免捕获通用 Exception（需要代码审查）
-  - [ ] 添加异常聚合和上报机制（待实现）
 - [x] **设备接口解耦** ✅ **已完成**
   - [x] 创建设备厂商集成指南（`docs/DEVICE_VENDOR_INTEGRATION_GUIDE.md`）
   - [x] 说明如何集成倍福、西门子、联诚等新厂商
