@@ -90,8 +90,10 @@ public class CodecException : SingulationException
 }
 
 /// <summary>
-/// 轴控制异常
-/// Axis control exception
+/// 轴控制异常（基础轴控制错误）
+/// Axis control exception (basic axis control errors)
+/// 用于简单的轴控制错误，如轴ID无效、轴未找到等
+/// Used for simple axis control errors like invalid axis ID, axis not found, etc.
 /// </summary>
 public class AxisControlException : SingulationException
 {
@@ -113,6 +115,10 @@ public class AxisControlException : SingulationException
 /// <summary>
 /// 轴操作异常（更具体的轴操作错误，包含操作上下文）
 /// Axis operation exception with operation context
+/// 用于具体的轴操作失败，包含操作名称、尝试的值等详细上下文
+/// Used for specific axis operation failures with operation name, attempted value, and other detailed context
+/// 区别：AxisControlException 是基础异常，AxisOperationException 包含更丰富的操作上下文
+/// Difference: AxisControlException is basic, AxisOperationException includes richer operational context
 /// </summary>
 public class AxisOperationException : SingulationException
 {

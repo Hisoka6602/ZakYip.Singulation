@@ -127,7 +127,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 // 先查询知识库
                 var knowledgeResult = QueryKnowledgeBase(errorCode, axisId);
                 if (knowledgeResult != null) {
-                    return knowledgeResult;
+                    // 添加驱动器的原始错误消息
+                    return knowledgeResult with { ErrorMessage = errorMsg };
                 }
 
                 // 通用错误诊断
@@ -149,7 +150,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         "清除驱动器报警后重试"
                     },
                     DiagnosedAt = DateTime.Now,
-                    ErrorCode = errorCode
+                    ErrorCode = errorCode,
+                    ErrorMessage = errorMsg
                 };
             }
 

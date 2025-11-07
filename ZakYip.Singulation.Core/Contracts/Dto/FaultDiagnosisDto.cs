@@ -52,6 +52,11 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
         /// 相关错误码
         /// </summary>
         public int? ErrorCode { get; init; }
+
+        /// <summary>
+        /// 原始错误消息（来自驱动器）
+        /// </summary>
+        public string? ErrorMessage { get; init; }
     }
 
     /// <summary>
