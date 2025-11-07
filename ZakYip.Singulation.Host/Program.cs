@@ -8,6 +8,7 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.SignalR;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Infrastructure.Cabinet;
 using ZakYip.Singulation.Core.Configs;

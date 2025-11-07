@@ -46,22 +46,22 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
         private async Task BroadcastAxisDataAsync(CancellationToken ct) {
             try {
-                var drives = _axisController.GetAllDrives().ToList();
+                var drives = _axisController.Drives.ToList();
                 var timestamp = DateTime.Now;
 
                 foreach (var drive in drives) {
                     try {
                         var data = new RealtimeAxisDataDto {
-                            AxisId = drive.AxisId.ToString(),
-                            CurrentSpeedMmps = drive.FeedbackLinearMmps,
-                            CurrentPositionMm = drive.FeedbackPositionMm,
-                            TargetSpeedMmps = drive.TargetLinearMmps,
-                            Enabled = drive.Enabled,
+                            AxisId = drive.Axis.ToString(),
+                            CurrentSpeedMmps = drive.LastFeedbackMmps.HasValue ? (double)drive.LastFeedbackMmps.Value : null,
+                            CurrentPositionMm = null, // Position not available in current interface
+                            TargetSpeedMmps = drive.LastTargetMmps.HasValue ? (double)drive.LastTargetMmps.Value : null,
+                            Enabled = drive.IsEnabled,
                             Timestamp = timestamp
                         };
 
                         // 推送到所有订阅该轴的客户端
-                        await _hubContext.Clients.Group($"Axis_{drive.AxisId}")
+                        await _hubContext.Clients.Group($"Axis_{drive.Axis}")
                             .SendAsync("ReceiveAxisData", data, ct);
 
                         // 同时推送到订阅所有轴的客户端
@@ -69,7 +69,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                             .SendAsync("ReceiveAxisData", data, ct);
                     }
                     catch (Exception ex) {
-                        _logger.LogDebug(ex, "推送轴 {AxisId} 数据失败", drive.AxisId);
+                        _logger.LogDebug(ex, "推送轴 {AxisId} 数据失败", drive.Axis);
                     }
                 }
             }

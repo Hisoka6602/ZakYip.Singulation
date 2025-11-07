@@ -59,11 +59,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
         private async Task InitializePprCacheAsync() {
             try {
-                var drives = _axisController.GetAllDrives().ToList();
+                var drives = _axisController.Drives.ToList();
                 lock (_cacheLock) {
                     foreach (var drive in drives) {
                         if (drive.Ppr.HasValue && drive.Ppr.Value > 0) {
-                            _lastKnownPpr[drive.AxisId.ToString()] = drive.Ppr.Value;
+                            _lastKnownPpr[drive.Axis.ToString()] = drive.Ppr.Value;
                         }
                     }
                 }
@@ -76,10 +76,10 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
         private async Task CheckPprChangesAsync(CancellationToken ct) {
             try {
-                var drives = _axisController.GetAllDrives().ToList();
+                var drives = _axisController.Drives.ToList();
 
                 foreach (var drive in drives) {
-                    var axisId = drive.AxisId.ToString();
+                    var axisId = drive.Axis.ToString();
                     var currentPpr = drive.Ppr;
 
                     if (!currentPpr.HasValue || currentPpr.Value <= 0) {
