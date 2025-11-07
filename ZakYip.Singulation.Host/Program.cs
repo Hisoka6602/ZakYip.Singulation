@@ -198,6 +198,9 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- 速度联动服务 ----------
         services.AddHostedService<SpeedLinkageService>();
 
+        // ---------- 配置导入导出服务 ----------
+        services.AddSingleton<ConfigurationImportExportService>();
+
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
         services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
