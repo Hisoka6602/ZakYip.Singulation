@@ -7,6 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
+using ZakYip.Singulation.Infrastructure.Logging;
 
 namespace ZakYip.Singulation.Infrastructure.Services {
     /// <summary>
@@ -16,15 +17,19 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly ILogger<RealtimeAxisDataService> _logger;
         private readonly IAxisController _axisController;
         private readonly IHubContext<Hub> _hubContext;
+        private readonly ExceptionAggregationService? _exceptionAggregation;
+        private readonly LogSampler _logSampler = new();
         private readonly TimeSpan _broadcastInterval = TimeSpan.FromMilliseconds(200); // 5Hz 更新率
 
         public RealtimeAxisDataService(
             ILogger<RealtimeAxisDataService> logger,
             IAxisController axisController,
-            IHubContext<Hub> hubContext) {
+            IHubContext<Hub> hubContext,
+            ExceptionAggregationService? exceptionAggregation = null) {
             _logger = logger;
             _axisController = axisController;
             _hubContext = hubContext;
+            _exceptionAggregation = exceptionAggregation;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -69,12 +74,19 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                             .SendAsync("ReceiveAxisData", data, ct);
                     }
                     catch (Exception ex) {
-                        _logger.LogDebug(ex, "推送轴 {AxisId} 数据失败", drive.Axis);
+                        // 使用日志采样避免高频错误日志泛滥
+                        if (_logSampler.ShouldLog($"AxisDataBroadcast_{drive.Axis}", 100)) {
+                            var count = _logSampler.GetCount($"AxisDataBroadcast_{drive.Axis}");
+                            _logger.HighFrequencyOperationSampled("AxisDataBroadcast", count, 100);
+                            _logger.LogDebug(ex, "推送轴 {AxisId} 数据失败 (已采样记录, 总次数: {Count})", drive.Axis, count);
+                        }
+                        _exceptionAggregation?.RecordException(ex, $"AxisDataBroadcast:Axis{drive.Axis}");
                     }
                 }
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "广播轴数据失败");
+                _exceptionAggregation?.RecordException(ex, "AxisDataBroadcast:Global");
             }
         }
     }
