@@ -6,6 +6,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Infrastructure.Logging;
 
 namespace ZakYip.Singulation.Infrastructure.Services {
 
@@ -16,16 +17,19 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly ILogger<IoLinkageService> _logger;
         private readonly IIoLinkageOptionsStore _store;
         private readonly IoStatusService _ioStatusService;
+        private readonly ExceptionAggregationService? _exceptionAggregation;
         private SystemState _currentState = SystemState.Stopped;
         private readonly object _stateLock = new();
 
         public IoLinkageService(
             ILogger<IoLinkageService> logger,
             IIoLinkageOptionsStore store,
-            IoStatusService ioStatusService) {
+            IoStatusService ioStatusService,
+            ExceptionAggregationService? exceptionAggregation = null) {
             _logger = logger;
             _store = store;
             _ioStatusService = ioStatusService;
+            _exceptionAggregation = exceptionAggregation;
         }
 
         /// <summary>
@@ -68,7 +72,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     return;
                 }
 
-                _logger.LogInformation("开始应用 IO 联动：状态={State}，联动点数={Count}", newState, iosToApply.Count);
+                // 使用结构化日志记录IO联动触发
+                _logger.IoLinkageTriggered(oldState.ToString(), newState.ToString(), iosToApply.Count);
 
                 // 应用每个 IO 联动点
                 int successCount = 0;
@@ -90,33 +95,20 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
                         if (success) {
                             successCount++;
-                            _logger.LogDebug(
-                                "IO 联动成功：位 {BitNumber} 设置为 {Level} ({State})",
-                                ioPoint.BitNumber,
-                                ioPoint.Level,
-                                ioState);
+                            _logger.IoLinkageSuccess(ioPoint.BitNumber, ioPoint.Level.ToString());
                         } else {
                             failCount++;
-                            _logger.LogWarning(
-                                "IO 联动失败：位 {BitNumber}，原因：{Message}",
-                                ioPoint.BitNumber,
-                                message);
+                            _logger.IoLinkageFailed(ioPoint.BitNumber, message ?? "Unknown");
                         }
                     }
                     catch (Exception ex) {
                         failCount++;
-                        _logger.LogError(
-                            ex,
-                            "IO 联动异常：位 {BitNumber}",
-                            ioPoint.BitNumber);
+                        _logger.IoLinkageException(ex, ioPoint.BitNumber);
+                        _exceptionAggregation?.RecordException(ex, $"IoLinkage:Bit{ioPoint.BitNumber}");
                     }
                 }
 
-                _logger.LogInformation(
-                    "IO 联动完成：状态={State}，成功={Success}，失败={Fail}",
-                    newState,
-                    successCount,
-                    failCount);
+                _logger.IoLinkageCompleted(newState.ToString(), successCount, failCount);
             }
             catch (OperationCanceledException) {
                 // 取消操作，直接抛出，不记录为错误
@@ -124,6 +116,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "执行 IO 联动时发生异常");
+                _exceptionAggregation?.RecordException(ex, "IoLinkage:Execute");
             }
         }
     }

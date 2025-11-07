@@ -9,6 +9,7 @@ using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Infrastructure.Telemetry;
+using ZakYip.Singulation.Infrastructure.Logging;
 
 namespace ZakYip.Singulation.Infrastructure.Services {
     /// <summary>
@@ -18,6 +19,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly ILogger<SystemHealthMonitorService> _logger;
         private readonly IAxisController _axisController;
         private readonly IHubContext<Hub> _hubContext;
+        private readonly ExceptionAggregationService? _exceptionAggregation;
+        private readonly LogSampler _logSampler = new();
         private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(5);
 
         // 性能指标滑动窗口
@@ -28,10 +31,12 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         public SystemHealthMonitorService(
             ILogger<SystemHealthMonitorService> logger,
             IAxisController axisController,
-            IHubContext<Hub> hubContext) {
+            IHubContext<Hub> hubContext,
+            ExceptionAggregationService? exceptionAggregation = null) {
             _logger = logger;
             _axisController = axisController;
             _hubContext = hubContext;
+            _exceptionAggregation = exceptionAggregation;
         }
 
         /// <summary>
@@ -83,13 +88,22 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 await _hubContext.Clients.Group("SystemHealth")
                     .SendAsync("ReceiveHealthData", health, ct);
 
-                if (health.Level == HealthLevel.Critical || health.Level == HealthLevel.Warning) {
-                    _logger.LogWarning("系统健康度: {Score}, 等级: {Level}, 说明: {Description}", 
-                        health.Score, health.Level, health.Description);
+                // 使用结构化日志记录健康状态
+                if (health.Level == HealthLevel.Critical) {
+                    _logger.SystemHealthCritical(health.Score, health.FaultedAxisCount, health.ErrorRate);
+                }
+                else if (health.Level == HealthLevel.Warning) {
+                    _logger.SystemHealthDegraded(health.Score, health.Level.ToString(), 
+                        health.OnlineAxisCount, health.TotalAxisCount);
+                }
+                else if (health.Level == HealthLevel.Excellent && 
+                         _logSampler.ShouldLogByTime("HealthExcellent", TimeSpan.FromMinutes(5))) {
+                    _logger.SystemHealthExcellent(health.Score);
                 }
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "计算和推送系统健康度失败");
+                _exceptionAggregation?.RecordException(ex, "SystemHealth:CheckAndBroadcast");
             }
         }
 
