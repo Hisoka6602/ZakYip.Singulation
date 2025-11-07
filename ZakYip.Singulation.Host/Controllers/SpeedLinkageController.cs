@@ -6,6 +6,7 @@ using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Utils;
 using ZakYip.Singulation.Host.Dto;
+using ZakYip.Singulation.Infrastructure.Services;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace ZakYip.Singulation.Host.Controllers {
@@ -24,12 +25,15 @@ namespace ZakYip.Singulation.Host.Controllers {
     public sealed class SpeedLinkageController : ControllerBase {
         private readonly ILogger<SpeedLinkageController> _logger;
         private readonly ISpeedLinkageOptionsStore _store;
+        private readonly ISpeedLinkageService _speedLinkageService;
 
         public SpeedLinkageController(
             ILogger<SpeedLinkageController> logger,
-            ISpeedLinkageOptionsStore store) {
+            ISpeedLinkageOptionsStore store,
+            ISpeedLinkageService speedLinkageService) {
             _logger = logger;
             _store = store;
+            _speedLinkageService = speedLinkageService;
         }
 
         /// <summary>
@@ -192,6 +196,69 @@ namespace ZakYip.Singulation.Host.Controllers {
             await _store.DeleteAsync(ct);
             _logger.LogInformation("速度联动配置已删除，将使用默认配置");
             return ApiResponse<string>.Success("配置已删除，将使用默认配置");
+        }
+
+        /// <summary>
+        /// 获取速度联动服务健康状态
+        /// </summary>
+        /// <remarks>
+        /// 监控速度联动服务的运行状态，提供健康度评分和详细的性能指标。
+        /// 
+        /// **使用示例**：
+        /// 
+        /// ```
+        /// GET /api/io-linkage/speed/health
+        /// ```
+        /// 
+        /// **返回示例**：
+        /// ```json
+        /// {
+        ///   "success": true,
+        ///   "data": {
+        ///     "totalChecks": 12345,
+        ///     "totalStateChanges": 56,
+        ///     "totalIoWrites": 112,
+        ///     "failedIoWrites": 2,
+        ///     "totalErrors": 0,
+        ///     "lastCheckTime": "2025-11-07T07:27:43.349Z",
+        ///     "lastErrorTime": "0001-01-01T00:00:00",
+        ///     "lastError": null,
+        ///     "isRunning": true,
+        ///     "activeGroupsCount": 2,
+        ///     "healthScore": 98.5
+        ///   },
+        ///   "message": "速度联动服务运行正常"
+        /// }
+        /// ```
+        /// 
+        /// **健康度评分说明**：
+        /// - 100-90分：服务运行优秀
+        /// - 89-70分：服务运行良好，存在轻微问题
+        /// - 69-50分：服务运行但存在明显问题
+        /// - 50分以下：服务存在严重问题
+        /// 
+        /// **指标说明**：
+        /// - totalChecks: 总检查次数（服务启动后累计）
+        /// - totalStateChanges: 状态变化次数（轴组启停）
+        /// - totalIoWrites: IO写入总次数
+        /// - failedIoWrites: IO写入失败次数
+        /// - totalErrors: 总错误次数
+        /// - lastCheckTime: 最后检查时间
+        /// - lastErrorTime: 最后错误时间
+        /// - activeGroupsCount: 活跃的联动组数量
+        /// - healthScore: 健康度评分（0-100）
+        /// </remarks>
+        /// <returns>服务健康状态信息</returns>
+        /// <response code="200">获取健康状态成功</response>
+        [HttpGet("health")]
+        [SwaggerOperation(
+            Summary = "获取速度联动服务健康状态",
+            Description = "监控速度联动服务的运行状态，提供健康度评分和详细的性能指标。")]
+        [ProducesResponseType(typeof(ApiResponse<SpeedLinkageStatistics>), 200)]
+        [Produces("application/json")]
+        public ApiResponse<SpeedLinkageStatistics> GetHealthAsync() {
+            var stats = _speedLinkageService.GetStatistics();
+            return ApiResponse<SpeedLinkageStatistics>.Success(stats, "速度联动服务运行正常");
         }
     }
 }

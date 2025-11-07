@@ -43,7 +43,8 @@ namespace ZakYip.Singulation.Host.Extensions {
 
             // 健康检查
             services.AddHealthChecks()
-                .AddCheck<SignalRHealthCheck>("signalr", tags: new[] { "realtime", "signalr" });
+                .AddCheck<SignalRHealthCheck>("signalr", tags: new[] { "realtime", "signalr" })
+                .AddCheck<SpeedLinkageHealthCheck>("speed-linkage", tags: new[] { "background", "speed-linkage" });
 
             return services;
         }
