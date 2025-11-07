@@ -522,6 +522,46 @@ public static partial class LogMessages
         int totalTypes,
         long totalCount);
 
+    [LoggerMessage(
+        EventId = 12003,
+        Level = LogLevel.Information,
+        Message = "异常聚合服务已启动，聚合间隔: {AggregationMinutes}分钟")]
+    public static partial void ExceptionAggregationServiceStarted(
+        this ILogger logger,
+        double aggregationMinutes);
+
+    [LoggerMessage(
+        EventId = 12004,
+        Level = LogLevel.Information,
+        Message = "异常聚合服务已取消")]
+    public static partial void ExceptionAggregationServiceCancelled(
+        this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 12005,
+        Level = LogLevel.Debug,
+        Message = "聚合了 {Count} 个异常记录")]
+    public static partial void ExceptionRecordsAggregated(
+        this ILogger logger,
+        int count);
+
+    [LoggerMessage(
+        EventId = 12006,
+        Level = LogLevel.Information,
+        Message = "异常统计报告：无异常记录")]
+    public static partial void ExceptionReportEmpty(
+        this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 12007,
+        Level = LogLevel.Critical,
+        Message = "高频异常: 类型={Type}, 上下文={Context}, 次数={Count}")]
+    public static partial void HighFrequencyException(
+        this ILogger logger,
+        string type,
+        string context,
+        long count);
+
     // ==================== High-Frequency Operation Sampled Logs ====================
 
     [LoggerMessage(

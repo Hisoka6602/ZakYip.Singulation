@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Exceptions;
+using ZakYip.Singulation.Infrastructure.Logging;
 
 namespace ZakYip.Singulation.Infrastructure.Services;
 
@@ -69,7 +70,7 @@ public sealed class ExceptionAggregationService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("异常聚合服务已启动，聚合间隔: {Interval}分钟", _aggregationInterval.TotalMinutes);
+        _logger.ExceptionAggregationServiceStarted(_aggregationInterval.TotalMinutes);
 
         try
         {
@@ -88,7 +89,7 @@ public sealed class ExceptionAggregationService : BackgroundService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("异常聚合服务已取消");
+            _logger.ExceptionAggregationServiceCancelled();
         }
         catch (Exception ex)
         {
@@ -129,7 +130,7 @@ public sealed class ExceptionAggregationService : BackgroundService
 
         if (processedCount > 0)
         {
-            _logger.LogDebug("聚合了 {Count} 个异常记录", processedCount);
+            _logger.ExceptionRecordsAggregated(processedCount);
         }
 
         return Task.CompletedTask;
@@ -139,7 +140,7 @@ public sealed class ExceptionAggregationService : BackgroundService
     {
         if (_exceptionStats.IsEmpty)
         {
-            _logger.LogInformation("异常统计报告：无异常记录");
+            _logger.ExceptionReportEmpty();
             return;
         }
 
@@ -147,30 +148,20 @@ public sealed class ExceptionAggregationService : BackgroundService
             .OrderByDescending(s => s.Count)
             .ToList();
 
-        _logger.LogWarning(
-            "异常统计报告：总计 {TotalTypes} 种异常类型，{TotalCount} 次异常",
-            sortedStats.Count,
-            sortedStats.Sum(s => s.Count));
+        _logger.ExceptionAggregationReport(sortedStats.Count, sortedStats.Sum(s => s.Count));
 
         // 报告前10个最频繁的异常
         var topExceptions = sortedStats.Take(10);
         foreach (var stat in topExceptions)
         {
-            var level = stat.Count > 100 ? LogLevel.Critical :
-                       stat.Count > 50 ? LogLevel.Error :
-                       LogLevel.Warning;
-
-            _logger.Log(level,
-                "异常统计: 类型={Type}, 上下文={Context}, 次数={Count}, " +
-                "首次={First:yyyy-MM-dd HH:mm:ss}, 最近={Last:yyyy-MM-dd HH:mm:ss}, " +
-                "可重试={Retryable}, 最后消息={Message}",
-                stat.ExceptionType,
-                stat.Context,
-                stat.Count,
-                stat.FirstOccurrence,
-                stat.LastOccurrence,
-                stat.IsRetryable,
-                stat.LastMessage);
+            if (stat.Count > 100)
+            {
+                _logger.HighFrequencyException(stat.ExceptionType, stat.Context, stat.Count);
+            }
+            else
+            {
+                _logger.ExceptionStatistics(stat.ExceptionType, stat.Context, stat.Count, stat.IsRetryable);
+            }
         }
 
         // 清理旧统计数据（保留最近的数据）
