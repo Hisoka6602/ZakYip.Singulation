@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Utils;
 using ZakYip.Singulation.Host.Dto;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -127,10 +128,18 @@ namespace ZakYip.Singulation.Host.Controllers {
             [FromBody] IoLinkageOptions options,
             CancellationToken ct) {
             
-            // 验证配置
-            if (!ModelState.IsValid) {
-                _logger.LogWarning("IO 联动配置验证失败");
-                return BadRequest(ApiResponse<string>.Invalid("配置验证失败"));
+            // 使用增强的配置验证
+            var validationResult = ConfigurationValidator.ValidateIoLinkageOptions(options);
+            if (!validationResult.IsValid) {
+                _logger.LogWarning("IO 联动配置验证失败: {Errors}", 
+                    string.Join("; ", validationResult.Errors));
+                return BadRequest(ApiResponse<string>.Invalid(validationResult.GetFormattedErrors()));
+            }
+            
+            // 记录警告信息
+            if (validationResult.Warnings.Count > 0) {
+                _logger.LogWarning("IO 联动配置存在警告: {Warnings}", 
+                    string.Join("; ", validationResult.Warnings));
             }
             
             // 保存到数据库
@@ -142,7 +151,11 @@ namespace ZakYip.Singulation.Host.Controllers {
                 options.RunningStateIos.Count,
                 options.StoppedStateIos.Count);
             
-            return ApiResponse<string>.Success("配置已保存并将在下次状态切换时生效");
+            var response = validationResult.Warnings.Count > 0
+                ? $"配置已保存并将在下次状态切换时生效。\n警告：\n{string.Join("\n", validationResult.Warnings)}"
+                : "配置已保存并将在下次状态切换时生效";
+            
+            return ApiResponse<string>.Success(response);
         }
 
         /// <summary>
