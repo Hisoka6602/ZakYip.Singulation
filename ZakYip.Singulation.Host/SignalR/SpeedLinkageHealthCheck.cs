@@ -11,6 +11,13 @@ namespace ZakYip.Singulation.Host.SignalR {
     /// 速度联动服务健康检查，监控服务运行状态和性能指标。
     /// </summary>
     public sealed class SpeedLinkageHealthCheck : IHealthCheck {
+        // 健康检查阈值常量
+        private const double UnhealthyErrorRateThreshold = 0.1;      // 10% 错误率视为不健康
+        private const double DegradedErrorRateThreshold = 0.01;      // 1% 错误率视为降级
+        private const double DegradedIoFailureThreshold = 0.2;       // 20% IO失败率视为降级
+        private static readonly TimeSpan MaxAllowedTimeSinceLastCheck = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan RecentErrorTimeWindow = TimeSpan.FromMinutes(5);
+
         private readonly ISpeedLinkageService _speedLinkageService;
 
         /// <summary>
@@ -48,7 +55,7 @@ namespace ZakYip.Singulation.Host.SignalR {
 
                 // 检查服务是否长时间未运行
                 var timeSinceLastCheck = DateTime.UtcNow - stats.LastCheckTime;
-                if (stats.LastCheckTime != DateTime.MinValue && timeSinceLastCheck > TimeSpan.FromMinutes(1)) {
+                if (stats.LastCheckTime != DateTime.MinValue && timeSinceLastCheck > MaxAllowedTimeSinceLastCheck) {
                     return Task.FromResult(
                         HealthCheckResult.Unhealthy(
                             $"速度联动服务未运行，上次检查时间：{stats.LastCheckTime:yyyy-MM-dd HH:mm:ss}",
@@ -58,13 +65,13 @@ namespace ZakYip.Singulation.Host.SignalR {
                 // 检查错误率
                 if (stats.TotalErrors > 0) {
                     var errorRate = stats.TotalChecks > 0 ? (double)stats.TotalErrors / stats.TotalChecks : 0;
-                    if (errorRate > 0.1) {
+                    if (errorRate > UnhealthyErrorRateThreshold) {
                         return Task.FromResult(
                             HealthCheckResult.Unhealthy(
                                 $"速度联动服务错误率过高：{errorRate:P2} ({stats.TotalErrors}/{stats.TotalChecks})",
                                 data: data));
                     }
-                    if (errorRate > 0.01) {
+                    if (errorRate > DegradedErrorRateThreshold) {
                         return Task.FromResult(
                             HealthCheckResult.Degraded(
                                 $"速度联动服务存在少量错误：{errorRate:P2} ({stats.TotalErrors}/{stats.TotalChecks})",
@@ -75,7 +82,7 @@ namespace ZakYip.Singulation.Host.SignalR {
                 // 检查IO写入失败率
                 if (stats.TotalIoWrites > 0) {
                     var ioFailureRate = (double)stats.FailedIoWrites / stats.TotalIoWrites;
-                    if (ioFailureRate > 0.2) {
+                    if (ioFailureRate > DegradedIoFailureThreshold) {
                         return Task.FromResult(
                             HealthCheckResult.Degraded(
                                 $"速度联动IO写入失败率较高：{ioFailureRate:P2} ({stats.FailedIoWrites}/{stats.TotalIoWrites})",
@@ -86,7 +93,7 @@ namespace ZakYip.Singulation.Host.SignalR {
                 // 检查最近是否有错误
                 if (stats.LastErrorTime != DateTime.MinValue) {
                     var timeSinceLastError = DateTime.UtcNow - stats.LastErrorTime;
-                    if (timeSinceLastError < TimeSpan.FromMinutes(5)) {
+                    if (timeSinceLastError < RecentErrorTimeWindow) {
                         data["recentError"] = stats.LastError ?? "未知错误";
                         return Task.FromResult(
                             HealthCheckResult.Degraded(

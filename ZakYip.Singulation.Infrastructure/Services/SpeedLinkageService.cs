@@ -50,6 +50,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private DateTime _lastCheckTime = DateTime.MinValue;
         private DateTime _lastErrorTime = DateTime.MinValue;
         private Exception? _lastError = null;
+        private bool _isRunning = false;
 
         public SpeedLinkageService(
             ILogger<SpeedLinkageService> logger,
@@ -78,7 +79,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     LastCheckTime = _lastCheckTime,
                     LastErrorTime = _lastErrorTime,
                     LastError = _lastError?.Message,
-                    IsRunning = !Task.CurrentId.HasValue || !Task.CompletedTask.IsCompleted,
+                    IsRunning = _isRunning,
                     ActiveGroupsCount = _groupStoppedStates.Count
                 };
             }
@@ -86,6 +87,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             _logger.LogInformation("速度联动服务启动");
+            _isRunning = true;
 
             try {
                 while (!stoppingToken.IsCancellationRequested) {
@@ -99,6 +101,9 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             catch (Exception ex) {
                 _logger.LogError(ex, "速度联动服务异常");
                 throw;
+            }
+            finally {
+                _isRunning = false;
             }
 
             _logger.LogInformation("速度联动服务已停止");
