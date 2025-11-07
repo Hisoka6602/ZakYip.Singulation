@@ -196,7 +196,9 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<IoLinkageService>();
 
         // ---------- 速度联动服务 ----------
-        services.AddHostedService<SpeedLinkageService>();
+        services.AddSingleton<SpeedLinkageService>();
+        services.AddSingleton<ISpeedLinkageService>(sp => sp.GetRequiredService<SpeedLinkageService>());
+        services.AddHostedService(sp => sp.GetRequiredService<SpeedLinkageService>());
 
         // ---------- 配置导入导出服务 ----------
         services.AddSingleton<ConfigurationImportExportService>();

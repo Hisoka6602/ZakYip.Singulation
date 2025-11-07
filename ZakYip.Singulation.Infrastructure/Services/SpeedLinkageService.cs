@@ -15,12 +15,19 @@ using ZakYip.Singulation.Drivers.Abstractions;
 namespace ZakYip.Singulation.Infrastructure.Services {
 
     /// <summary>
+    /// 速度联动服务统计接口
+    /// </summary>
+    public interface ISpeedLinkageService {
+        SpeedLinkageStatistics GetStatistics();
+    }
+
+    /// <summary>
     /// 速度联动服务：监听轴速度变化并自动控制配置的 IO 端口。
     /// 当指定轴组的所有轴速度从非0降到0时，设置指定IO为指定电平；
     /// 当所有轴速度从0提升到非0时，设置相反电平。
     /// 注意：仅在远程模式下生效，本地模式下不触发速度联动。
     /// </summary>
-    public sealed class SpeedLinkageService : BackgroundService {
+    public sealed class SpeedLinkageService : BackgroundService, ISpeedLinkageService {
         private readonly ILogger<SpeedLinkageService> _logger;
         private readonly ISpeedLinkageOptionsStore _store;
         private readonly IoStatusService _ioStatusService;
@@ -33,6 +40,17 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
         // 性能优化：缓存轴ID到驱动器的映射，避免每次都使用LINQ查询
         private Dictionary<int, IAxisDrive>? _axisIdToDriveCache;
+
+        // 健康状态跟踪
+        private long _totalChecks = 0;
+        private long _totalStateChanges = 0;
+        private long _totalIoWrites = 0;
+        private long _failedIoWrites = 0;
+        private long _totalErrors = 0;
+        private DateTime _lastCheckTime = DateTime.MinValue;
+        private DateTime _lastErrorTime = DateTime.MinValue;
+        private Exception? _lastError = null;
+        private bool _isRunning = false;
 
         public SpeedLinkageService(
             ILogger<SpeedLinkageService> logger,
@@ -47,8 +65,29 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             _cabinetPipeline = cabinetPipeline;
         }
 
+        /// <summary>
+        /// 获取服务统计信息（用于健康检查）
+        /// </summary>
+        public SpeedLinkageStatistics GetStatistics() {
+            lock (_stateLock) {
+                return new SpeedLinkageStatistics {
+                    TotalChecks = _totalChecks,
+                    TotalStateChanges = _totalStateChanges,
+                    TotalIoWrites = _totalIoWrites,
+                    FailedIoWrites = _failedIoWrites,
+                    TotalErrors = _totalErrors,
+                    LastCheckTime = _lastCheckTime,
+                    LastErrorTime = _lastErrorTime,
+                    LastError = _lastError?.Message,
+                    IsRunning = _isRunning,
+                    ActiveGroupsCount = _groupStoppedStates.Count
+                };
+            }
+        }
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
             _logger.LogInformation("速度联动服务启动");
+            _isRunning = true;
 
             try {
                 while (!stoppingToken.IsCancellationRequested) {
@@ -63,6 +102,9 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 _logger.LogError(ex, "速度联动服务异常");
                 throw;
             }
+            finally {
+                _isRunning = false;
+            }
 
             _logger.LogInformation("速度联动服务已停止");
         }
@@ -72,6 +114,12 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// </summary>
         private async Task CheckAndApplySpeedLinkageAsync(CancellationToken ct) {
             try {
+                // 更新统计信息
+                lock (_stateLock) {
+                    _totalChecks++;
+                    _lastCheckTime = DateTime.UtcNow;
+                }
+
                 // 仅在远程模式下执行速度联动
                 if (!_cabinetPipeline.IsRemoteMode) {
                     return;
@@ -114,6 +162,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 throw;
             }
             catch (Exception ex) {
+                lock (_stateLock) {
+                    _totalErrors++;
+                    _lastErrorTime = DateTime.UtcNow;
+                    _lastError = ex;
+                }
                 _logger.LogError(ex, "检查速度联动时发生异常");
                 throw;
             }
@@ -171,6 +224,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             if (allStopped != previouslyStopped) {
                 lock (_stateLock) {
                     _groupStoppedStates[groupIndex] = allStopped;
+                    _totalStateChanges++;
                 }
 
                 // 仅在状态变化时记录日志
@@ -242,6 +296,12 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         "批量 IO 写入：IO {BitNumber} 设置异常",
                         write.BitNumber);
                 }
+            }
+
+            // 更新统计信息
+            lock (_stateLock) {
+                _totalIoWrites += successCount + failCount;
+                _failedIoWrites += failCount;
             }
 
             if (failCount > 0) {
