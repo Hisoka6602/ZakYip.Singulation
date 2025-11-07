@@ -203,6 +203,26 @@ var host = Host.CreateDefaultBuilder(args)
         // ---------- 配置导入导出服务 ----------
         services.AddSingleton<ConfigurationImportExportService>();
 
+        // ---------- 监控和诊断服务 ----------
+        services.AddSingleton<IPprChangeRecordStore, LiteDbPprChangeRecordStore>();
+        services.AddSingleton<SystemHealthMonitorService>(sp => new SystemHealthMonitorService(
+            sp.GetRequiredService<ILogger<SystemHealthMonitorService>>(),
+            sp.GetRequiredService<IAxisController>(),
+            sp.GetRequiredService<IHubContext<MonitoringHub>>()));
+        services.AddHostedService(sp => sp.GetRequiredService<SystemHealthMonitorService>());
+        services.AddSingleton<RealtimeAxisDataService>(sp => new RealtimeAxisDataService(
+            sp.GetRequiredService<ILogger<RealtimeAxisDataService>>(),
+            sp.GetRequiredService<IAxisController>(),
+            sp.GetRequiredService<IHubContext<MonitoringHub>>()));
+        services.AddHostedService(sp => sp.GetRequiredService<RealtimeAxisDataService>());
+        services.AddSingleton<PprChangeMonitorService>(sp => new PprChangeMonitorService(
+            sp.GetRequiredService<ILogger<PprChangeMonitorService>>(),
+            sp.GetRequiredService<IAxisController>(),
+            sp.GetRequiredService<IPprChangeRecordStore>(),
+            sp.GetRequiredService<IHubContext<MonitoringHub>>()));
+        services.AddHostedService(sp => sp.GetRequiredService<PprChangeMonitorService>());
+        services.AddSingleton<FaultDiagnosisService>();
+
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
         services.AddSingleton<ICabinetIsolator, CabinetIsolator>();
@@ -336,6 +356,7 @@ var host = Host.CreateDefaultBuilder(args)
             app.UseEndpoints(endpoints => {
                 endpoints.MapControllers();
                 endpoints.MapHub<EventsHub>("/hubs/events");
+                endpoints.MapHub<MonitoringHub>("/hubs/monitoring");
 
                 // 健康检查端点
                 endpoints.MapHealthChecks("/health");
