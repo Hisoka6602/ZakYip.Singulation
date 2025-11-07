@@ -206,41 +206,43 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         /// <summary>
-        /// 批量并行执行 IO 写入操作，提高性能。
+        /// 批量执行 IO 写入操作。
+        /// 注意：由于硬件API可能不支持并发访问，顺序执行确保稳定性。
+        /// 优化点：批量收集减少了服务调用和状态检查的次数。
         /// </summary>
         private async Task ApplyIoWritesBatchAsync(
             List<(int BitNumber, IoState State)> writes,
             CancellationToken ct) {
 
-            // 使用 Task.WhenAll 并行执行所有写入操作
-            var tasks = writes.Select(async write => {
+            int successCount = 0;
+            int failCount = 0;
+
+            // 顺序执行 IO 写入操作（硬件API可能不支持并发访问）
+            foreach (var write in writes) {
                 try {
                     var (success, message) = await _ioStatusService.WriteOutputBitAsync(
                         write.BitNumber,
                         write.State,
                         ct);
 
-                    if (!success) {
+                    if (success) {
+                        successCount++;
+                    } else {
+                        failCount++;
                         _logger.LogWarning(
                             "批量 IO 写入：IO {BitNumber} 设置失败，原因：{Message}",
                             write.BitNumber,
                             message);
-                        return false;
                     }
-                    return true;
                 }
                 catch (Exception ex) {
+                    failCount++;
                     _logger.LogError(
                         ex,
                         "批量 IO 写入：IO {BitNumber} 设置异常",
                         write.BitNumber);
-                    return false;
                 }
-            });
-
-            var results = await Task.WhenAll(tasks);
-            var successCount = results.Count(r => r);
-            var failCount = results.Count(r => !r);
+            }
 
             if (failCount > 0) {
                 _logger.LogWarning(

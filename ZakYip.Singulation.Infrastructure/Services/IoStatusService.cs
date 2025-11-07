@@ -45,7 +45,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         }
 
         /// <summary>
-        /// 查询所有 IO 状态（使用并行读取优化性能）。
+        /// 查询所有 IO 状态（使用优化的内存分配）。
+        /// 注意：由于硬件API可能不支持并发访问，使用顺序读取确保稳定性。
         /// </summary>
         /// <param name="inputStart">输入 IO 起始位号，默认 0</param>
         /// <param name="inputCount">输入 IO 数量，默认 32</param>
@@ -63,46 +64,39 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             await InitializeAsync(ct);
 
             // 使用 ArrayPool 减少内存分配
-            var inputBitNumbers = ArrayPool<int>.Shared.Rent(inputCount);
-            var outputBitNumbers = ArrayPool<int>.Shared.Rent(outputCount);
+            var inputResults = ArrayPool<IoStatusDto>.Shared.Rent(inputCount);
+            var outputResults = ArrayPool<IoStatusDto>.Shared.Rent(outputCount);
             
             try {
-                // 填充位号数组
+                // 顺序读取输入 IO（硬件API可能不支持并发访问）
                 for (int i = 0; i < inputCount; i++) {
-                    inputBitNumbers[i] = inputStart + i;
+                    inputResults[i] = ReadInputBit(inputStart + i);
+                }
+
+                // 顺序读取输出 IO
+                for (int i = 0; i < outputCount; i++) {
+                    outputResults[i] = ReadOutputBit(outputStart + i);
+                }
+
+                // 创建输出列表（避免在循环中添加，减少重新分配）
+                var inputIos = new List<IoStatusDto>(inputCount);
+                var outputIos = new List<IoStatusDto>(outputCount);
+                
+                for (int i = 0; i < inputCount; i++) {
+                    inputIos.Add(inputResults[i]);
                 }
                 for (int i = 0; i < outputCount; i++) {
-                    outputBitNumbers[i] = outputStart + i;
+                    outputIos.Add(outputResults[i]);
                 }
 
-                // 并行读取输入和输出 IO，提高性能
-                var inputTask = Task.Run(() => {
-                    var results = new IoStatusDto[inputCount];
-                    // 使用并行循环读取输入IO，限制并发度避免资源耗尽
-                    Parallel.For(0, inputCount, new ParallelOptions { MaxDegreeOfParallelism = 8 }, i => {
-                        results[i] = ReadInputBit(inputBitNumbers[i]);
-                    });
-                    return results.ToList();
-                }, ct);
-
-                var outputTask = Task.Run(() => {
-                    var results = new IoStatusDto[outputCount];
-                    // 使用并行循环读取输出IO，限制并发度避免资源耗尽
-                    Parallel.For(0, outputCount, new ParallelOptions { MaxDegreeOfParallelism = 8 }, i => {
-                        results[i] = ReadOutputBit(outputBitNumbers[i]);
-                    });
-                    return results.ToList();
-                }, ct);
-
-                // 等待两个任务并行完成
-                await Task.WhenAll(inputTask, outputTask);
-
-                var inputIos = inputTask.Result;
-                var outputIos = outputTask.Result;
-
-                var allIos = inputIos.Concat(outputIos);
-                var validCount = allIos.Count(io => io.IsValid);
-                var errorCount = allIos.Count(io => !io.IsValid);
+                var validCount = 0;
+                var errorCount = 0;
+                foreach (var io in inputIos) {
+                    if (io.IsValid) validCount++; else errorCount++;
+                }
+                foreach (var io in outputIos) {
+                    if (io.IsValid) validCount++; else errorCount++;
+                }
 
                 var response = new IoStatusResponseDto {
                     InputIos = inputIos,
@@ -115,8 +109,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             }
             finally {
                 // 归还数组到池中
-                ArrayPool<int>.Shared.Return(inputBitNumbers);
-                ArrayPool<int>.Shared.Return(outputBitNumbers);
+                ArrayPool<IoStatusDto>.Shared.Return(inputResults);
+                ArrayPool<IoStatusDto>.Shared.Return(outputResults);
             }
         }
 

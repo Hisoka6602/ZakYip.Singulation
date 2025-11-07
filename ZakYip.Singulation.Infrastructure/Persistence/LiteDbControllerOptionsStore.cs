@@ -11,6 +11,7 @@ using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Configs.Defaults;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
+using ZakYip.Singulation.Infrastructure.Configuration;
 
 namespace ZakYip.Singulation.Infrastructure.Persistence {
 
@@ -57,10 +58,10 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             try {
                 var result = _coll.FindById(Key)?.ToDto() ?? ConfigDefaults.Controller();
                 
-                // 缓存配置，5分钟过期
+                // 缓存配置，使用配置的过期时间
                 var cacheOptions = new MemoryCacheEntryOptions {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
-                    SlidingExpiration = TimeSpan.FromMinutes(2)
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(InfrastructureConstants.Cache.ConfigAbsoluteExpirationMinutes),
+                    SlidingExpiration = TimeSpan.FromMinutes(InfrastructureConstants.Cache.ConfigSlidingExpirationMinutes)
                 };
                 _cache.Set(CacheKey, result, cacheOptions);
                 

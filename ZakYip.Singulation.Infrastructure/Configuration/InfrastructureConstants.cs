@@ -23,4 +23,22 @@ public static class InfrastructureConstants
     /// Idle delay for event pump processing loop in milliseconds
     /// </summary>
     public const int EventPumpIdleDelayMs = 2;
+
+    /// <summary>
+    /// 缓存配置相关常量
+    /// Cache configuration constants
+    /// </summary>
+    public static class Cache {
+        /// <summary>
+        /// 配置缓存的绝对过期时间（分钟）
+        /// Absolute expiration time for configuration cache in minutes
+        /// </summary>
+        public const int ConfigAbsoluteExpirationMinutes = 5;
+
+        /// <summary>
+        /// 配置缓存的滑动过期时间（分钟）
+        /// Sliding expiration time for configuration cache in minutes
+        /// </summary>
+        public const int ConfigSlidingExpirationMinutes = 2;
+    }
 }
