@@ -11,10 +11,28 @@ namespace ZakYip.Singulation.Benchmarks;
 /// ZakYip.Singulation 性能基准测试主程序
 /// </summary>
 class Program {
-    static void Main(string[] args) {
+    static async Task Main(string[] args) {
+        // 检查是否是稳定性测试
+        if (args.Length > 0 && args[0] == "stability") {
+            await StabilityTestRunner.RunAsync(args);
+            return;
+        }
+
         Console.WriteLine("===================================================");
         Console.WriteLine("ZakYip.Singulation 性能基准测试工具");
         Console.WriteLine("===================================================");
+        Console.WriteLine();
+        Console.WriteLine("可用的测试套件:");
+        Console.WriteLine("  1. ProtocolBenchmarks - 协议编解码性能测试");
+        Console.WriteLine("  2. LinqVsLoopBenchmarks - LINQ vs 循环性能对比");
+        Console.WriteLine("  3. BatchOperationBenchmarks - 批量操作性能测试 (10/50/100轴)");
+        Console.WriteLine("  4. MemoryAllocationBenchmarks - 内存分配和GC压力测试");
+        Console.WriteLine("  5. IoOperationBenchmarks - IO操作性能测试");
+        Console.WriteLine("  6. ConcurrencyBenchmarks - 并发操作性能测试");
+        Console.WriteLine("  7. All - 运行所有基准测试");
+        Console.WriteLine();
+        Console.WriteLine("特殊命令:");
+        Console.WriteLine("  stability [小时数] - 运行长时间稳定性测试");
         Console.WriteLine();
         
         var config = DefaultConfig.Instance
@@ -27,7 +45,46 @@ class Program {
             .AddColumn(BaselineRatioColumn.RatioMean)
             .WithSummaryStyle(SummaryStyle.Default.WithRatioStyle(RatioStyle.Trend));
         
-        var summary = BenchmarkRunner.Run<ProtocolBenchmarks>(config, args);
+        // 根据命令行参数选择要运行的基准测试
+        if (args.Length > 0) {
+            switch (args[0].ToLower()) {
+                case "protocol":
+                    BenchmarkRunner.Run<ProtocolBenchmarks>(config);
+                    break;
+                case "linq":
+                    BenchmarkRunner.Run<LinqVsLoopBenchmarks>(config);
+                    break;
+                case "batch":
+                    BenchmarkRunner.Run<BatchOperationBenchmarks>(config);
+                    break;
+                case "memory":
+                    BenchmarkRunner.Run<MemoryAllocationBenchmarks>(config);
+                    break;
+                case "io":
+                    BenchmarkRunner.Run<IoOperationBenchmarks>(config);
+                    break;
+                case "concurrency":
+                    BenchmarkRunner.Run<ConcurrencyBenchmarks>(config);
+                    break;
+                case "all":
+                    BenchmarkRunner.Run<ProtocolBenchmarks>(config);
+                    BenchmarkRunner.Run<LinqVsLoopBenchmarks>(config);
+                    BenchmarkRunner.Run<BatchOperationBenchmarks>(config);
+                    BenchmarkRunner.Run<MemoryAllocationBenchmarks>(config);
+                    BenchmarkRunner.Run<IoOperationBenchmarks>(config);
+                    BenchmarkRunner.Run<ConcurrencyBenchmarks>(config);
+                    break;
+                default:
+                    Console.WriteLine($"未知的基准测试类型: {args[0]}");
+                    Console.WriteLine("使用 'all' 运行所有测试，或指定具体的测试类型");
+                    StabilityTestRunner.PrintHelp();
+                    return;
+            }
+        }
+        else {
+            // 默认运行批量操作基准测试（最重要的测试）
+            BenchmarkRunner.Run<BatchOperationBenchmarks>(config);
+        }
         
         Console.WriteLine();
         Console.WriteLine("===================================================");
