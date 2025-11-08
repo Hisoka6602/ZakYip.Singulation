@@ -32,33 +32,33 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// <summary>
         /// 诊断指定轴的故障
         /// </summary>
-        public async Task<FaultDiagnosisDto?> DiagnoseAxisAsync(string axisId, CancellationToken ct = default) {
+        public Task<FaultDiagnosisDto?> DiagnoseAxisAsync(string axisId, CancellationToken ct = default) {
             try {
                 var drive = _axisController.Drives
                     .FirstOrDefault(d => d.Axis.ToString() == axisId);
 
                 if (drive == null) {
-                    return new FaultDiagnosisDto {
+                    return Task.FromResult<FaultDiagnosisDto?>(new FaultDiagnosisDto {
                         AxisId = axisId,
                         FaultType = "AXIS_NOT_FOUND",
                         Severity = FaultSeverity.Error,
                         Description = $"未找到轴 {axisId}",
                         DiagnosedAt = DateTime.Now
-                    };
+                    });
                 }
 
-                return DiagnoseAxisDrive(drive);
+                return Task.FromResult<FaultDiagnosisDto?>(DiagnoseAxisDrive(drive));
             }
             catch (Exception ex) {
                 _logger.LogError(ex, "诊断轴 {AxisId} 失败", axisId);
-                return null;
+                return Task.FromResult<FaultDiagnosisDto?>(null);
             }
         }
 
         /// <summary>
         /// 诊断所有轴并返回有问题的轴
         /// </summary>
-        public async Task<List<FaultDiagnosisDto>> DiagnoseAllAxesAsync(CancellationToken ct = default) {
+        public Task<List<FaultDiagnosisDto>> DiagnoseAllAxesAsync(CancellationToken ct = default) {
             var results = new List<FaultDiagnosisDto>();
 
             try {
@@ -75,7 +75,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 _logger.LogError(ex, "诊断所有轴失败");
             }
 
-            return results;
+            return Task.FromResult(results);
         }
 
         /// <summary>
