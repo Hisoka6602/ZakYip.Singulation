@@ -151,6 +151,8 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
 
             public IReadOnlyList<decimal?> RealtimeSpeedsMmps => Array.Empty<decimal?>();
 
+            public IReadOnlyList<decimal?> TargetSpeedsMmps => Array.Empty<decimal?>();
+
             public event EventHandler<string>? ControllerFaulted;
 
             public Task<KeyValuePair<bool, string>> InitializeAsync(string vendor, DriverOptions template, int? overrideAxisCount = null, CancellationToken ct = default)
