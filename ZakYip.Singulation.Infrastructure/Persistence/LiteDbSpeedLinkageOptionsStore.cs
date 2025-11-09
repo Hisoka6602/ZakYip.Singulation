@@ -33,6 +33,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
             IMemoryCache cache) {
             _col = db.GetCollection<SpeedLinkageOptionsDoc>(CollName);
             _col.EnsureIndex(x => x.Id, unique: true);
+            // 为 Enabled 字段创建索引，用于快速查找启用的配置
+            _col.EnsureIndex(x => x.Enabled);
             _logger = logger;
             _safetyIsolator = safetyIsolator;
             _cache = cache;

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using LiteDB;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Enums;
@@ -21,7 +22,8 @@ namespace ZakYip.Singulation.Tests {
             var dbPath = Path.Combine(Path.GetTempPath(), $"test_cabinet_{Guid.NewGuid()}.db");
             using var db = new LiteDatabase($"Filename={dbPath};Mode=Shared");
             var safetyIsolator = new FakeCabinetIsolator();
-            var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator);
+            var cache = new MemoryCache(new MemoryCacheOptions());
+            var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator, cache);
 
             var options = new LeadshineCabinetIoOptions {
                 Enabled = true,
@@ -87,7 +89,8 @@ namespace ZakYip.Singulation.Tests {
             var dbPath = Path.Combine(Path.GetTempPath(), $"test_cabinet_{Guid.NewGuid()}.db");
             using var db = new LiteDatabase($"Filename={dbPath};Mode=Shared");
             var safetyIsolator = new FakeCabinetIsolator();
-            var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator);
+            var cache = new MemoryCache(new MemoryCacheOptions());
+            var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator, cache);
 
             // Act
             var retrieved = await store.GetAsync();
@@ -109,7 +112,8 @@ namespace ZakYip.Singulation.Tests {
             var dbPath = Path.Combine(Path.GetTempPath(), $"test_cabinet_{Guid.NewGuid()}.db");
             using var db = new LiteDatabase($"Filename={dbPath};Mode=Shared");
             var safetyIsolator = new FakeCabinetIsolator();
-            var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator);
+            var cache = new MemoryCache(new MemoryCacheOptions());
+            var store = new LiteDbLeadshineCabinetIoOptionsStore(db, NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance, safetyIsolator, cache);
 
             var options = new LeadshineCabinetIoOptions {
                 Enabled = true,
