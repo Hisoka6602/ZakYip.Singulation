@@ -381,44 +381,46 @@ try {
             EXECUTION_STATE.ES_SYSTEM_REQUIRED |
             EXECUTION_STATE.ES_DISPLAY_REQUIRED);
 
-        // ---------- Windows 系统配置（使用安全隔离器） ----------
+        // ---------- Windows 系统配置（使用统一的安全隔离器，异步执行不阻塞主线程） ----------
+        var cabinetIsolator = host.Services.GetRequiredService<ICabinetIsolator>();
         var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
-        var isolatorLogger = loggerFactory.CreateLogger<SafeOperationIsolator>();
-        var safeIsolator = new SafeOperationIsolator(isolatorLogger);
 
-        // ---------- 配置 Windows 防火墙 ----------
-        safeIsolator.SafeExecute(() => {
-            var configuration = host.Services.GetRequiredService<IConfiguration>();
-            var logger = loggerFactory.CreateLogger<WindowsFirewallManager>();
-            var firewallManager = new WindowsFirewallManager(logger);
-            
-            // 从配置中获取 KestrelUrl
-            var kestrelUrl = configuration.GetValue<string>("KestrelUrl", "http://localhost:5005");
-            var urls = new[] { kestrelUrl };
-            
-            // 提取端口
-            var ports = WindowsFirewallManager.ExtractPortsFromUrls(urls);
-            
-            // 获取应用程序路径和名称
-            var applicationPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            var applicationName = "ZakYip.Singulation.Host";
-            
-            // 检查并配置防火墙
-            firewallManager.CheckAndConfigureFirewall(applicationPath, applicationName, ports);
-        }, 
-        "Windows防火墙配置",
-        ex => NLog.LogManager.GetCurrentClassLogger().Warn(ex, "配置防火墙时发生错误，但程序将继续运行"));
+        // 异步执行 Windows 配置，不阻塞主线程
+        _ = Task.Run(async () => {
+            // ---------- 配置 Windows 防火墙 ----------
+            await cabinetIsolator.SafeExecuteAsync(async () => {
+                var configuration = host.Services.GetRequiredService<IConfiguration>();
+                var logger = loggerFactory.CreateLogger<WindowsFirewallManager>();
+                var firewallManager = new WindowsFirewallManager(logger);
+                
+                // 从配置中获取 KestrelUrl
+                var kestrelUrl = configuration.GetValue<string>("KestrelUrl", "http://localhost:5005");
+                var urls = new[] { kestrelUrl };
+                
+                // 提取端口
+                var ports = WindowsFirewallManager.ExtractPortsFromUrls(urls);
+                
+                // 获取应用程序路径和名称
+                var applicationPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                var applicationName = "ZakYip.Singulation.Host";
+                
+                // 检查并配置防火墙（同步操作，包装为 Task）
+                await Task.Run(() => firewallManager.CheckAndConfigureFirewall(applicationPath, applicationName, ports)).ConfigureAwait(false);
+            }, 
+            "Windows防火墙配置",
+            ex => NLog.LogManager.GetCurrentClassLogger().Warn(ex, "配置防火墙时发生错误，但程序将继续运行"));
 
-        // ---------- 配置网络适配器（巨帧、传输缓存、禁用节能）----------
-        safeIsolator.SafeExecute(() => {
-            var networkLogger = loggerFactory.CreateLogger<WindowsNetworkAdapterManager>();
-            var networkManager = new WindowsNetworkAdapterManager(networkLogger);
-            
-            // 配置所有网卡：启用巨帧、最大化传输缓存、禁用节能
-            networkManager.ConfigureAllNetworkAdapters();
-        },
-        "网络适配器配置",
-        ex => NLog.LogManager.GetCurrentClassLogger().Warn(ex, "配置网络适配器时发生错误，但程序将继续运行"));
+            // ---------- 配置网络适配器（巨帧、传输缓存、禁用节能）----------
+            await cabinetIsolator.SafeExecuteAsync(async () => {
+                var networkLogger = loggerFactory.CreateLogger<WindowsNetworkAdapterManager>();
+                var networkManager = new WindowsNetworkAdapterManager(networkLogger);
+                
+                // 配置所有网卡：启用巨帧、最大化传输缓存、禁用节能（同步操作，包装为 Task）
+                await Task.Run(() => networkManager.ConfigureAllNetworkAdapters()).ConfigureAwait(false);
+            },
+            "网络适配器配置",
+            ex => NLog.LogManager.GetCurrentClassLogger().Warn(ex, "配置网络适配器时发生错误，但程序将继续运行"));
+        });
     }
     host.Run();
 }

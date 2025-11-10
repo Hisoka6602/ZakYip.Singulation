@@ -38,8 +38,8 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
                 // - Mode=Shared: 允许多个进程/线程共享数据库
                 // - Connection=Direct: 使用直接连接以提升性能
                 // - Upgrade=true: 自动升级数据库结构
-                // - Collation: 使用二进制排序以提升性能
-                var connectionString = $"Filename={resolvedPath};Mode=Shared;Connection=Direct;Upgrade=true;Collation=en-US/None";
+                // - Collation: 保持与原数据库一致的排序规则 zh-CN/IgnoreCase
+                var connectionString = $"Filename={resolvedPath};Mode=Shared;Connection=Direct;Upgrade=true;Collation=zh-CN/IgnoreCase";
                 return new LiteDatabase(connectionString);
             });
             services.AddSingleton<IControllerOptionsStore, LiteDbControllerOptionsStore>();
