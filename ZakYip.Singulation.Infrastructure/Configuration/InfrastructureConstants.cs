@@ -40,5 +40,47 @@ public static class InfrastructureConstants
         /// Sliding expiration time for configuration cache in minutes
         /// </summary>
         public const int ConfigSlidingExpirationMinutes = 2;
+
+        /// <summary>
+        /// 查询结果缓存的默认绝对过期时间（分钟）
+        /// Default absolute expiration time for query result cache in minutes
+        /// </summary>
+        public const int QueryResultAbsoluteExpirationMinutes = 10;
+
+        /// <summary>
+        /// 查询结果缓存的默认滑动过期时间（分钟）
+        /// Default sliding expiration time for query result cache in minutes
+        /// </summary>
+        public const int QueryResultSlidingExpirationMinutes = 3;
+    }
+
+    /// <summary>
+    /// 数据库连接配置相关常量
+    /// Database connection configuration constants
+    /// </summary>
+    public static class Database {
+        /// <summary>
+        /// LiteDB 连接模式（共享模式允许并发访问）
+        /// LiteDB connection mode (Shared mode allows concurrent access)
+        /// </summary>
+        public const string ConnectionMode = "Shared";
+
+        /// <summary>
+        /// LiteDB 连接类型（Direct 模式提供更好的性能）
+        /// LiteDB connection type (Direct mode provides better performance)
+        /// </summary>
+        public const string ConnectionType = "Direct";
+
+        /// <summary>
+        /// 是否自动升级数据库架构
+        /// Whether to automatically upgrade database schema
+        /// </summary>
+        public const bool AutoUpgrade = true;
+
+        /// <summary>
+        /// 排序规则（None 表示使用二进制比较，性能最佳）
+        /// Collation (None means binary comparison, best performance)
+        /// </summary>
+        public const string Collation = "en-US/None";
     }
 }

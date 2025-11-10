@@ -24,10 +24,12 @@ namespace ZakYip.Singulation.Tests {
             // 使用正常的内存数据库验证基本功能仍然工作
             using var db = new LiteDatabase(":memory:");
             var isolator = new RecordingSafetyIsolator();
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbIoStatusMonitorOptionsStore(
                 db,
                 NullLogger<LiteDbIoStatusMonitorOptionsStore>.Instance,
-                isolator);
+                isolator,
+                cache);
 
             // 正常读取不应触发降级
             var result = await store.GetAsync();
@@ -40,10 +42,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task LeadshineSafetyIoStore_HandlesNormalOperation() {
             using var db = new LiteDatabase(":memory:");
             var isolator = new RecordingSafetyIsolator();
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbLeadshineCabinetIoOptionsStore(
                 db,
                 NullLogger<LiteDbLeadshineCabinetIoOptionsStore>.Instance,
-                isolator);
+                isolator,
+                cache);
 
             var result = await store.GetAsync();
 
@@ -72,10 +76,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task UpstreamOptionsStore_HandlesNormalOperation() {
             using var db = new LiteDatabase(":memory:");
             var isolator = new RecordingSafetyIsolator();
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbUpstreamOptionsStore(
                 db,
                 NullLogger<LiteDbUpstreamOptionsStore>.Instance,
-                isolator);
+                isolator,
+                cache);
 
             var result = await store.GetAsync();
 
@@ -87,10 +93,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task UpstreamCodecOptionsStore_HandlesNormalOperation() {
             using var db = new LiteDatabase(":memory:");
             var isolator = new RecordingSafetyIsolator();
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbUpstreamCodecOptionsStore(
                 db,
                 NullLogger<LiteDbUpstreamCodecOptionsStore>.Instance,
-                isolator);
+                isolator,
+                cache);
 
             var result = await store.GetAsync();
 
@@ -102,10 +110,12 @@ namespace ZakYip.Singulation.Tests {
         public async Task AxisLayoutStore_HandlesNormalOperation() {
             using var db = new LiteDatabase(":memory:");
             var isolator = new RecordingSafetyIsolator();
+            var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new LiteDbAxisLayoutStore(
                 db,
                 NullLogger<LiteDbAxisLayoutStore>.Instance,
-                isolator);
+                isolator,
+                cache);
 
             var result = await store.GetAsync();
 
