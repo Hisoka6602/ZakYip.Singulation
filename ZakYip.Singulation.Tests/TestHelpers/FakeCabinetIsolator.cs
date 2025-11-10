@@ -41,5 +41,72 @@ namespace ZakYip.Singulation.Tests.TestHelpers {
             WriteCount++;
             return true;
         }
+
+        // 实现新的安全执行方法
+        public bool SafeExecute(Action action, string operationName, Action<Exception>? onError = null) {
+            try {
+                action();
+                return true;
+            }
+            catch (Exception ex) {
+                onError?.Invoke(ex);
+                return false;
+            }
+        }
+
+        public T SafeExecute<T>(Func<T> func, string operationName, T defaultValue, Action<Exception>? onError = null) {
+            try {
+                return func();
+            }
+            catch (Exception ex) {
+                onError?.Invoke(ex);
+                return defaultValue;
+            }
+        }
+
+        public T? SafeExecuteNullable<T>(Func<T> func, string operationName, Action<Exception>? onError = null) where T : class {
+            try {
+                return func();
+            }
+            catch (Exception ex) {
+                onError?.Invoke(ex);
+                return null;
+            }
+        }
+
+        public int SafeExecuteBatch(Action[] actions, string operationName, bool stopOnFirstError = false) {
+            int successCount = 0;
+            foreach (var action in actions) {
+                try {
+                    action();
+                    successCount++;
+                }
+                catch {
+                    if (stopOnFirstError) break;
+                }
+            }
+            return successCount;
+        }
+
+        public async Task<bool> SafeExecuteAsync(Func<Task> action, string operationName, Action<Exception>? onError = null) {
+            try {
+                await action();
+                return true;
+            }
+            catch (Exception ex) {
+                onError?.Invoke(ex);
+                return false;
+            }
+        }
+
+        public async Task<T> SafeExecuteAsync<T>(Func<Task<T>> func, string operationName, T defaultValue, Action<Exception>? onError = null) {
+            try {
+                return await func();
+            }
+            catch (Exception ex) {
+                onError?.Invoke(ex);
+                return defaultValue;
+            }
+        }
     }
 }
