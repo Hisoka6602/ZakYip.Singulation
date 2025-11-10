@@ -381,12 +381,15 @@ try {
             EXECUTION_STATE.ES_SYSTEM_REQUIRED |
             EXECUTION_STATE.ES_DISPLAY_REQUIRED);
 
+        // ---------- Windows 系统配置（使用安全隔离器） ----------
+        var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
+        var isolatorLogger = loggerFactory.CreateLogger<SafeOperationIsolator>();
+        var safeIsolator = new SafeOperationIsolator(isolatorLogger);
+
         // ---------- 配置 Windows 防火墙 ----------
-        try {
+        safeIsolator.SafeExecute(() => {
             var configuration = host.Services.GetRequiredService<IConfiguration>();
-            var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
             var logger = loggerFactory.CreateLogger<WindowsFirewallManager>();
-            
             var firewallManager = new WindowsFirewallManager(logger);
             
             // 从配置中获取 KestrelUrl
@@ -402,10 +405,20 @@ try {
             
             // 检查并配置防火墙
             firewallManager.CheckAndConfigureFirewall(applicationPath, applicationName, ports);
-        }
-        catch (Exception ex) {
-            NLog.LogManager.GetCurrentClassLogger().Warn(ex, "配置防火墙时发生错误，但程序将继续运行");
-        }
+        }, 
+        "Windows防火墙配置",
+        ex => NLog.LogManager.GetCurrentClassLogger().Warn(ex, "配置防火墙时发生错误，但程序将继续运行"));
+
+        // ---------- 配置网络适配器（巨帧、传输缓存、禁用节能）----------
+        safeIsolator.SafeExecute(() => {
+            var networkLogger = loggerFactory.CreateLogger<WindowsNetworkAdapterManager>();
+            var networkManager = new WindowsNetworkAdapterManager(networkLogger);
+            
+            // 配置所有网卡：启用巨帧、最大化传输缓存、禁用节能
+            networkManager.ConfigureAllNetworkAdapters();
+        },
+        "网络适配器配置",
+        ex => NLog.LogManager.GetCurrentClassLogger().Warn(ex, "配置网络适配器时发生错误，但程序将继续运行"));
     }
     host.Run();
 }
