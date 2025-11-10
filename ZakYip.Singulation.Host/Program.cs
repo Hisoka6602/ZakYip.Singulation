@@ -380,6 +380,32 @@ try {
             EXECUTION_STATE.ES_CONTINUOUS |
             EXECUTION_STATE.ES_SYSTEM_REQUIRED |
             EXECUTION_STATE.ES_DISPLAY_REQUIRED);
+
+        // ---------- 配置 Windows 防火墙 ----------
+        try {
+            var configuration = host.Services.GetRequiredService<IConfiguration>();
+            var loggerFactory = host.Services.GetRequiredService<ILoggerFactory>();
+            var logger = loggerFactory.CreateLogger<WindowsFirewallManager>();
+            
+            var firewallManager = new WindowsFirewallManager(logger);
+            
+            // 从配置中获取 KestrelUrl
+            var kestrelUrl = configuration.GetValue<string>("KestrelUrl", "http://localhost:5005");
+            var urls = new[] { kestrelUrl };
+            
+            // 提取端口
+            var ports = WindowsFirewallManager.ExtractPortsFromUrls(urls);
+            
+            // 获取应用程序路径和名称
+            var applicationPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var applicationName = "ZakYip.Singulation.Host";
+            
+            // 检查并配置防火墙
+            firewallManager.CheckAndConfigureFirewall(applicationPath, applicationName, ports);
+        }
+        catch (Exception ex) {
+            NLog.LogManager.GetCurrentClassLogger().Warn(ex, "配置防火墙时发生错误，但程序将继续运行");
+        }
     }
     host.Run();
 }
