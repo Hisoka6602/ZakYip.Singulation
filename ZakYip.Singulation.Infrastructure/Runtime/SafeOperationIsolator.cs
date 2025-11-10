@@ -7,6 +7,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
     /// 安全操作隔离器：为有风险的操作提供隔离保护
     /// 捕获异常、记录日志，防止单个操作失败影响整体系统
     /// </summary>
+    /// <remarks>
+    /// [已弃用] 此类已被统一到 ICabinetIsolator/CabinetIsolator 中。
+    /// 请使用 ICabinetIsolator 的 SafeExecute/SafeExecuteAsync 方法代替。
+    /// </remarks>
+    [Obsolete("此类已被弃用，请使用 ICabinetIsolator 的 SafeExecute/SafeExecuteAsync 方法代替", false)]
     public class SafeOperationIsolator {
         private readonly ILogger _logger;
 

@@ -253,5 +253,61 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
             return successCount;
         }
+
+        /// <summary>
+        /// 异步安全执行操作（无返回值）
+        /// </summary>
+        public async Task<bool> SafeExecuteAsync(Func<Task> action, string operationName, Action<Exception>? onError = null) {
+            if (action == null) {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            try {
+                _log.LogDebug("开始执行异步操作: {OperationName}", operationName);
+                await action().ConfigureAwait(false);
+                _log.LogDebug("异步操作执行成功: {OperationName}", operationName);
+                return true;
+            }
+            catch (Exception ex) {
+                _log.LogWarning(ex, "异步操作执行失败: {OperationName}", operationName);
+                
+                try {
+                    onError?.Invoke(ex);
+                }
+                catch (Exception callbackEx) {
+                    _log.LogError(callbackEx, "错误处理回调执行失败: {OperationName}", operationName);
+                }
+                
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 异步安全执行操作（有返回值）
+        /// </summary>
+        public async Task<T> SafeExecuteAsync<T>(Func<Task<T>> func, string operationName, T defaultValue, Action<Exception>? onError = null) {
+            if (func == null) {
+                throw new ArgumentNullException(nameof(func));
+            }
+
+            try {
+                _log.LogDebug("开始执行异步操作: {OperationName}", operationName);
+                var result = await func().ConfigureAwait(false);
+                _log.LogDebug("异步操作执行成功: {OperationName}", operationName);
+                return result;
+            }
+            catch (Exception ex) {
+                _log.LogWarning(ex, "异步操作执行失败: {OperationName}，返回默认值", operationName);
+                
+                try {
+                    onError?.Invoke(ex);
+                }
+                catch (Exception callbackEx) {
+                    _log.LogError(callbackEx, "错误处理回调执行失败: {OperationName}", operationName);
+                }
+                
+                return defaultValue;
+            }
+        }
     }
 }

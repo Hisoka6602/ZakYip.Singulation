@@ -80,5 +80,27 @@ namespace ZakYip.Singulation.Core.Abstractions.Cabinet {
         /// <param name="stopOnFirstError">是否在第一个错误时停止</param>
         /// <returns>成功执行的操作数量</returns>
         int SafeExecuteBatch(Action[] actions, string operationName, bool stopOnFirstError = false);
+
+        /// <summary>
+        /// 异步安全执行操作（无返回值）。
+        /// 捕获异常、记录日志，防止单个操作失败影响整体系统。
+        /// </summary>
+        /// <param name="action">要执行的异步操作</param>
+        /// <param name="operationName">操作名称（用于日志）</param>
+        /// <param name="onError">可选的错误处理回调</param>
+        /// <returns>操作是否成功</returns>
+        Task<bool> SafeExecuteAsync(Func<Task> action, string operationName, Action<Exception>? onError = null);
+
+        /// <summary>
+        /// 异步安全执行操作（有返回值）。
+        /// 捕获异常、记录日志，失败时返回默认值。
+        /// </summary>
+        /// <typeparam name="T">返回值类型</typeparam>
+        /// <param name="func">要执行的异步操作</param>
+        /// <param name="operationName">操作名称（用于日志）</param>
+        /// <param name="defaultValue">失败时的默认返回值</param>
+        /// <param name="onError">可选的错误处理回调</param>
+        /// <returns>操作结果或默认值</returns>
+        Task<T> SafeExecuteAsync<T>(Func<Task<T>> func, string operationName, T defaultValue, Action<Exception>? onError = null);
     }
 }
