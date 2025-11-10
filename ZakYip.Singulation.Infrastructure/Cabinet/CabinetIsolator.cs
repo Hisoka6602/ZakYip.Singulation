@@ -11,7 +11,8 @@ using Microsoft.Extensions.Logging;
 namespace ZakYip.Singulation.Infrastructure.Cabinet {
 
     /// <summary>
-    /// 默认安全隔离器实现：集中管理隔离/降级状态，并对外广播。
+    /// 默认安全隔离器实现：集中管理隔离/降级状态、对外广播，并提供安全操作执行能力。
+    /// 统一了 SafeOperationIsolator 的功能，成为唯一的安全隔离器。
     /// </summary>
     public sealed class CabinetIsolator : ICabinetIsolator {
         private readonly ILogger<CabinetIsolator> _log;
@@ -132,6 +133,125 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 payload.prev,
                 payload.reason
             });
+        }
+
+        // ========== 安全操作执行方法（统一 SafeOperationIsolator 功能） ==========
+
+        /// <summary>
+        /// 安全执行操作（无返回值）
+        /// </summary>
+        public bool SafeExecute(Action action, string operationName, Action<Exception>? onError = null) {
+            if (action == null) {
+                throw new ArgumentNullException(nameof(action));
+            }
+
+            try {
+                _log.LogDebug("开始执行操作: {OperationName}", operationName);
+                action();
+                _log.LogDebug("操作执行成功: {OperationName}", operationName);
+                return true;
+            }
+            catch (Exception ex) {
+                _log.LogWarning(ex, "操作执行失败: {OperationName}", operationName);
+                
+                try {
+                    onError?.Invoke(ex);
+                }
+                catch (Exception callbackEx) {
+                    _log.LogError(callbackEx, "错误处理回调执行失败: {OperationName}", operationName);
+                }
+                
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 安全执行操作（有返回值）
+        /// </summary>
+        public T SafeExecute<T>(Func<T> func, string operationName, T defaultValue, Action<Exception>? onError = null) {
+            if (func == null) {
+                throw new ArgumentNullException(nameof(func));
+            }
+
+            try {
+                _log.LogDebug("开始执行操作: {OperationName}", operationName);
+                var result = func();
+                _log.LogDebug("操作执行成功: {OperationName}", operationName);
+                return result;
+            }
+            catch (Exception ex) {
+                _log.LogWarning(ex, "操作执行失败: {OperationName}，返回默认值", operationName);
+                
+                try {
+                    onError?.Invoke(ex);
+                }
+                catch (Exception callbackEx) {
+                    _log.LogError(callbackEx, "错误处理回调执行失败: {OperationName}", operationName);
+                }
+                
+                return defaultValue;
+            }
+        }
+
+        /// <summary>
+        /// 安全执行操作（可选返回值）
+        /// </summary>
+        public T? SafeExecuteNullable<T>(Func<T> func, string operationName, Action<Exception>? onError = null) where T : class {
+            if (func == null) {
+                throw new ArgumentNullException(nameof(func));
+            }
+
+            try {
+                _log.LogDebug("开始执行操作: {OperationName}", operationName);
+                var result = func();
+                _log.LogDebug("操作执行成功: {OperationName}", operationName);
+                return result;
+            }
+            catch (Exception ex) {
+                _log.LogWarning(ex, "操作执行失败: {OperationName}，返回 null", operationName);
+                
+                try {
+                    onError?.Invoke(ex);
+                }
+                catch (Exception callbackEx) {
+                    _log.LogError(callbackEx, "错误处理回调执行失败: {OperationName}", operationName);
+                }
+                
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 批量安全执行操作
+        /// </summary>
+        public int SafeExecuteBatch(Action[] actions, string operationName, bool stopOnFirstError = false) {
+            if (actions == null) {
+                throw new ArgumentNullException(nameof(actions));
+            }
+
+            int successCount = 0;
+            for (int i = 0; i < actions.Length; i++) {
+                bool success = SafeExecute(
+                    actions[i],
+                    $"{operationName}[{i}]"
+                );
+
+                if (success) {
+                    successCount++;
+                }
+                else if (stopOnFirstError) {
+                    _log.LogWarning("批量操作在第 {Index} 个操作失败后停止", i);
+                    break;
+                }
+            }
+
+            _log.LogInformation(
+                "批量操作完成: {SuccessCount}/{TotalCount} 成功",
+                successCount,
+                actions.Length
+            );
+
+            return successCount;
         }
     }
 }
