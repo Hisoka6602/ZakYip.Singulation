@@ -2439,12 +2439,31 @@ dotnet run -- stability 0.1  # 6分钟快速验证测试
 
 ## 构建与运行
 
+### ⚠️ 重要变更：自包含部署
+
+**从当前版本开始，应用程序已配置为自包含部署（Self-Contained Deployment）。**
+
+这意味着：
+- ✅ **无需在目标机器上安装 .NET 运行时** - 所有必需的运行时文件都包含在构建输出中
+- ✅ **可在"干净"的机器上直接运行** - 不依赖预先安装的 .NET 环境
+- ✅ **支持多平台** - Windows、Linux、macOS 等
+
+详细的构建说明请查看 **[BUILD.md](BUILD.md)**
+
 ### 前置要求
-- **.NET 8.0 SDK** 或更高版本
+
+**开发环境**：
+- **.NET 8.0 SDK** 或更高版本（仅开发时需要）
 - **IDE**：Visual Studio 2022、JetBrains Rider 或 VS Code
 - **雷赛 LTDMC 驱动**（仅用于硬件控制，开发和测试不需要）
 
+**部署环境**：
+- ✅ **无需安装 .NET 运行时** - 应用程序已自包含运行时
+- 目标操作系统：Windows x64、Linux x64 或其他支持的平台
+
 ### 构建整个解决方案
+
+**开发构建（Debug）**：
 ```bash
 # 恢复依赖
 dotnet restore
@@ -2457,6 +2476,20 @@ dotnet build --no-restore
 dotnet build ZakYip.Singulation.Host --no-restore
 dotnet build ZakYip.Singulation.Tests --no-restore
 ```
+
+**生产构建（Release）**：
+```bash
+# Windows x64（默认）
+dotnet build ZakYip.Singulation.Host -c Release
+
+# Linux x64
+dotnet build ZakYip.Singulation.Host -c Release -r linux-x64
+
+# 输出位置：bin/Release/net8.0/{runtime}/
+# 包含约 370+ 个文件（包括 .NET 运行时），总大小约 100MB
+```
+
+详细的构建选项和平台支持请查看 **[BUILD.md](BUILD.md)**
 
 ### 运行测试
 ```bash

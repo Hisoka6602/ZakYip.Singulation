@@ -8,6 +8,18 @@
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>$(NoWarn);1591</NoWarn>
 	</PropertyGroup>
+	
+	<!-- 自包含部署配置：应用程序将包含 .NET 运行时，无需单独安装 -->
+	<PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+		<!-- 当指定了运行时标识符时启用自包含部署 -->
+		<SelfContained>true</SelfContained>
+		<!-- 发布为单个可执行文件（可选，便于部署） -->
+		<PublishSingleFile>false</PublishSingleFile>
+		<!-- 启用运行时裁剪以减小发布大小（可选，谨慎使用） -->
+		<PublishTrimmed>false</PublishTrimmed>
+		<!-- 准备好可读的应用程序以便调试 -->
+		<PublishReadyToRun>false</PublishReadyToRun>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<Compile Remove="Runtime\新文件夹\**" />
