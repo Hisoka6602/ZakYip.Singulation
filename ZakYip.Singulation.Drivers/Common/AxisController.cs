@@ -125,7 +125,10 @@ namespace ZakYip.Singulation.Drivers.Common {
                 
                 token.ThrowIfCancellationRequested();
                 try {
+                    // 记录操作开始和轴状态
+                    OnControllerFaulted($"[轴操作开始] 轴={d.Axis}, 当前状态={d.Status}, 使能状态={d.IsEnabled}");
                     await action(d);
+                    OnControllerFaulted($"[轴操作完成] 轴={d.Axis}, 当前状态={d.Status}, 使能状态={d.IsEnabled}");
                 }
                 catch (Exception ex) {
                     OnControllerFaulted($"Drive {d.Axis}: {ex.Message}");
@@ -133,20 +136,40 @@ namespace ZakYip.Singulation.Drivers.Common {
             });
         }
 
-        public Task EnableAllAsync(CancellationToken ct = default) =>
-            ForEachDriveAsync(d => d.EnableAsync(ct), ct);
+        public Task EnableAllAsync(CancellationToken ct = default) {
+            OnControllerFaulted($"[EnableAllAsync] 开始使能所有轴，轴数={_drives.Count}");
+            foreach (var drive in _drives) {
+                OnControllerFaulted($"[EnableAllAsync] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
+            }
+            return ForEachDriveAsync(d => d.EnableAsync(ct), ct);
+        }
 
-        public Task DisableAllAsync(CancellationToken ct = default) =>
-            ForEachDriveAsync(d => d.DisableAsync(ct).AsTask(), ct);
+        public Task DisableAllAsync(CancellationToken ct = default) {
+            OnControllerFaulted($"[DisableAllAsync] 开始禁用所有轴，轴数={_drives.Count}");
+            foreach (var drive in _drives) {
+                OnControllerFaulted($"[DisableAllAsync] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
+            }
+            return ForEachDriveAsync(d => d.DisableAsync(ct).AsTask(), ct);
+        }
 
         public Task SetAccelDecelAllAsync(decimal accelMmPerSec2, decimal decelMmPerSec2, CancellationToken ct = default) =>
             ForEachDriveAsync(d => d.SetAccelDecelByLinearAsync(accelMmPerSec2, decelMmPerSec2, ct), ct);
 
-        public Task WriteSpeedAllAsync(decimal mmPerSec, CancellationToken ct = default) =>
-            ForEachDriveAsync(d => d.WriteSpeedAsync(mmPerSec, ct), ct);
+        public Task WriteSpeedAllAsync(decimal mmPerSec, CancellationToken ct = default) {
+            OnControllerFaulted($"[WriteSpeedAllAsync] 开始设置所有轴速度={mmPerSec} mm/s，轴数={_drives.Count}");
+            foreach (var drive in _drives) {
+                OnControllerFaulted($"[WriteSpeedAllAsync] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
+            }
+            return ForEachDriveAsync(d => d.WriteSpeedAsync(mmPerSec, ct), ct);
+        }
 
-        public Task StopAllAsync(CancellationToken ct = default) =>
-            ForEachDriveAsync(d => d.StopAsync(ct).AsTask(), ct);
+        public Task StopAllAsync(CancellationToken ct = default) {
+            OnControllerFaulted($"[StopAllAsync] 开始停止所有轴，轴数={_drives.Count}");
+            foreach (var drive in _drives) {
+                OnControllerFaulted($"[StopAllAsync] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
+            }
+            return ForEachDriveAsync(d => d.StopAsync(ct).AsTask(), ct);
+        }
 
         public async Task DisposeAllAsync(CancellationToken ct = default) {
             try {

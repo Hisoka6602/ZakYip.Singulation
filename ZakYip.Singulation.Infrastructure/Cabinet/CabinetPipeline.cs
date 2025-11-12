@@ -353,16 +353,23 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         /// <param name="ct">取消令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
         private async Task HandleStateChangedAsync(CabinetStateChangedEventArgs ev, CancellationToken ct) {
+            // 记录详细的状态转换信息
+            _log.LogInformation(
+                "[机柜状态转换] 从 {Previous} 转换到 {Current}, 触发类型={TriggerKind}, 原因={Reason}",
+                ev.Previous, ev.Current, ev.TriggerKind, ev.ReasonText);
+            
             StateChanged?.Invoke(this, ev);
             switch (ev.Current) {
                 case CabinetIsolationState.Isolated:
+                    _log.LogError("[机柜隔离] 系统进入隔离状态，执行紧急停机");
                     await StopAllAsync("safety-isolated", ev.ReasonText, ct).ConfigureAwait(false);
                     break;
                 case CabinetIsolationState.Degraded:
+                    _log.LogWarning("[机柜降级] 系统进入降级状态，执行停机");
                     await StopAllAsync("safety-degraded", ev.ReasonText, ct).ConfigureAwait(false);
                     break;
                 case CabinetIsolationState.Normal:
-                    _log.LogInformation("安全状态已恢复：{Reason}", ev.ReasonText);
+                    _log.LogInformation("[机柜正常] 安全状态已恢复：{Reason}", ev.ReasonText);
                     break;
             }
         }

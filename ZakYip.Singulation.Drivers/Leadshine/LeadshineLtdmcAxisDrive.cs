@@ -41,6 +41,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine
     {
         private readonly DriverOptions _opts;
         private volatile DriverStatus _status = DriverStatus.Disconnected;
+        
+        // 用于状态转换日志记录（通过事件发布）
+        private readonly object _statusLock = new();
 
         // —— 全局 PPR（只在 Enable 或 UpdateMechanics 时设置）——
         // 设备单位换算的唯一真源；未就绪禁止写速度/加减速度。
@@ -91,7 +94,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             _health.Recovered += () =>
             {
                 _fails.Reset();
-                _status = DriverStatus.Connected;
+                UpdateStatus(DriverStatus.Connected, "HealthMonitor.Recovered", "健康监测恢复");
             };
 
             // 断路器：降级与恢复回调
@@ -99,7 +102,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 _opts.ConsecutiveFailThreshold,
                 onDegraded: () =>
                 {
-                    _status = DriverStatus.Degraded;
+                    UpdateStatus(DriverStatus.Degraded, "CircuitBreaker.Degraded", "断路器触发（连续失败）");
                     OnAxisDisconnected("Degraded by circuit-breaker (consecutive failures).");
                     if (_opts.EnableHealthMonitor)
                         _health.Start();
@@ -107,7 +110,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 onRecovered: () =>
                 {
                     _fails.Reset();
-                    _status = DriverStatus.Connected;
+                    UpdateStatus(DriverStatus.Connected, "CircuitBreaker.Recovered", "断路器恢复");
                     _health.Stop();
                 }
             );
@@ -274,7 +277,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 return;
             }
 
-            _status = DriverStatus.Connected;
+            UpdateStatus(DriverStatus.Connected, "WriteSpeedAsync", $"写入速度成功: {mmPerSec} mm/s");
         }
 
         /// <summary>
@@ -387,25 +390,28 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             if (ret != 0)
             { OnAxisFaulted(new InvalidOperationException($"QuickStop failed, ret={ret}")); return; }
 
-            _status = DriverStatus.Connected;
+            UpdateStatus(DriverStatus.Connected, "StopAsync", "停止成功");
         }
 
         /// <summary>心跳/反馈：读取 0x606C（负载侧 pps），换算为 mm/s 广播。</summary>
         public async Task<bool> PingAsync(CancellationToken ct = default)
         {
             if (!EnsureNativeLibLoaded())
-            { _status = DriverStatus.Degraded; return false; }
+            { 
+                UpdateStatus(DriverStatus.Degraded, "PingAsync", "原生库未加载");
+                return false; 
+            }
 
             var ret = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort _, suppressLog: true);
             if (ret != 0)
             {
                 SetErrorFromRet("read 0x6041 (StatusWord)", ret);
-                _status = DriverStatus.Degraded;
+                UpdateStatus(DriverStatus.Degraded, "PingAsync", $"读取状态字失败: ret={ret}");
                 OnAxisDisconnected(LastErrorMessage!);
                 return false;
             }
 
-            _status = DriverStatus.Connected;
+            UpdateStatus(DriverStatus.Connected, "PingAsync", "心跳正常");
 
             ret = ReadTxPdo(LeadshineProtocolMap.Index.ActualVelocity, out int actualPps, suppressLog: true);
             if (ret != 0)
@@ -549,7 +555,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             }, ct).ConfigureAwait(false);
 
             // 状态更新仅在成功后执行一次
-            _status = DriverStatus.Connected;
+            UpdateStatus(DriverStatus.Connected, "EnableAsync", "使能成功");
             IsEnabled = true;
         }
 
@@ -599,7 +605,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             _health.Stop();
             _fails.Reset();
 
-            _status = DriverStatus.Disconnected;
+            UpdateStatus(DriverStatus.Disconnected, "DisableAsync", "禁用成功");
             Volatile.Write(ref _lastFbStamp, 0);
             _lastFbMmps = 0;
             IsEnabled = false;
@@ -664,7 +670,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 if (!_driverNotifiedOnce)
                 {
                     _driverNotifiedOnce = true;
-                    _status = DriverStatus.Degraded;
+                    UpdateStatus(DriverStatus.Degraded, "ReadAxisPulsesPerRevAsync", "原生库未加载");
                     OnDriverNotLoaded("LTDMC.dll", ex.Message);
                 }
                 return 0;
@@ -674,7 +680,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 if (!_driverNotifiedOnce)
                 {
                     _driverNotifiedOnce = true;
-                    _status = DriverStatus.Degraded;
+                    UpdateStatus(DriverStatus.Degraded, "ReadAxisPulsesPerRevAsync", $"入口缺失: {ex.Message}");
                     OnDriverNotLoaded("LTDMC.dll", $"入口缺失：{ex.Message}");
                 }
                 return 0;
@@ -783,7 +789,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 if (_status == DriverStatus.Degraded)
                 {
                     _health.Stop();
-                    _status = DriverStatus.Connected;
+                    UpdateStatus(DriverStatus.Connected, "WriteRxPdo", "PDO写入恢复");
                 }
             }
             return ret;
@@ -1000,7 +1006,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             if (!_driverNotifiedOnce)
             {
                 _driverNotifiedOnce = true;
-                _status = DriverStatus.Disconnected;
+                UpdateStatus(DriverStatus.Disconnected, "EnsureNativeLibLoaded", probed.reason);
                 OnDriverNotLoaded("LTDMC.dll", probed.reason);
             }
             return false;
@@ -1032,6 +1038,35 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetErrorFromRet(string action, int ret)
         { LastErrorCode = ret; LastErrorMessage = $"{action} failed, ret={ret}"; }
+        
+        /// <summary>
+        /// 安全地更新驱动状态，包含状态转换验证和日志记录。
+        /// </summary>
+        /// <param name="newStatus">新状态</param>
+        /// <param name="operation">触发操作</param>
+        /// <param name="reason">转换原因（可选）</param>
+        private void UpdateStatus(DriverStatus newStatus, string operation, string? reason = null)
+        {
+            lock (_statusLock)
+            {
+                var oldStatus = _status;
+                
+                // 如果状态没有变化，直接返回
+                if (oldStatus == newStatus)
+                    return;
+                
+                // 记录状态转换到命令事件（用于日志和追踪）
+                var transitionInfo = $"[状态转换] {oldStatus} -> {newStatus}";
+                if (!string.IsNullOrWhiteSpace(reason))
+                    transitionInfo += $", 原因: {reason}";
+                
+                OnCommandIssued("StateTransition", $"{Axis}, {operation}, {transitionInfo}", 0, 
+                    $"状态转换: {oldStatus} -> {newStatus}");
+                
+                // 更新状态
+                _status = newStatus;
+            }
+        }
 
         // —— 便捷事件触发 ——
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
