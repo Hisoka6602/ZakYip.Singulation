@@ -56,18 +56,6 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// <summary>
         /// 事件状态封装结构体（用于非阻塞事件广播）。
         /// </summary>
-        private readonly struct EvState<T>
-        {
-            public readonly object Sender;
-            public readonly EventHandler<T> Handler;
-            public readonly T Args;
-
-            public EvState(object sender, EventHandler<T> handler, T args)
-            {
-                Sender = sender;
-                Handler = handler;
-                Args = args;
-            }
-        }
+        private readonly record struct EvState<T>(object Sender, EventHandler<T> Handler, T Args);
     }
 }
