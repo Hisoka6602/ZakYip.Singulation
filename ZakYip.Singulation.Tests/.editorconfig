@@ -1,0 +1,5 @@
+# Test code legitimately catches all exceptions for safe test execution
+
+[*.cs]
+# Disable CA1031 for test code
+dotnet_diagnostic.CA1031.severity = none

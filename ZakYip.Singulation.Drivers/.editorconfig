@@ -1,0 +1,6 @@
+# Driver layer must be resilient - hardware communication errors should not crash the system
+# DLL interop and event handlers require broad exception handling
+
+[*.cs]
+# Reduce CA1031 to suggestion level for this project
+dotnet_diagnostic.CA1031.severity = suggestion
