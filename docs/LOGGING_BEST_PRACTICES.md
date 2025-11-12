@@ -187,45 +187,86 @@ _logger.LogInformation("用户登录: {Username}/{Password}", username, password
 
 ### 高频日志处理 / High-Frequency Log Handling
 
-对于高频操作（如每秒数百次的传感器读取），应实施采样策略：
-For high-frequency operations (e.g., hundreds of sensor readings per second), implement sampling:
+对于高频操作（如每秒数百次的传感器读取、心跳包处理、UDP广播），应使用 `LogSampler` 实施采样策略：
+For high-frequency operations (e.g., hundreds of sensor readings per second, heartbeat processing, UDP broadcasts), use `LogSampler` to implement sampling:
 
 ```csharp
-public class SampledLogger
+using ZakYip.Singulation.Infrastructure.Logging;
+
+public class MyHighFrequencyService : BackgroundService
 {
-    private readonly ILogger _logger;
-    private readonly TimeSpan _samplingInterval;
-    private DateTime _lastLogTime = DateTime.MinValue;
-    private long _eventCount;
+    private readonly ILogger<MyHighFrequencyService> _logger;
+    private readonly LogSampler _logSampler = new();
+    private long _operationCount = 0;
 
-    public SampledLogger(ILogger logger, TimeSpan samplingInterval)
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger = logger;
-        _samplingInterval = samplingInterval;
-    }
-
-    public void LogDebugSampled(string message, params object[] args)
-    {
-        var now = DateTime.UtcNow;
-        Interlocked.Increment(ref _eventCount);
-
-        if (now - _lastLogTime >= _samplingInterval)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            _logger.LogDebug(
-                message + " [采样: {EventCount} 次事件]",
-                args.Append(_eventCount).ToArray());
+            _operationCount++;
             
-            _lastLogTime = now;
-            Interlocked.Exchange(ref _eventCount, 0);
+            // 每100次操作记录一次日志
+            // Log every 100 operations
+            if (_logSampler.ShouldLog("MyOperation", 100))
+            {
+                _logger.HighFrequencyOperationSampled("MyOperation", _operationCount, 100);
+            }
+            
+            // 或者基于时间间隔采样
+            // Or sample based on time interval
+            if (_logSampler.ShouldLogByTime("MyTimeBasedOperation", TimeSpan.FromMinutes(1)))
+            {
+                _logger.LogInformation("定期操作状态检查: 总计={Count}次", _operationCount);
+            }
         }
     }
 }
 ```
 
+**LogSampler 的两种采样方式 / Two Sampling Methods:**
+
+1. **基于计数的采样 (Count-based Sampling)** - `ShouldLog(key, samplingRate)`
+   - 每 N 次操作记录一次
+   - 适用于均匀分布的高频操作
+
+2. **基于时间的采样 (Time-based Sampling)** - `ShouldLogByTime(key, minInterval)`
+   - 每隔固定时间记录一次
+   - 适用于时间敏感的监控
+
 **使用场景 / Use Cases:**
+- 心跳包处理 / Heartbeat processing (HeartbeatWorker - 每100次)
+- UDP服务发现广播 / UDP service discovery broadcasts (UdpDiscoveryService - 每20次)
+- 轴实时数据推送错误 / Axis realtime data push errors (RealtimeAxisDataService - 每100次)
 - 传感器数据读取 / Sensor data reading
 - 网络数据包处理 / Network packet processing
-- 性能监控指标 / Performance monitoring metrics
+
+### 实际应用示例 / Real-World Examples
+
+**示例 1: HeartbeatWorker (心跳处理)**
+```csharp
+// 每100次心跳记录一次，避免日志泛滥
+if (_logSampler.ShouldLog("Heartbeat", 100)) {
+    _log.HeartbeatReceived(mem.Length, _heartbeatSequence);
+}
+```
+
+**示例 2: UdpDiscoveryService (UDP广播)**
+```csharp
+// 每20次UDP广播记录一次
+_broadcastSequence++;
+if (_logSampler.ShouldLog("UdpBroadcast", 20)) {
+    _logger.UdpBroadcastSent(_broadcastSequence);
+}
+```
+
+**示例 3: SystemHealthMonitorService (系统健康检查)**
+```csharp
+// 仅在健康度优秀时，每5分钟记录一次
+if (health.Level == HealthLevel.Excellent && 
+    _logSampler.ShouldLogByTime("HealthExcellent", TimeSpan.FromMinutes(5))) {
+    _logger.SystemHealthExcellent(health.Score);
+}
+```
 
 ### 配置采样率 / Configure Sampling Rate
 
