@@ -355,8 +355,8 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         private async Task HandleStateChangedAsync(CabinetStateChangedEventArgs ev, CancellationToken ct) {
             // 记录详细的状态转换信息
             _log.LogInformation(
-                "[机柜状态转换] 从 {Previous} 转换到 {Current}, 触发类型={TriggerKind}, 原因={Reason}",
-                ev.Previous, ev.Current, ev.TriggerKind, ev.ReasonText);
+                "[机柜状态转换] 从 {Previous} 转换到 {Current}, 触发类型={ReasonKind}, 原因={Reason}",
+                ev.Previous, ev.Current, ev.ReasonKind, ev.ReasonText);
             
             StateChanged?.Invoke(this, ev);
             switch (ev.Current) {
