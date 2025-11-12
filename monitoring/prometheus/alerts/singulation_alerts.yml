@@ -1,0 +1,125 @@
+# ZakYip.Singulation 告警规则
+# 定义关键指标的告警阈值和条件
+
+groups:
+  # 应用健康告警组
+  - name: application_health
+    interval: 30s
+    rules:
+      # 应用实例不可用
+      - alert: ServiceDown
+        expr: up{job="singulation-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Singulation 服务不可用"
+          description: "{{ $labels.instance }} 实例已经停止响应超过 1 分钟"
+
+      # 高内存使用率
+      - alert: HighMemoryUsage
+        expr: process_runtime_dotnet_gc_heap_size_bytes{job="singulation-app"} > 500000000
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "内存使用率过高"
+          description: "{{ $labels.instance }} 内存使用超过 500MB，当前值: {{ $value | humanize }}B"
+
+      # GC 频繁触发
+      - alert: HighGCPressure
+        expr: rate(process_runtime_dotnet_gc_collections_count{job="singulation-app"}[1m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "GC 压力过高"
+          description: "{{ $labels.instance }} GC 触发频率过高: {{ $value | humanize }}/s"
+
+  # 业务指标告警组
+  - name: business_metrics
+    interval: 30s
+    rules:
+      # 帧丢失率过高
+      - alert: HighFrameDropRate
+        expr: rate(singulation_frames_dropped_total{job="singulation-app"}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "帧丢失率过高"
+          description: "{{ $labels.instance }} 帧丢失率超过 5/s: {{ $value | humanize }}/s"
+
+      # 系统降级事件频繁
+      - alert: FrequentDegradation
+        expr: rate(singulation_degrade_total{job="singulation-app"}[5m]) > 1
+        for: 3m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "系统降级事件频繁"
+          description: "{{ $labels.instance }} 降级事件频率: {{ $value | humanize }}/s"
+
+      # 轴故障频繁
+      - alert: AxisFaultDetected
+        expr: rate(singulation_axis_fault_total{job="singulation-app"}[5m]) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          category: hardware
+        annotations:
+          summary: "轴故障检测"
+          description: "{{ $labels.instance }} 检测到轴故障: {{ $value | humanize }}/s"
+
+      # 心跳超时频繁
+      - alert: HeartbeatTimeouts
+        expr: rate(singulation_heartbeat_timeout_total{job="singulation-app"}[5m]) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+          category: connectivity
+        annotations:
+          summary: "心跳超时频繁"
+          description: "{{ $labels.instance }} 心跳超时率: {{ $value | humanize }}/s"
+
+      # 帧处理延迟过高
+      - alert: HighFrameLatency
+        expr: histogram_quantile(0.95, rate(singulation_frame_rtt_ms_bucket{job="singulation-app"}[5m])) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "帧处理延迟过高"
+          description: "{{ $labels.instance }} P95 帧 RTT 超过 100ms: {{ $value | humanize }}ms"
+
+  # HTTP 性能告警组
+  - name: http_performance
+    interval: 30s
+    rules:
+      # HTTP 请求错误率过高
+      - alert: HighHttpErrorRate
+        expr: rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "HTTP 5xx 错误率过高"
+          description: "{{ $labels.instance }} 5xx 错误率: {{ $value | humanize }}/s"
+
+      # HTTP 请求延迟过高
+      - alert: HighHttpLatency
+        expr: histogram_quantile(0.95, rate(http_server_request_duration_seconds_bucket{job="singulation-app"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "HTTP 请求延迟过高"
+          description: "{{ $labels.instance }} P95 延迟超过 1s: {{ $value | humanize }}s"

@@ -37,6 +37,7 @@ using ZakYip.Singulation.Core.Abstractions.Realtime;
 using ZakYip.Singulation.Infrastructure.Persistence;
 using ZakYip.Singulation.Host.Configuration;
 using System.Runtime.InteropServices;
+using OpenTelemetry.Metrics;
 
 ThreadPool.SetMinThreads(HostConstants.MinWorkerThreads, HostConstants.MinCompletionPortThreads);
 System.Runtime.GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
@@ -120,6 +121,16 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ---------- Health Checks ----------
         services.AddHealthChecks();
+
+        // ---------- OpenTelemetry Metrics (Prometheus) ----------
+        services.AddOpenTelemetry()
+            .WithMetrics(metrics => {
+                metrics
+                    .AddMeter("ZakYip.Singulation") // 添加自定义 Meter
+                    .AddRuntimeInstrumentation()      // .NET 运行时指标
+                    .AddAspNetCoreInstrumentation()   // ASP.NET Core 指标
+                    .AddPrometheusExporter();         // Prometheus 导出器
+            });
 
         // ---------- Memory Cache ----------
         services.AddMemoryCache();
@@ -352,6 +363,9 @@ var host = Host.CreateDefaultBuilder(args)
                 opt.DocumentTitle = "ZakYip.Singulation ― API 文档";
                 opt.SwaggerEndpoint("/swagger/v1/swagger.json", "ZakYip.Singulation API v1");
             });
+
+            // ---------- Prometheus Metrics ----------
+            app.UseOpenTelemetryPrometheusScrapingEndpoint();
 
             // ---------- 终结点 ----------
             app.UseEndpoints(endpoints => {

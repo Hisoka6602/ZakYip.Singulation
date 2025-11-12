@@ -35,6 +35,10 @@
 		<PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="9.0.10" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.10" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="9.0.10" />
+		<PackageReference Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.13.1-beta.1" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.13.1" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.13.0" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.13.0" />
 		<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
 		<PackageReference Include="Swashbuckle.AspNetCore.Annotations" Version="9.0.6" />
 		<PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="9.0.6" />
