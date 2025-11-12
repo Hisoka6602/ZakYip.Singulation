@@ -1,0 +1,6 @@
+# Transport layer event raising and cleanup code legitimately catches all exceptions
+# to prevent breaking subscribers and masking original exceptions
+
+[*.cs]
+# Reduce CA1031 to suggestion level for this project - transport must be resilient
+dotnet_diagnostic.CA1031.severity = suggestion

@@ -1,0 +1,5 @@
+# MAUI application must prevent crashes - all exceptions should be caught and handled gracefully
+
+[*.cs]
+# Reduce CA1031 to suggestion level for this project
+dotnet_diagnostic.CA1031.severity = suggestion

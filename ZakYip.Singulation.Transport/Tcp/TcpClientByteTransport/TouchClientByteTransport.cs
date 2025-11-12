@@ -9,6 +9,7 @@ using TouchSocket.Sockets;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Exceptions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
 
@@ -115,10 +116,20 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                 // 客户端通常不需要额外延时；如需可加 50~100ms
                 await StartAsync(ct).ConfigureAwait(false);
             }
-            catch (Exception ex) {
+            catch (OperationCanceledException) {
+                throw; // Let cancellation propagate
+            }
+            catch (System.Net.Sockets.SocketException ex) {
                 //不抛异常，事件上报
                 RaiseError($"client restart failed: {ex.Message}", ex, transient: true,
                     endpoint: $"{_opt.Host}:{_opt.Port}", port: _opt.Port);
+                throw new TransportException($"TCP client restart failed: {ex.Message}", ex);
+            }
+            catch (System.IO.IOException ex) {
+                //不抛异常，事件上报
+                RaiseError($"client restart failed: {ex.Message}", ex, transient: true,
+                    endpoint: $"{_opt.Host}:{_opt.Port}", port: _opt.Port);
+                throw new TransportException($"TCP client restart failed: {ex.Message}", ex);
             }
         }
 
@@ -231,6 +242,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                     catch (OperationCanceledException) {
                         break; // 正常退出
                     }
+#pragma warning disable CA1031 // Catching all exceptions in retry loop is intentional for resilience
                     catch (Exception ex) {
                         if (token.IsCancellationRequested || _stopping) break;
 
@@ -238,6 +250,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                         RaiseError($"connect/retry failed: {ex.Message}", ex, transient: true, endpoint: endpoint, port: _opt.Port);
                         // Retry 策略会安排下一次尝试，这里无需额外延时
                     }
+#pragma warning restore CA1031
                 }
             }
             finally {

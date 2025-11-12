@@ -114,9 +114,11 @@ internal static class Program {
                 Thread.Sleep(100);
             }
         }
+#pragma warning disable CA1031 // Top-level exception handler - must catch all exceptions
         catch (Exception ex) {
             Console.WriteLine($"[致命错误] 捕获到异常:{ex}");
         }
+#pragma warning restore CA1031
         finally {
             // 停机并释放
             try {

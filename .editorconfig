@@ -166,8 +166,8 @@ dotnet_naming_style.begins_with_i.required_suffix =
 dotnet_naming_style.begins_with_i.word_separator =
 dotnet_naming_style.begins_with_i.capitalization = pascal_case
 
-# CA1031: Do not catch general exception types - suggestion (顶层API控制器需要捕获通用异常以返回统一错误响应)
-dotnet_diagnostic.CA1031.severity = suggestion
+# CA1031: Do not catch general exception types - warning (顶层API控制器可使用异常过滤器来捕获通用异常以返回统一错误响应)
+dotnet_diagnostic.CA1031.severity = warning
 
 # CA1062: Validate arguments of public methods - suggestion
 dotnet_diagnostic.CA1062.severity = suggestion

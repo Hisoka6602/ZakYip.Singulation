@@ -230,3 +230,58 @@ public class SafetyViolationException : SingulationException
         IsRetryable = false;
     }
 }
+
+/// <summary>
+/// IO操作异常
+/// IO operation exception
+/// </summary>
+public class IoOperationException : SingulationException
+{
+    public IoOperationException(string message)
+        : base("IO_ERROR", message)
+    {
+        IsRetryable = true;
+    }
+
+    public IoOperationException(string message, Exception innerException)
+        : base("IO_ERROR", message, innerException)
+    {
+        IsRetryable = true;
+    }
+}
+
+/// <summary>
+/// 数据库操作异常
+/// Database operation exception
+/// </summary>
+public class DatabaseOperationException : SingulationException
+{
+    public DatabaseOperationException(string message)
+        : base("DATABASE_ERROR", message)
+    {
+        IsRetryable = true;
+    }
+
+    public DatabaseOperationException(string message, Exception innerException)
+        : base("DATABASE_ERROR", message, innerException)
+    {
+        IsRetryable = true;
+    }
+}
+
+/// <summary>
+/// 序列化/反序列化异常
+/// Serialization/Deserialization exception
+/// </summary>
+public class SerializationException : SingulationException
+{
+    public SerializationException(string message)
+        : base("SERIALIZATION_ERROR", message)
+    {
+    }
+
+    public SerializationException(string message, Exception innerException)
+        : base("SERIALIZATION_ERROR", message, innerException)
+    {
+    }
+}
