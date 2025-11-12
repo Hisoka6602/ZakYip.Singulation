@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
@@ -112,9 +113,17 @@ namespace ZakYip.Singulation.Drivers.Common {
                 throw new InvalidOperationException(msg);
             }
 
-            // 并行执行所有轴的操作，提升性能
-            var tasks = _drives.Select(async d => {
-                ct.ThrowIfCancellationRequested();
+            // 使用 Parallel.ForEachAsync 并行执行所有轴的操作，每个操作启动前间隔1ms
+            // 这样可以避免并发调用过快导致部分轴执行失败
+            var index = 0;
+            await Parallel.ForEachAsync(_drives, ct, async (d, token) => {
+                // 为每个轴添加1ms的启动间隔，避免并发调用过快
+                var currentIndex = Interlocked.Increment(ref index) - 1;
+                if (currentIndex > 0) {
+                    await Task.Delay(1, token);
+                }
+                
+                token.ThrowIfCancellationRequested();
                 try {
                     await action(d);
                 }
@@ -122,8 +131,6 @@ namespace ZakYip.Singulation.Drivers.Common {
                     OnControllerFaulted($"Drive {d.Axis}: {ex.Message}");
                 }
             });
-            
-            await Task.WhenAll(tasks);
         }
 
         public Task EnableAllAsync(CancellationToken ct = default) =>
