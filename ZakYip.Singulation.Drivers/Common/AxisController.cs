@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using ZakYip.Singulation.Core.Contracts.Dto;
+using ZakYip.Singulation.Core.Exceptions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 
@@ -79,12 +80,22 @@ namespace ZakYip.Singulation.Drivers.Common {
                         _lastSpeeds.Add(null); // Initialize last speed as null for new axis
                         _aggregator.Attach(drive);
                     }
-                    catch (Exception ex) {
+                    catch (AxisControlException) {
+                        throw; // Re-throw domain exceptions
+                    }
+                    catch (InvalidOperationException ex) {
                         var msg = $"Create axis {i} (node {axisId.Value}) failed: {ex.Message}";
                         OnControllerFaulted(msg);
                         _drives.Clear(); // 若需要可在此处补充逐个 Detach
                         _lastSpeeds.Clear();
-                        return new(false, msg);
+                        throw new AxisControlException(msg, axisId.Value, ex);
+                    }
+                    catch (ArgumentException ex) {
+                        var msg = $"Create axis {i} (node {axisId.Value}) failed: {ex.Message}";
+                        OnControllerFaulted(msg);
+                        _drives.Clear();
+                        _lastSpeeds.Clear();
+                        throw new AxisControlException(msg, axisId.Value, ex);
                     }
                 }
 
@@ -96,8 +107,15 @@ namespace ZakYip.Singulation.Drivers.Common {
                 OnControllerFaulted(msg);
                 return new(false, msg);
             }
-            catch (Exception ex) {
-                var msg = $"Unexpected error: {ex.Message}";
+            catch (AxisControlException ex) {
+                var msg = ex.Message;
+                OnControllerFaulted(msg);
+                _drives.Clear();
+                _lastSpeeds.Clear();
+                return new(false, msg);
+            }
+            catch (HardwareCommunicationException ex) {
+                var msg = $"Hardware communication error: {ex.Message}";
                 OnControllerFaulted(msg);
                 _drives.Clear();
                 _lastSpeeds.Clear();
@@ -130,8 +148,17 @@ namespace ZakYip.Singulation.Drivers.Common {
                     await action(d);
                     OnControllerFaulted($"[轴操作完成] 轴={d.Axis}, 当前状态={d.Status}, 使能状态={d.IsEnabled}");
                 }
-                catch (Exception ex) {
+                catch (OperationCanceledException) {
+                    throw; // Let cancellation propagate
+                }
+                catch (AxisOperationException ex) {
                     OnControllerFaulted($"Drive {d.Axis}: {ex.Message}");
+                }
+                catch (HardwareCommunicationException ex) {
+                    OnControllerFaulted($"Drive {d.Axis}: Hardware communication error - {ex.Message}");
+                }
+                catch (InvalidOperationException ex) {
+                    OnControllerFaulted($"Drive {d.Axis}: Invalid operation - {ex.Message}");
                 }
             });
         }
@@ -227,7 +254,17 @@ namespace ZakYip.Singulation.Drivers.Common {
                 if (!lastSpeed.HasValue || lastSpeed.Value != newSpeed) {
                     try {
                         await drive.WriteSpeedAsync(newSpeed, ct);
-                    } catch (Exception ex) {
+                    }
+                    catch (OperationCanceledException) {
+                        throw; // Let cancellation propagate
+                    }
+                    catch (AxisOperationException ex) {
+                        OnControllerFaulted($"Failed to write speed for axis {i}: {ex.Message}");
+                    }
+                    catch (HardwareCommunicationException ex) {
+                        OnControllerFaulted($"Failed to write speed for axis {i}: Hardware error - {ex.Message}");
+                    }
+                    catch (InvalidOperationException ex) {
                         OnControllerFaulted($"Failed to write speed for axis {i}: {ex.Message}");
                     }
                     _lastSpeeds[i] = newSpeed;

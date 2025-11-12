@@ -6,6 +6,7 @@ using TouchSocket.Sockets;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Exceptions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
 
@@ -109,11 +110,26 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
                 // 刚启动监听，尚无客户端 ⇒ 标记为 Disconnected（服务可用但未连接）
                 SetConnState(TransportConnectionState.Disconnected, endpoint, reason: "listening");
             }
-            catch (Exception ex) {
+            catch (System.Net.Sockets.SocketException ex) {
                 Status = TransportStatus.Faulted;
                 RaiseError($"server start failed: {ex.Message}", ex, transient: false, endpoint: endpoint, port: _opt.Port);
-
-                try { service.SafeDispose(); } catch { /* ignore */ }
+                throw new TransportException($"TCP server start failed: {ex.Message}", ex);
+            }
+            catch (System.IO.IOException ex) {
+                Status = TransportStatus.Faulted;
+                RaiseError($"server start failed: {ex.Message}", ex, transient: false, endpoint: endpoint, port: _opt.Port);
+                throw new TransportException($"TCP server start failed: {ex.Message}", ex);
+            }
+            catch (InvalidOperationException ex) {
+                Status = TransportStatus.Faulted;
+                RaiseError($"server start failed: {ex.Message}", ex, transient: false, endpoint: endpoint, port: _opt.Port);
+                throw new TransportException($"TCP server start failed: {ex.Message}", ex);
+            }
+            finally {
+                // Cleanup if not assigned to _service
+                if (_service == null) {
+                    try { service.SafeDispose(); } catch { /* ignore */ }
+                }
             }
         }
 
@@ -160,9 +176,21 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
                 await StartAsync(ct).ConfigureAwait(false);
             }
-            catch (Exception ex) {
+            catch (OperationCanceledException) {
+                throw; // Let cancellation propagate
+            }
+            catch (TransportException) {
+                throw; // Re-throw transport exceptions
+            }
+            catch (System.Net.Sockets.SocketException ex) {
                 RaiseError($"server restart failed: {ex.Message}", ex, transient: true,
                     endpoint: endpoint, port: _opt.Port);
+                throw new TransportException($"TCP server restart failed: {ex.Message}", ex);
+            }
+            catch (System.IO.IOException ex) {
+                RaiseError($"server restart failed: {ex.Message}", ex, transient: true,
+                    endpoint: endpoint, port: _opt.Port);
+                throw new TransportException($"TCP server restart failed: {ex.Message}", ex);
             }
         }
 
