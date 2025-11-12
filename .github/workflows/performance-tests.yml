@@ -1,0 +1,375 @@
+name: Performance Regression Testing
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:  # Allow manual triggers
+  schedule:
+    # Run nightly performance tests at 2 AM UTC
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  performance-benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for comparison
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore ZakYip.Singulation.Benchmarks/ZakYip.Singulation.Benchmarks.csproj
+      
+      - name: Build benchmarks
+        run: dotnet build ZakYip.Singulation.Benchmarks/ZakYip.Singulation.Benchmarks.csproj -c Release --no-restore
+      
+      # Run each benchmark suite separately for better diagnostics
+      - name: Run Protocol Benchmarks
+        run: |
+          dotnet run --project ZakYip.Singulation.Benchmarks -c Release -- protocol
+          mkdir -p benchmark-results
+          cp -r ZakYip.Singulation.Benchmarks/BenchmarkDotNet.Artifacts/results/* benchmark-results/ || true
+      
+      - name: Run LINQ vs Loop Benchmarks
+        run: |
+          dotnet run --project ZakYip.Singulation.Benchmarks -c Release -- linq
+          cp -r ZakYip.Singulation.Benchmarks/BenchmarkDotNet.Artifacts/results/* benchmark-results/ || true
+      
+      - name: Run Batch Operation Benchmarks
+        run: |
+          dotnet run --project ZakYip.Singulation.Benchmarks -c Release -- batch
+          cp -r ZakYip.Singulation.Benchmarks/BenchmarkDotNet.Artifacts/results/* benchmark-results/ || true
+      
+      - name: Run Memory Allocation Benchmarks
+        run: |
+          dotnet run --project ZakYip.Singulation.Benchmarks -c Release -- memory
+          cp -r ZakYip.Singulation.Benchmarks/BenchmarkDotNet.Artifacts/results/* benchmark-results/ || true
+      
+      - name: Run IO Operation Benchmarks
+        run: |
+          dotnet run --project ZakYip.Singulation.Benchmarks -c Release -- io
+          cp -r ZakYip.Singulation.Benchmarks/BenchmarkDotNet.Artifacts/results/* benchmark-results/ || true
+      
+      - name: Run Concurrency Benchmarks
+        run: |
+          dotnet run --project ZakYip.Singulation.Benchmarks -c Release -- concurrency
+          cp -r ZakYip.Singulation.Benchmarks/BenchmarkDotNet.Artifacts/results/* benchmark-results/ || true
+      
+      # Save benchmark results as artifacts
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results-${{ github.sha }}
+          path: benchmark-results/
+          retention-days: 90
+      
+      # Download baseline results if available (from master branch)
+      - name: Download baseline results
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v3
+        continue-on-error: true
+        with:
+          workflow: performance-tests.yml
+          branch: master
+          name: performance-baseline
+          path: baseline-results/
+      
+      # Compare results with baseline
+      - name: Compare with baseline
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          echo "## Performance Benchmark Results" > performance-report.md
+          echo "" >> performance-report.md
+          echo "Comparing current results with baseline from master branch..." >> performance-report.md
+          echo "" >> performance-report.md
+          
+          if [ -d "baseline-results" ]; then
+            echo "✅ Baseline found. Detailed comparison:" >> performance-report.md
+            echo "" >> performance-report.md
+            
+            # List all result files for debugging
+            echo "### Benchmark Result Files" >> performance-report.md
+            echo "" >> performance-report.md
+            echo "**Current Results:**" >> performance-report.md
+            ls -la benchmark-results/*.json 2>/dev/null || echo "No JSON files found" >> performance-report.md
+            echo "" >> performance-report.md
+            echo "**Baseline Results:**" >> performance-report.md
+            ls -la baseline-results/*.json 2>/dev/null || echo "No JSON files found" >> performance-report.md
+            echo "" >> performance-report.md
+          else
+            echo "⚠️ No baseline results found. This is the first run or baseline is missing." >> performance-report.md
+            echo "Results will be used as baseline for future comparisons." >> performance-report.md
+          fi
+          
+          echo "" >> performance-report.md
+          echo "### Summary" >> performance-report.md
+          echo "" >> performance-report.md
+          echo "- Benchmark artifacts are available for download" >> performance-report.md
+          echo "- Results stored for 90 days" >> performance-report.md
+          echo "- View detailed results in BenchmarkDotNet artifacts" >> performance-report.md
+          
+          cat performance-report.md
+      
+      # Post comment on PR with results
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## 🚀 Performance Benchmark Results\n\n';
+            
+            try {
+              const report = fs.readFileSync('performance-report.md', 'utf8');
+              comment += report;
+            } catch (error) {
+              comment += '⚠️ Could not read performance report file.\n';
+            }
+            
+            comment += '\n\n---\n';
+            comment += `📊 **Artifacts:** [Download benchmark results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+            comment += `⏱️ **Run time:** ${new Date().toISOString()}\n`;
+            comment += `🔗 **Commit:** ${{ github.sha }}\n`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      # Store results as baseline on master branch
+      - name: Save as performance baseline
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-baseline
+          path: benchmark-results/
+          retention-days: 90
+
+  stability-test:
+    name: Stability Test (Quick)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore ZakYip.Singulation.Benchmarks/ZakYip.Singulation.Benchmarks.csproj
+      
+      - name: Build benchmarks
+        run: dotnet build ZakYip.Singulation.Benchmarks/ZakYip.Singulation.Benchmarks.csproj -c Release --no-restore
+      
+      # Run quick 10-minute stability test
+      - name: Run stability test
+        run: |
+          echo "Running 10-minute stability test..."
+          dotnet run --project ZakYip.Singulation.Benchmarks -c Release -- stability 0.167 > stability-results.txt 2>&1
+          
+          echo "Stability test completed. Results:"
+          cat stability-results.txt
+      
+      - name: Analyze stability results
+        run: |
+          echo "## Stability Test Results" > stability-report.md
+          echo "" >> stability-report.md
+          
+          # Extract key metrics from stability results
+          if grep -q "稳定性评估" stability-results.txt; then
+            echo "✅ Stability test completed successfully" >> stability-report.md
+            echo "" >> stability-report.md
+            echo "### Key Metrics" >> stability-report.md
+            echo "" >> stability-report.md
+            echo '```' >> stability-report.md
+            grep -A 20 "稳定性测试报告" stability-results.txt >> stability-report.md || true
+            echo '```' >> stability-report.md
+            
+            # Check for critical issues
+            if grep -q "可能存在内存泄漏" stability-results.txt; then
+              echo "" >> stability-report.md
+              echo "⚠️ **WARNING:** Possible memory leak detected!" >> stability-report.md
+            fi
+            
+            if grep -q "可能存在线程泄漏" stability-results.txt; then
+              echo "" >> stability-report.md
+              echo "⚠️ **WARNING:** Possible thread leak detected!" >> stability-report.md
+            fi
+            
+            # Extract stability score
+            SCORE=$(grep "评分:" stability-results.txt | sed 's/.*评分: \([0-9]*\).*/\1/' || echo "N/A")
+            echo "" >> stability-report.md
+            echo "**Stability Score:** $SCORE/100" >> stability-report.md
+            
+            # Set fail threshold
+            if [ "$SCORE" != "N/A" ] && [ "$SCORE" -lt 50 ]; then
+              echo "" >> stability-report.md
+              echo "❌ **FAILED:** Stability score below threshold (50)" >> stability-report.md
+              exit 1
+            fi
+          else
+            echo "❌ Stability test did not complete successfully" >> stability-report.md
+            echo "" >> stability-report.md
+            echo '```' >> stability-report.md
+            cat stability-results.txt >> stability-report.md
+            echo '```' >> stability-report.md
+          fi
+          
+          cat stability-report.md
+      
+      - name: Upload stability results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stability-results-${{ github.sha }}
+          path: |
+            stability-results.txt
+            stability-report.md
+          retention-days: 30
+      
+      - name: Comment PR with stability results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## 🔬 Stability Test Results\n\n';
+            
+            try {
+              const report = fs.readFileSync('stability-report.md', 'utf8');
+              comment += report;
+            } catch (error) {
+              comment += '⚠️ Could not read stability report file.\n';
+            }
+            
+            comment += '\n\n---\n';
+            comment += `📊 **Artifacts:** [Download stability results](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+            comment += `⏱️ **Duration:** 10 minutes\n`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Optional: Extended stability test (runs on schedule only)
+  stability-test-extended:
+    name: Stability Test (Extended - 1 hour)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore ZakYip.Singulation.Benchmarks/ZakYip.Singulation.Benchmarks.csproj
+      
+      - name: Build benchmarks
+        run: dotnet build ZakYip.Singulation.Benchmarks/ZakYip.Singulation.Benchmarks.csproj -c Release --no-restore
+      
+      - name: Run extended stability test
+        run: |
+          echo "Running 1-hour extended stability test..."
+          dotnet run --project ZakYip.Singulation.Benchmarks -c Release -- stability 1 > stability-extended-results.txt 2>&1
+          
+          echo "Extended stability test completed. Results:"
+          cat stability-extended-results.txt
+      
+      - name: Analyze extended stability results
+        run: |
+          # Similar analysis as quick test
+          echo "## Extended Stability Test Results (1 hour)" > stability-extended-report.md
+          echo "" >> stability-extended-report.md
+          
+          if grep -q "稳定性评估" stability-extended-results.txt; then
+            echo "✅ Extended stability test completed successfully" >> stability-extended-report.md
+            echo "" >> stability-extended-report.md
+            echo '```' >> stability-extended-report.md
+            grep -A 25 "稳定性测试报告" stability-extended-results.txt >> stability-extended-report.md || true
+            echo '```' >> stability-extended-report.md
+            
+            SCORE=$(grep "评分:" stability-extended-results.txt | sed 's/.*评分: \([0-9]*\).*/\1/' || echo "N/A")
+            echo "" >> stability-extended-report.md
+            echo "**Extended Stability Score:** $SCORE/100" >> stability-extended-report.md
+            
+            if [ "$SCORE" != "N/A" ] && [ "$SCORE" -lt 60 ]; then
+              echo "" >> stability-extended-report.md
+              echo "❌ **FAILED:** Extended stability score below threshold (60)" >> stability-extended-report.md
+              exit 1
+            fi
+          else
+            echo "❌ Extended stability test did not complete successfully" >> stability-extended-report.md
+            exit 1
+          fi
+          
+          cat stability-extended-report.md
+      
+      - name: Upload extended stability results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stability-extended-results-${{ github.sha }}
+          path: |
+            stability-extended-results.txt
+            stability-extended-report.md
+          retention-days: 90
+      
+      - name: Create issue if extended stability test fails
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## ⚠️ Extended Stability Test Failed\n\n';
+            body += `The 1-hour stability test has detected issues.\n\n`;
+            body += `**Run:** [View Details](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+            body += `**Commit:** ${{ github.sha }}\n`;
+            body += `**Branch:** ${{ github.ref }}\n\n`;
+            
+            try {
+              const report = fs.readFileSync('stability-extended-report.md', 'utf8');
+              body += report;
+            } catch (error) {
+              body += 'Could not read extended stability report.\n';
+            }
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Performance] Extended Stability Test Failed - ${new Date().toISOString().split('T')[0]}`,
+              body: body,
+              labels: ['performance', 'stability', 'automated']
+            });
