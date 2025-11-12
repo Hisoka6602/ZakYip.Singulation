@@ -40,7 +40,7 @@ namespace ZakYip.Singulation.Tests {
 
         [MiniFact]
         public void IoLinkagePointDefaultsAreZero() {
-            var point = new IoLinkagePoint();
+            var point = new IoLinkagePoint { BitNumber = 0, Level = TriggerLevel.ActiveHigh };
 
             MiniAssert.Equal(0, point.BitNumber, "默认 BitNumber 应该为 0");
             MiniAssert.Equal(TriggerLevel.ActiveHigh, point.Level, "默认 Level 应该为 ActiveHigh (0)");

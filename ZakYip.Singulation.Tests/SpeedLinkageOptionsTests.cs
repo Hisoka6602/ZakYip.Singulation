@@ -51,7 +51,7 @@ namespace ZakYip.Singulation.Tests {
 
         [MiniFact]
         public void SpeedLinkageIoPointDefaultsAreZero() {
-            var point = new SpeedLinkageIoPoint();
+            var point = new SpeedLinkageIoPoint { BitNumber = 0, LevelWhenStopped = TriggerLevel.ActiveHigh };
 
             MiniAssert.Equal(0, point.BitNumber, "默认 BitNumber 应该为 0");
             MiniAssert.Equal(TriggerLevel.ActiveHigh, point.LevelWhenStopped, "默认 LevelWhenStopped 应该为 ActiveHigh (0)");

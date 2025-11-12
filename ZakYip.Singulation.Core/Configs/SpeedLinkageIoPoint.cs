@@ -13,12 +13,12 @@ namespace ZakYip.Singulation.Core.Configs {
         /// </summary>
         [Required(ErrorMessage = "IO 端口编号不能为空")]
         [Range(0, 1023, ErrorMessage = "IO 端口编号必须在 0-1023 之间")]
-        public int BitNumber { get; init; }
+        public required int BitNumber { get; init; }
 
         /// <summary>
         /// 当所有轴速度为0时的目标电平状态（ActiveHigh=高电平，ActiveLow=低电平）。
         /// </summary>
         [Required(ErrorMessage = "IO 电平状态不能为空")]
-        public TriggerLevel LevelWhenStopped { get; init; }
+        public required TriggerLevel LevelWhenStopped { get; init; }
     }
 }

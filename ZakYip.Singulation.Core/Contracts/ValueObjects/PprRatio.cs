@@ -9,7 +9,7 @@ namespace ZakYip.Singulation.Core.Contracts.ValueObjects {
     /// <summary>
     /// 表示 PPR（每转脉冲数）比率的值对象。
     /// </summary>
-    public readonly struct PprRatio {
+    public readonly record struct PprRatio {
         /// <summary>
         /// 脉冲数的分子部分，用于计算每转脉冲数比率。
         /// </summary>

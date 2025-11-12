@@ -16,12 +16,12 @@ namespace ZakYip.Singulation.Core.Configs {
         /// 网格行数，必须大于等于 1。
         /// </summary>
         [Range(1, int.MaxValue, ErrorMessage = "网格行数必须大于等于 1")]
-        public int Rows { get; init; }
+        public required int Rows { get; init; }
 
         /// <summary>
         /// 网格列数，必须大于等于 1。
         /// </summary>
         [Range(1, int.MaxValue, ErrorMessage = "网格列数必须大于等于 1")]
-        public int Cols { get; init; }
+        public required int Cols { get; init; }
     }
 }
