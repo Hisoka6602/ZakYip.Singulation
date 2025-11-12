@@ -595,38 +595,109 @@ db.Rebuild();
 
 ## 4. 监控告警
 
-### 4.1 关键监控指标
+### 4.1 Prometheus + Grafana 监控系统（推荐）
 
-#### 4.1.1 服务健康指标
+**🎯 完整的 APM 和告警系统已集成**
+
+系统现已集成 Prometheus + Grafana 监控栈，提供：
+- ✅ 实时指标收集和可视化
+- ✅ 自动告警和通知
+- ✅ 历史数据分析
+- ✅ 性能基线建立
+
+**详细文档**：参见 **[监控系统文档](../monitoring/README.md)**
+
+#### 4.1.1 快速启动监控
+
+```bash
+# 1. 确保应用正在运行
+# 应用会在 http://localhost:5005/metrics 暴露 Prometheus 指标
+
+# 2. 启动 Prometheus + Grafana
+cd /path/to/ZakYip.Singulation
+docker-compose -f docker-compose.monitoring.yml up -d
+
+# 3. 访问监控面板
+# Grafana: http://localhost:3000 (admin/admin)
+# Prometheus: http://localhost:9090
+```
+
+#### 4.1.2 监控端点
+
+| 端点 | 用途 | 说明 |
+|------|------|------|
+| `/metrics` | Prometheus 指标 | OpenTelemetry 导出的所有指标 |
+| `/health` | 健康检查 | 服务健康状态 |
+| `http://localhost:9090` | Prometheus UI | 查询指标和告警 |
+| `http://localhost:3000` | Grafana | 可视化仪表盘 |
+
+### 4.2 关键监控指标
+
+#### 4.2.1 业务指标（Singulation 专用）
+
+| 指标名称 | 类型 | 正常范围 | 告警阈值 | 说明 |
+|---------|------|---------|---------|------|
+| `singulation_frames_processed` | Counter | > 10/s | < 1/s | 已处理的帧总数 |
+| `singulation_frames_dropped` | Counter | < 1% | > 5% | 丢弃的帧总数 |
+| `singulation_frame_rtt_ms` (P95) | Histogram | < 50ms | > 100ms | 帧往返时间 |
+| `singulation_degrade_total` | Counter | 0 | > 1/5m | 系统降级事件 |
+| `singulation_axis_fault_total` | Counter | 0 | > 0.5/5m | 轴故障事件 |
+| `singulation_heartbeat_timeout_total` | Counter | 0 | > 0.5/5m | 心跳超时 |
+
+#### 4.2.2 .NET 运行时指标
 
 | 指标 | 正常范围 | 告警阈值 | 说明 |
 |------|----------|----------|------|
-| 服务状态 | Running | Stopped | 服务运行状态 |
-| API 可用性 | 100% | < 99% | API 是否可访问 |
-| 响应时间 | < 200ms | > 1000ms | API 平均响应时间 |
-| 错误率 | < 0.1% | > 1% | 请求错误比例 |
+| GC 堆内存 | < 300MB | > 500MB | .NET 堆内存使用 |
+| GC 收集频率 | < 5/s | > 10/s | GC 触发频率 |
+| 工作集大小 | < 400MB | > 800MB | 进程内存使用 |
+| 异常计数 | < 10/m | > 50/m | 异常抛出频率 |
 
-#### 4.1.2 系统资源指标
+#### 4.2.3 HTTP 性能指标
+
+| 指标 | 正常范围 | 告警阈值 | 说明 |
+|------|----------|----------|------|
+| 请求延迟 (P95) | < 200ms | > 1000ms | API 响应时间 |
+| 5xx 错误率 | < 0.1% | > 1% | 服务器错误率 |
+| 请求速率 | 10-100/s | < 1/s 或 > 500/s | 请求吞吐量 |
+
+#### 4.2.4 系统资源指标
 
 | 指标 | 正常范围 | 告警阈值 | 说明 |
 |------|----------|----------|------|
 | CPU 使用率 | < 40% | > 80% | 持续 5 分钟 |
-| 内存使用率 | < 60% | > 85% | 持续 5 分钟 |
 | 磁盘使用率 | < 70% | > 90% | 剩余空间不足 |
 | 网络延迟 | < 10ms | > 100ms | 局域网延迟 |
 
-#### 4.1.3 业务指标
+### 4.3 自动告警规则
 
-| 指标 | 说明 |
-|------|------|
-| SignalR 连接数 | 当前活跃的实时连接数 |
-| 轴在线数量 | 正常运行的轴数量 |
-| 安全事件频率 | 每小时安全事件触发次数 |
-| 命令执行成功率 | 命令执行成功的比例 |
+系统预配置了 12 个告警规则，覆盖关键场景：
 
-### 4.2 监控工具
+#### 4.3.1 Critical 级别告警
 
-#### 4.2.1 Windows Performance Monitor
+| 告警名称 | 触发条件 | 持续时间 | 响应 |
+|---------|---------|---------|------|
+| **ServiceDown** | 服务不可用 | 1分钟 | 立即响应 |
+| **AxisFaultDetected** | 轴故障 > 0.5/s | 2分钟 | 立即响应 |
+
+#### 4.3.2 Warning 级别告警
+
+| 告警名称 | 触发条件 | 持续时间 | 响应 |
+|---------|---------|---------|------|
+| **HighMemoryUsage** | 内存 > 500MB | 5分钟 | 15分钟内 |
+| **HighGCPressure** | GC > 10/s | 5分钟 | 15分钟内 |
+| **HighFrameDropRate** | 帧丢失 > 5/s | 2分钟 | 15分钟内 |
+| **FrequentDegradation** | 降级 > 1/s | 3分钟 | 15分钟内 |
+| **HeartbeatTimeouts** | 超时 > 0.5/s | 3分钟 | 15分钟内 |
+| **HighFrameLatency** | P95 RTT > 100ms | 5分钟 | 30分钟内 |
+| **HighHttpErrorRate** | 5xx > 5/s | 2分钟 | 15分钟内 |
+| **HighHttpLatency** | P95 > 1s | 5分钟 | 30分钟内 |
+
+**查看告警状态**: http://localhost:9090/alerts
+
+### 4.4 传统监控工具（备选）
+
+#### 4.4.1 Windows Performance Monitor
 
 ```powershell
 # 启动性能监视器
@@ -638,7 +709,7 @@ perfmon
 # - ASP.NET Core -> Requests/Sec
 ```
 
-#### 4.2.2 Docker 监控
+#### 4.4.2 Docker 监控
 
 ```bash
 # 实时查看资源使用
@@ -651,18 +722,41 @@ docker events --filter 'container=singulation-host'
 docker inspect singulation-host
 ```
 
-### 4.3 告警配置
+### 4.5 告警配置
 
-#### 4.3.1 告警级别
+#### 4.5.1 告警级别定义
 
 | 级别 | 响应时间 | 通知方式 | 示例 |
 |------|----------|----------|------|
-| **Critical** | 立即 | 电话、短信、企业微信 | 服务停止、数据库损坏 |
+| **Critical** | 立即 | 电话、短信、企业微信 | 服务停止、轴故障 |
 | **Error** | 15分钟内 | 邮件、企业微信 | API 错误率高、内存泄漏 |
 | **Warning** | 1小时内 | 邮件 | 磁盘空间不足、性能下降 |
 | **Info** | 记录不通知 | 日志 | 正常启停、配置变更 |
 
-#### 4.3.2 告警脚本示例
+#### 4.5.2 告警通知集成（可选）
+
+可以配置 Alertmanager 集成企业通知渠道：
+
+```yaml
+# alertmanager.yml 示例
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'severity']
+  group_wait: 10s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: 'default'
+    webhook_configs:
+      - url: 'http://your-webhook-url'  # 企业微信/钉钉 Webhook
+    email_configs:
+      - to: 'admin@example.com'
+        from: 'alert@example.com'
+        smarthost: 'smtp.example.com:587'
+```
+
+#### 4.5.3 传统告警脚本示例
 
 ```powershell
 # check_service_health.ps1
@@ -689,6 +783,27 @@ if ($service.Status -ne 'Running') {
     }
 }
 ```
+
+### 4.6 性能基线建立
+
+使用 Prometheus 数据建立性能基线：
+
+```promql
+# 查询过去 7 天的 P95 帧 RTT
+histogram_quantile(0.95, 
+  rate(singulation_frame_rtt_ms_bucket[7d]))
+
+# 查询平均帧处理速率
+rate(singulation_frames_processed_total[7d])
+
+# 查询系统正常运行时间
+up{job="singulation-app"}
+```
+
+基于这些数据可以：
+- 设置更准确的告警阈值
+- 识别性能趋势
+- 优化系统配置
 
 ---
 
