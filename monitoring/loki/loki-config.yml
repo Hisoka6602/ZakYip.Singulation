@@ -1,0 +1,83 @@
+# Loki 配置文件
+# 用于 ZakYip.Singulation 日志聚合
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active
+    cache_location: /loki/boltdb-shipper-cache
+    cache_ttl: 24h
+    shared_store: filesystem
+  filesystem:
+    directory: /loki/chunks
+
+compactor:
+  working_directory: /loki/boltdb-shipper-compactor
+  shared_store: filesystem
+
+limits_config:
+  # 拒绝旧样本（超过7天的日志）
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  
+  # 每个查询的最大日志行数
+  max_query_length: 721h  # 30天
+  max_query_lookback: 720h
+  
+  # 入库限制
+  ingestion_rate_mb: 10
+  ingestion_burst_size_mb: 20
+  
+  # 并发查询限制
+  max_concurrent_tail_requests: 10
+  max_streams_per_user: 10000
+  max_global_streams_per_user: 50000
+
+chunk_store_config:
+  max_look_back_period: 720h  # 30天
+
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 720h  # 30天
+
+# 查询优化
+query_range:
+  align_queries_with_step: true
+  max_retries: 5
+  parallelise_shardable_queries: true
+
+# 日志流式传输
+frontend:
+  compress_responses: true
+  max_outstanding_per_tenant: 256
+
+# 查询调度器
+query_scheduler:
+  max_outstanding_requests_per_tenant: 256

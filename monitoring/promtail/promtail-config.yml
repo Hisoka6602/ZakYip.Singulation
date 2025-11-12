@@ -1,0 +1,161 @@
+# Promtail 配置文件
+# 用于采集 ZakYip.Singulation 日志文件并发送到 Loki
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # 结构化日志（JSON格式）
+  - job_name: singulation-structured
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: singulation
+          app: singulation
+          __path__: /var/log/singulation/structured-*.json
+    pipeline_stages:
+      # JSON 解析
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            logger: logger
+            message: message
+            exception: exception
+            machineName: machineName
+            processId: processId
+            threadId: threadId
+      # 时间戳解析
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+      # 添加标签
+      - labels:
+          level:
+          logger:
+          machineName:
+      # 输出格式
+      - output:
+          source: message
+
+  # 所有日志文件（传统格式）
+  - job_name: singulation-all
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: singulation
+          app: singulation
+          log_type: all
+          __path__: /var/log/singulation/all-*.log
+    pipeline_stages:
+      # 解析传统格式：2024-11-12 10:30:45.123|INFO|LoggerName|Message
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\|(?P<level>[A-Z]+)\|(?P<logger>[^\|]+)\|(?P<message>.*)$'
+      # 时间戳解析
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+      # 添加标签
+      - labels:
+          level:
+          logger:
+      # 输出格式
+      - output:
+          source: message
+
+  # 错误日志文件
+  - job_name: singulation-errors
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: singulation
+          app: singulation
+          log_type: error
+          level: ERROR
+          __path__: /var/log/singulation/error-*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\|(?P<level>[A-Z]+)\|(?P<logger>[^\|]+)\|(?P<message>.*)$'
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+      - labels:
+          logger:
+      - output:
+          source: message
+
+  # UDP 日志（采样后）
+  - job_name: singulation-udp
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: singulation
+          app: singulation
+          log_type: udp
+          component: discovery
+          __path__: /var/log/singulation/udp-*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\|(?P<level>[A-Z]+)\|(?P<logger>[^\|]+)\|(?P<message>.*)$'
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+      - labels:
+          level:
+      - output:
+          source: message
+
+  # Transport 日志（采样后）
+  - job_name: singulation-transport
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: singulation
+          app: singulation
+          log_type: transport
+          component: transport-pump
+          __path__: /var/log/singulation/transport-event-pump-*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\|(?P<level>[A-Z]+)\|(?P<logger>[^\|]+)\|(?P<message>.*)$'
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+      - labels:
+          level:
+      - output:
+          source: message
+
+  # IO Status 日志（采样后）
+  - job_name: singulation-iostatus
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: singulation
+          app: singulation
+          log_type: iostatus
+          component: io-worker
+          __path__: /var/log/singulation/io-status-worker-*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\|(?P<level>[A-Z]+)\|(?P<logger>[^\|]+)\|(?P<message>.*)$'
+      - timestamp:
+          source: timestamp
+          format: "2006-01-02 15:04:05.000"
+      - labels:
+          level:
+      - output:
+          source: message
