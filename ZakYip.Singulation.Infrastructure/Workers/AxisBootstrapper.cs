@@ -15,12 +15,29 @@ using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
+    /// <summary>
+    /// 轴控制器引导启动服务，负责在应用程序启动时初始化运动控制轴。
+    /// </summary>
+    /// <remarks>
+    /// 此服务在后台执行以下操作：
+    /// 1. 从配置存储中读取控制器选项
+    /// 2. 初始化总线适配器和运动轴驱动
+    /// 3. 使能所有轴并设置加速度/减速度参数
+    /// 4. 在应用程序停止时释放所有轴资源
+    /// </remarks>
     public sealed class AxisBootstrapper : BackgroundService {
         private readonly ILogger<AxisBootstrapper> _log;
         private readonly IControllerOptionsStore _ctrlOpts;
         private readonly IAxisController _controller;
         private readonly IHostApplicationLifetime _lifetime;
 
+        /// <summary>
+        /// 初始化 <see cref="AxisBootstrapper"/> 类的新实例。
+        /// </summary>
+        /// <param name="log">日志记录器实例。</param>
+        /// <param name="ctrlOpts">控制器配置选项存储。</param>
+        /// <param name="controller">轴控制器接口实例。</param>
+        /// <param name="lifetime">应用程序生命周期管理器。</param>
         public AxisBootstrapper(
             ILogger<AxisBootstrapper> log,
             IControllerOptionsStore ctrlOpts,
@@ -33,6 +50,15 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _lifetime.ApplicationStopping.Register(OnStopping);
         }
 
+        /// <summary>
+        /// 执行后台服务的主方法，在独立任务中初始化轴控制器。
+        /// </summary>
+        /// <param name="stoppingToken">用于通知任务应停止的取消令牌。</param>
+        /// <returns>立即完成的任务，实际初始化在后台异步执行。</returns>
+        /// <remarks>
+        /// 此方法立即返回以避免阻塞应用程序启动（包括 Kestrel 服务器）。
+        /// 实际的初始化工作在 <see cref="InitializeInBackgroundAsync"/> 方法中异步执行。
+        /// </remarks>
         protected override Task ExecuteAsync(CancellationToken stoppingToken) {
             // 立即返回，让应用继续启动（包括 Kestrel）
             // 在后台任务中执行初始化，不阻塞应用启动
@@ -41,6 +67,19 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// 在后台异步初始化轴控制器系统。
+        /// </summary>
+        /// <param name="stoppingToken">用于取消初始化操作的令牌。</param>
+        /// <returns>表示异步操作的任务。</returns>
+        /// <remarks>
+        /// 执行步骤：
+        /// 1. 从 LiteDB 读取控制器模板配置，如果不存在则使用默认值
+        /// 2. 根据配置初始化总线、探测轴数量并创建驱动实例
+        /// 3. 使能所有轴
+        /// 4. 根据机械参数计算并设置加速度和减速度
+        /// 如果初始化失败，会记录错误但不会终止应用程序。
+        /// </remarks>
         private async Task InitializeInBackgroundAsync(CancellationToken stoppingToken) {
             try {
                 // 1) 从 LiteDB 读取控制器模板；若无则写入默认并继续使用默认
@@ -81,6 +120,13 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             }
         }
 
+        /// <summary>
+        /// 在应用程序停止时释放所有轴资源的回调方法。
+        /// </summary>
+        /// <remarks>
+        /// 此方法在应用程序生命周期的停止阶段被调用，
+        /// 负责安全地释放所有已初始化的轴驱动和总线连接。
+        /// </remarks>
         private void OnStopping() {
             try {
                 _log.LogInformation("AxisBootstrapper stopping: releasing all axes...");
