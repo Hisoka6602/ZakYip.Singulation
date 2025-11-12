@@ -1,5 +1,6 @@
 ﻿using Polly;
 using System;
+using System.Buffers;
 using Polly.Retry;
 using System.Linq;
 using System.Text;
@@ -176,7 +177,8 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                                 };
 
                                 client.Received = (c, e) => {
-                                    // 这里为了安全与简单，采用 ToArray(); 若要零分配，可换 ArrayPool 方案
+                                    // 必须拷贝：ByteBlock 的生命周期短于异步处理流程
+                                    // 使用 ToArray() 保证线程安全和数据完整性
                                     var payload = e.ByteBlock.Span.ToArray();
 
                                     // 轻量 Data（无元信息）

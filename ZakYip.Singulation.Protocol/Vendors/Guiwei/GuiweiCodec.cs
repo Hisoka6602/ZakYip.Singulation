@@ -39,18 +39,25 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
             if (payload.Length % 4 != 0) return false;
 
             int n = payload.Length / 4;
-            var all = new int[n];
-            for (int i = 0, off = 0; i < n; i++, off += 4)
-                all[i] = ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4)); // mm/s
+            
+            // 使用 ArrayPool 减少临时数组的 GC 压力
+            var all = ArrayPool<int>.Shared.Rent(n);
+            try {
+                for (int i = 0, off = 0; i < n; i++, off += 4)
+                    all[i] = ByteUtils.ReadInt32LittleEndian(payload.Slice(off, 4)); // mm/s
 
-            var main = new int[Math.Min(_mainCount, n)];
-            var eject = new int[Math.Min(_ejectCount, Math.Max(0, n - _mainCount))];
+                var main = new int[Math.Min(_mainCount, n)];
+                var eject = new int[Math.Min(_ejectCount, Math.Max(0, n - _mainCount))];
 
-            Array.Copy(all, 0, main, 0, main.Length);
-            if (eject.Length > 0) Array.Copy(all, _mainCount, eject, 0, eject.Length);
+                Array.Copy(all, 0, main, 0, main.Length);
+                if (eject.Length > 0) Array.Copy(all, _mainCount, eject, 0, eject.Length);
 
-            set = new SpeedSet(DateTime.Now, 0, main, eject);
-            return true;
+                set = new SpeedSet(DateTime.Now, 0, main, eject);
+                return true;
+            }
+            finally {
+                ArrayPool<int>.Shared.Return(all);
+            }
         }
 
         /// <inheritdoc />
