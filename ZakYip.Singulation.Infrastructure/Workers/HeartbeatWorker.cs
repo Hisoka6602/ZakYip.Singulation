@@ -1,11 +1,12 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using ZakYip.Singulation.Infrastructure.Runtime;
+using ZakYip.Singulation.Infrastructure.Logging;
 using ZakYip.Singulation.Core.Contracts;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
@@ -16,6 +17,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
     public sealed class HeartbeatWorker : BackgroundService {
         private readonly ILogger<HeartbeatWorker> _log;
         private readonly IUpstreamFrameHub _hub;
+        private readonly LogSampler _logSampler = new();
+        private long _heartbeatSequence = 0;
 
         public HeartbeatWorker(ILogger<HeartbeatWorker> log, IUpstreamFrameHub hub) {
             _log = log;
@@ -29,11 +32,15 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     await foreach (var mem in reader.ReadAllAsync(stoppingToken)) {
                         try {
                             // 在此解析/统计心跳；保持轻量
-                            _log.LogDebug("Heartbeat {len}B", mem.Length);
+                            _heartbeatSequence++;
+                            // 使用采样记录心跳（每100次记录一次，避免日志泛滥）
+                            if (_logSampler.ShouldLog("Heartbeat", 100)) {
+                                _log.HeartbeatReceived(mem.Length, _heartbeatSequence);
+                            }
                         }
                         catch (Exception ex) {
                             // 异常隔离：单个心跳包处理失败不影响其他心跳包
-                            _log.LogWarning(ex, "心跳包处理失败，长度：{Length}字节", mem.Length);
+                            _log.HeartbeatProcessingFailed(ex, mem.Length);
                         }
                     }
                 }
@@ -41,7 +48,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     // 正常停止，不记录错误
                 }
                 catch (Exception ex) {
-                    _log.LogError(ex, "心跳监听发生异常");
+                    _log.HeartbeatListenerException(ex);
                 }
             }
         }

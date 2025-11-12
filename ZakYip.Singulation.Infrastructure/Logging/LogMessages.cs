@@ -605,4 +605,202 @@ public static partial class LogMessages
         this ILogger logger,
         double score);
 
+    // ==================== Cabinet IO Module Logs ====================
+
+    [LoggerMessage(
+        EventId = 15001,
+        Level = LogLevel.Information,
+        Message = "控制面板IO模块启动: 轮询间隔={PollingIntervalMs}ms")]
+    public static partial void CabinetIoModuleStarted(
+        this ILogger logger,
+        int pollingIntervalMs);
+
+    [LoggerMessage(
+        EventId = 15002,
+        Level = LogLevel.Information,
+        Message = "控制面板IO模块已停止")]
+    public static partial void CabinetIoModuleStopped(
+        this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 15003,
+        Level = LogLevel.Warning,
+        Message = "控制面板IO模块已在运行中")]
+    public static partial void CabinetIoModuleAlreadyRunning(
+        this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 15004,
+        Level = LogLevel.Warning,
+        Message = "检测到急停按键按下 - IO端口: IN{Port}")]
+    public static partial void EmergencyStopButtonPressed(
+        this ILogger logger,
+        int port);
+
+    [LoggerMessage(
+        EventId = 15005,
+        Level = LogLevel.Information,
+        Message = "检测到停止按键按下 - IO端口: IN{Port}")]
+    public static partial void StopButtonPressed(
+        this ILogger logger,
+        int port);
+
+    [LoggerMessage(
+        EventId = 15006,
+        Level = LogLevel.Information,
+        Message = "检测到启动按键按下 - IO端口: IN{Port}")]
+    public static partial void StartButtonPressed(
+        this ILogger logger,
+        int port);
+
+    [LoggerMessage(
+        EventId = 15007,
+        Level = LogLevel.Information,
+        Message = "检测到复位按键按下 - IO端口: IN{Port}")]
+    public static partial void ResetButtonPressed(
+        this ILogger logger,
+        int port);
+
+    [LoggerMessage(
+        EventId = 15008,
+        Level = LogLevel.Information,
+        Message = "检测到远程/本地模式切换: {Mode}")]
+    public static partial void RemoteLocalModeChanged(
+        this ILogger logger,
+        string mode);
+
+    [LoggerMessage(
+        EventId = 15009,
+        Level = LogLevel.Information,
+        Message = "启动时读取远程/本地模式IO状态: {Mode}")]
+    public static partial void InitialRemoteLocalModeDetected(
+        this ILogger logger,
+        string mode);
+
+    [LoggerMessage(
+        EventId = 15010,
+        Level = LogLevel.Information,
+        Message = "远程/本地模式IO未配置，默认为本地模式")]
+    public static partial void RemoteLocalModeNotConfigured(
+        this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 15011,
+        Level = LogLevel.Warning,
+        Message = "启动时读取远程/本地模式IO超时（控制器可能未初始化），默认为本地模式")]
+    public static partial void InitialRemoteLocalModeTimeout(
+        this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 15012,
+        Level = LogLevel.Information,
+        Message = "输出位状态设置: 位={BitNo}, 状态={Status}")]
+    public static partial void OutputBitSet(
+        this ILogger logger,
+        int bitNo,
+        string status);
+
+    [LoggerMessage(
+        EventId = 15013,
+        Level = LogLevel.Warning,
+        Message = "读取输入位失败: 位={BitNo}, 错误码={ErrorCode}")]
+    public static partial void ReadInputBitFailed(
+        this ILogger logger,
+        int bitNo,
+        int errorCode);
+
+    [LoggerMessage(
+        EventId = 15014,
+        Level = LogLevel.Error,
+        Message = "读取输入位时发生硬件库异常: 位={BitNo}")]
+    public static partial void ReadInputBitException(
+        this ILogger logger,
+        Exception exception,
+        int bitNo);
+
+    [LoggerMessage(
+        EventId = 15015,
+        Level = LogLevel.Error,
+        Message = "读取控制面板IO时发生异常")]
+    public static partial void CabinetIoReadException(
+        this ILogger logger,
+        Exception exception);
+
+    // ==================== UDP Discovery Service Logs ====================
+
+    [LoggerMessage(
+        EventId = 16001,
+        Level = LogLevel.Information,
+        Message = "UDP服务发现已禁用")]
+    public static partial void UdpDiscoveryDisabled(
+        this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 16002,
+        Level = LogLevel.Information,
+        Message = "UDP服务发现服务启动，端口: {Port}, 间隔: {Interval}秒")]
+    public static partial void UdpDiscoveryServiceStarted(
+        this ILogger logger,
+        int port,
+        int interval);
+
+    [LoggerMessage(
+        EventId = 16003,
+        Level = LogLevel.Information,
+        Message = "UDP服务发现服务已停止")]
+    public static partial void UdpDiscoveryServiceStopped(
+        this ILogger logger);
+
+    [LoggerMessage(
+        EventId = 16004,
+        Level = LogLevel.Debug,
+        Message = "已发送UDP广播: 序号={SequenceNumber}")]
+    public static partial void UdpBroadcastSent(
+        this ILogger logger,
+        long sequenceNumber);
+
+    [LoggerMessage(
+        EventId = 16005,
+        Level = LogLevel.Error,
+        Message = "发送UDP广播时发生错误")]
+    public static partial void UdpBroadcastError(
+        this ILogger logger,
+        Exception exception);
+
+    [LoggerMessage(
+        EventId = 16006,
+        Level = LogLevel.Error,
+        Message = "UDP服务发现服务异常")]
+    public static partial void UdpDiscoveryServiceException(
+        this ILogger logger,
+        Exception exception);
+
+    // ==================== Heartbeat Worker Logs ====================
+
+    [LoggerMessage(
+        EventId = 17001,
+        Level = LogLevel.Debug,
+        Message = "心跳接收: 长度={Length}字节, 序号={SequenceNumber}")]
+    public static partial void HeartbeatReceived(
+        this ILogger logger,
+        int length,
+        long sequenceNumber);
+
+    [LoggerMessage(
+        EventId = 17002,
+        Level = LogLevel.Warning,
+        Message = "心跳包处理失败: 长度={Length}字节")]
+    public static partial void HeartbeatProcessingFailed(
+        this ILogger logger,
+        Exception exception,
+        int length);
+
+    [LoggerMessage(
+        EventId = 17003,
+        Level = LogLevel.Error,
+        Message = "心跳监听发生异常")]
+    public static partial void HeartbeatListenerException(
+        this ILogger logger,
+        Exception exception);
+
 }
