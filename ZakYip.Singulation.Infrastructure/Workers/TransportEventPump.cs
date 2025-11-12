@@ -1,12 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using System;
 using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Channels;
 using System.Collections.Concurrent;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Utils;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
@@ -208,7 +210,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                         _ = _rt.PublishVisionAsync(new {
                             kind = "speed.raw",
                             len = mem.Length,
-                            hex = BitConverter.ToString(mem.ToArray()).Replace("-", " ")
+                            hex = ByteUtils.ToHexString(mem)
                         });
                         break;
 

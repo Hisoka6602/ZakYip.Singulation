@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 
@@ -180,6 +181,94 @@ public static class ByteUtils {
     [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
     public static float Int32BitsToSingle(int value) {
         return BitConverter.Int32BitsToSingle(value);
+    }
+
+    /// <summary>
+    /// 高效地将字节数组转换为十六进制字符串。
+    /// 对于小数据（≤256字符）使用 stackalloc，大数据使用 ArrayPool 以减少 GC 压力。
+    /// </summary>
+    /// <param name="bytes">要转换的字节数据。</param>
+    /// <param name="separator">字节之间的分隔符，默认为空格。传入 null 或空字符串表示无分隔符。</param>
+    /// <param name="uppercase">是否使用大写字母（A-F），默认为 true。设为 false 使用小写字母（a-f）。</param>
+    /// <returns>格式化的十六进制字符串。</returns>
+    /// <remarks>
+    /// 此方法针对性能优化，避免了多次内存分配。相比 BitConverter.ToString().Replace()，
+    /// 减少了 3 次分配（ToArray、ToString、Replace）。
+    /// <para>示例用法：</para>
+    /// <code>
+    /// ToHexString(bytes)                    // "2A 3B 4C" (默认空格分隔，大写)
+    /// ToHexString(bytes, "-")               // "2A-3B-4C" (短横线分隔)
+    /// ToHexString(bytes, "", false)         // "2a3b4c" (无分隔，小写)
+    /// ToHexString(bytes, ":", true)         // "2A:3B:4C" (冒号分隔)
+    /// </code>
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static string ToHexString(ReadOnlyMemory<byte> bytes, string? separator = " ", bool uppercase = true) {
+        var span = bytes.Span;
+        var length = span.Length;
+        
+        if (length == 0) return string.Empty;
+        
+        var useSeparator = !string.IsNullOrEmpty(separator);
+        var separatorLength = useSeparator ? separator!.Length : 0;
+        
+        // 计算所需字符数：每个字节2个十六进制字符 + 分隔符（除了最后一个字节）
+        var charCount = length * 2 + (useSeparator ? (length - 1) * separatorLength : 0);
+        
+        // 对于小数据使用 stackalloc，大数据使用 ArrayPool
+        char[]? rentedArray = null;
+        Span<char> chars = charCount <= 512
+            ? stackalloc char[charCount]
+            : (rentedArray = ArrayPool<char>.Shared.Rent(charCount)).AsSpan(0, charCount);
+        
+        try {
+            var hexChars = uppercase ? "0123456789ABCDEF" : "0123456789abcdef";
+            var charIndex = 0;
+            
+            for (int i = 0; i < length; i++) {
+                var b = span[i];
+                chars[charIndex++] = hexChars[b >> 4];
+                chars[charIndex++] = hexChars[b & 0xF];
+                
+                // 添加分隔符（最后一个字节除外）
+                if (useSeparator && i < length - 1) {
+                    for (int j = 0; j < separatorLength; j++) {
+                        chars[charIndex++] = separator![j];
+                    }
+                }
+            }
+            
+            return new string(chars);
+        }
+        finally {
+            if (rentedArray != null) {
+                ArrayPool<char>.Shared.Return(rentedArray);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 高效地将字节 Span 转换为十六进制字符串。
+    /// </summary>
+    /// <param name="bytes">要转换的字节数据。</param>
+    /// <param name="separator">字节之间的分隔符，默认为空格。</param>
+    /// <param name="uppercase">是否使用大写字母（A-F），默认为 true。</param>
+    /// <returns>格式化的十六进制字符串。</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static string ToHexString(ReadOnlySpan<byte> bytes, string? separator = " ", bool uppercase = true) {
+        return ToHexString(new ReadOnlyMemory<byte>(bytes.ToArray()), separator, uppercase);
+    }
+
+    /// <summary>
+    /// 高效地将字节数组转换为十六进制字符串。
+    /// </summary>
+    /// <param name="bytes">要转换的字节数组。</param>
+    /// <param name="separator">字节之间的分隔符，默认为空格。</param>
+    /// <param name="uppercase">是否使用大写字母（A-F），默认为 true。</param>
+    /// <returns>格式化的十六进制字符串。</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+    public static string ToHexString(byte[] bytes, string? separator = " ", bool uppercase = true) {
+        return ToHexString(new ReadOnlyMemory<byte>(bytes), separator, uppercase);
     }
 
 }
