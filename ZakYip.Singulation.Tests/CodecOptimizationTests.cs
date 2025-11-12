@@ -131,6 +131,33 @@ internal sealed class CodecOptimizationTests
         }
     }
 
+    [MiniFact]
+    public void ByteUtils_ToHexString_SupportsMultipleFormats()
+    {
+        // 验证 ByteUtils.ToHexString 的多种用法（可复用性）
+        var testData = new byte[] { 0x2A, 0x3B, 0x4C, 0xFF };
+        
+        // 默认格式：空格分隔，大写
+        var result1 = ByteUtils.ToHexString(testData);
+        MiniAssert.Equal("2A 3B 4C FF", result1, "默认格式应为空格分隔的大写");
+        
+        // 无分隔符，小写
+        var result2 = ByteUtils.ToHexString(testData, "", false);
+        MiniAssert.Equal("2a3b4cff", result2, "无分隔符小写格式应正确");
+        
+        // 冒号分隔，大写
+        var result3 = ByteUtils.ToHexString(testData, ":");
+        MiniAssert.Equal("2A:3B:4C:FF", result3, "冒号分隔格式应正确");
+        
+        // 短横线分隔，小写
+        var result4 = ByteUtils.ToHexString(testData, "-", false);
+        MiniAssert.Equal("2a-3b-4c-ff", result4, "短横线分隔小写格式应正确");
+        
+        // 空数组
+        var empty = ByteUtils.ToHexString(Array.Empty<byte>());
+        MiniAssert.Equal("", empty, "空数组应返回空字符串");
+    }
+
     // Helper methods
     private static void WriteInt32LE(byte[] buffer, int offset, int value)
     {

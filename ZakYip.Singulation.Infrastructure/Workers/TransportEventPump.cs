@@ -2,13 +2,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Buffers;
 using System.Text;
 using Newtonsoft.Json;
 using System.Threading.Channels;
 using System.Collections.Concurrent;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Utils;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
@@ -210,7 +210,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                         _ = _rt.PublishVisionAsync(new {
                             kind = "speed.raw",
                             len = mem.Length,
-                            hex = BytesToHexString(mem)
+                            hex = ByteUtils.ToHexString(mem)
                         });
                         break;
 
@@ -453,47 +453,6 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     _log.LogWarning(ex, "更新远程连接指示灯状态失败");
                 }
             }, CancellationToken.None);
-        }
-
-        /// <summary>
-        /// 高效地将字节数组转换为十六进制字符串（使用 ArrayPool 减少 GC 压力）
-        /// </summary>
-        private static string BytesToHexString(ReadOnlyMemory<byte> bytes) {
-            var span = bytes.Span;
-            var length = span.Length;
-            
-            if (length == 0) return string.Empty;
-            
-            // 每个字节需要 2 个十六进制字符 + 1 个空格（最后一个字节没有空格）
-            var charCount = length * 3 - 1;
-            
-            // 对于小数据使用 stackalloc，大数据使用 ArrayPool
-            char[]? rentedArray = null;
-            Span<char> chars = charCount <= 256
-                ? stackalloc char[charCount]
-                : (rentedArray = ArrayPool<char>.Shared.Rent(charCount)).AsSpan(0, charCount);
-            
-            try {
-                const string hexChars = "0123456789ABCDEF";
-                var charIndex = 0;
-                
-                for (int i = 0; i < length; i++) {
-                    var b = span[i];
-                    chars[charIndex++] = hexChars[b >> 4];
-                    chars[charIndex++] = hexChars[b & 0xF];
-                    
-                    if (i < length - 1) {
-                        chars[charIndex++] = ' ';
-                    }
-                }
-                
-                return new string(chars);
-            }
-            finally {
-                if (rentedArray != null) {
-                    ArrayPool<char>.Shared.Return(rentedArray);
-                }
-            }
         }
     }
 }
