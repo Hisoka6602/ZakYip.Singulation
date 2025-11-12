@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ZakYip.Singulation.Infrastructure.Logging;
 
 namespace ZakYip.Singulation.Infrastructure.Services;
 
@@ -16,7 +17,9 @@ public class UdpDiscoveryService : BackgroundService
 {
     private readonly ILogger<UdpDiscoveryService> _logger;
     private readonly UdpDiscoveryOptions _options;
+    private readonly LogSampler _logSampler = new();
     private UdpClient? _udpClient;
+    private long _broadcastSequence = 0;
 
     public UdpDiscoveryService(
         ILogger<UdpDiscoveryService> logger,
@@ -30,12 +33,11 @@ public class UdpDiscoveryService : BackgroundService
     {
         if (!_options.Enabled)
         {
-            _logger.LogInformation("UDP 服务发现已禁用");
+            _logger.UdpDiscoveryDisabled();
             return;
         }
 
-        _logger.LogInformation("UDP 服务发现服务启动，端口: {Port}, 间隔: {Interval}秒",
-            _options.BroadcastPort, _options.BroadcastIntervalSeconds);
+        _logger.UdpDiscoveryServiceStarted(_options.BroadcastPort, _options.BroadcastIntervalSeconds);
 
         try
         {
@@ -64,7 +66,12 @@ public class UdpDiscoveryService : BackgroundService
 
                     await _udpClient.SendAsync(data, data.Length, broadcastEndpoint);
 
-                    //_logger.LogDebug("已发送 UDP 广播: {Json}", json);
+                    // 使用采样记录UDP广播（每20次记录一次，避免日志泛滥）
+                    _broadcastSequence++;
+                    if (_logSampler.ShouldLog("UdpBroadcast", 20))
+                    {
+                        _logger.UdpBroadcastSent(_broadcastSequence);
+                    }
 
                     await Task.Delay(TimeSpan.FromSeconds(_options.BroadcastIntervalSeconds), stoppingToken);
                 }
@@ -74,19 +81,19 @@ public class UdpDiscoveryService : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "发送 UDP 广播时发生错误");
+                    _logger.UdpBroadcastError(ex);
                     await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "UDP 服务发现服务异常");
+            _logger.UdpDiscoveryServiceException(ex);
         }
         finally
         {
             _udpClient?.Dispose();
-            _logger.LogInformation("UDP 服务发现服务已停止");
+            _logger.UdpDiscoveryServiceStopped();
         }
     }
 
