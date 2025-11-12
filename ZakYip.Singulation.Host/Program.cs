@@ -316,6 +316,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<LogEventBus>();
         services.AddHostedService<LogEventPump>();
         // ---------- 日志清理 ----------
+        services.Configure<LogsCleanupOptions>(configuration.GetSection("LogsCleanup"));
         services.AddHostedService<LogsCleanupService>();
     })
     // ---------- 日志 ----------

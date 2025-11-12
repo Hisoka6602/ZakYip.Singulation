@@ -1,25 +1,24 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
     /// <summary>
     /// 日志清理服务
-    /// - 保留策略：主日志30天，高频日志7天
+    /// - 保留策略：可通过配置文件设置不同类型日志的保留天数
     /// - 清理频率：每天凌晨执行一次
     /// - 压缩旧日志以节省空间
     /// </summary>
     public class LogsCleanupService : Microsoft.Extensions.Hosting.BackgroundService {
         private readonly ILogger<LogsCleanupService> _logger;
-        
-        // 不同类型日志的保留天数
-        private const int MainLogRetentionDays = 30;    // 主日志：30天
-        private const int HighFreqLogRetentionDays = 7; // 高频日志：7天（UDP、Transport、IoStatus）
-        private const int ErrorLogRetentionDays = 90;   // 错误日志：90天
+        private readonly LogsCleanupOptions _options;
 
         public LogsCleanupService(
-            ILogger<LogsCleanupService> logger) {
+            ILogger<LogsCleanupService> logger,
+            IOptions<LogsCleanupOptions> options) {
             _logger = logger;
+            _options = options.Value;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -94,17 +93,17 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             }
         }
         
-        private static int GetRetentionDays(string fileName) {
+        private int GetRetentionDays(string fileName) {
             // 根据文件名确定保留天数
             if (fileName.StartsWith("error-", StringComparison.OrdinalIgnoreCase)) {
-                return ErrorLogRetentionDays;
+                return _options.ErrorLogRetentionDays;
             }
             if (fileName.StartsWith("udp-", StringComparison.OrdinalIgnoreCase) ||
                 fileName.StartsWith("transport-", StringComparison.OrdinalIgnoreCase) ||
                 fileName.StartsWith("io-status-", StringComparison.OrdinalIgnoreCase)) {
-                return HighFreqLogRetentionDays;
+                return _options.HighFreqLogRetentionDays;
             }
-            return MainLogRetentionDays;
+            return _options.MainLogRetentionDays;
         }
     }
 }
