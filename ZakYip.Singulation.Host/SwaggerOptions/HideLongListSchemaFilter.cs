@@ -6,13 +6,36 @@ using Microsoft.Extensions.Logging;
 
 namespace ZakYip.Singulation.Host.SwaggerOptions {
 
+    /// <summary>
+    /// 架构过滤器，用于简化长类型名称并为枚举类型添加详细描述。
+    /// </summary>
+    /// <remarks>
+    /// 此过滤器执行以下操作：
+    /// 1. 对于 ZakYip 命名空间下的类型，生成友好的短名称作为 Schema 标题
+    /// 2. 对于枚举类型，在描述中列出所有可能的值及其整数值和 Description 特性
+    /// 这有助于在 Swagger UI 中提供更清晰、更易读的 API 文档。
+    /// </remarks>
     public class HideLongListSchemaFilter : ISchemaFilter {
         private readonly ILogger<HideLongListSchemaFilter>? _logger;
 
+        /// <summary>
+        /// 初始化 <see cref="HideLongListSchemaFilter"/> 类的新实例。
+        /// </summary>
+        /// <param name="logger">可选的日志记录器实例。</param>
         public HideLongListSchemaFilter(ILogger<HideLongListSchemaFilter>? logger = null) {
             _logger = logger;
         }
 
+        /// <summary>
+        /// 应用架构过滤逻辑到 OpenAPI 架构。
+        /// </summary>
+        /// <param name="schema">要修改的 OpenAPI 架构对象。</param>
+        /// <param name="context">包含类型信息的架构过滤器上下文。</param>
+        /// <remarks>
+        /// 此方法处理两种情况：
+        /// 1. ZakYip 命名空间的类型：设置友好的 Schema 标题
+        /// 2. 枚举类型：在描述中添加所有枚举值及其说明
+        /// </remarks>
         public void Apply(OpenApiSchema schema, SchemaFilterContext context) {
             SafeOperationHelper.SafeExecute(() => {
                 var type = context.Type;
@@ -49,6 +72,14 @@ namespace ZakYip.Singulation.Host.SwaggerOptions {
             }, _logger, "HideLongListSchemaFilter.Apply");
         }
 
+        /// <summary>
+        /// 获取类型的友好名称，处理泛型类型的嵌套参数。
+        /// </summary>
+        /// <param name="type">要获取友好名称的类型。</param>
+        /// <returns>简化后的类型名称字符串。</returns>
+        /// <remarks>
+        /// 此方法递归处理泛型类型参数，生成格式如 "TypeName.Arg1AndArg2" 的名称。
+        /// </remarks>
         private string GetFriendlyTypeName(Type type) {
             // 获取简短类名（去掉泛型标记）
             var typeName = type.Name;
