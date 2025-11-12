@@ -1,0 +1,6 @@
+# Controllers and SignalR hubs rely on global exception handling middleware
+[Controllers/**.cs]
+dotnet_diagnostic.CA1031.severity = none
+
+[SignalR/**.cs]
+dotnet_diagnostic.CA1031.severity = none

@@ -37,6 +37,7 @@ public class GlobalExceptionHandlerMiddleware
         {
             await _next(context);
         }
+#pragma warning disable CA1031 // Global exception handler middleware - must catch all exceptions except critical ones
         catch (Exception ex)
         {
             // 重新抛出不应处理的关键异常
@@ -46,6 +47,7 @@ public class GlobalExceptionHandlerMiddleware
             }
             await HandleExceptionAsync(context, ex);
         }
+#pragma warning restore CA1031
     }
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)

@@ -424,9 +424,11 @@ try {
     }
     host.Run();
 }
+#pragma warning disable CA1031 // Top-level exception handler - must catch all exceptions to prevent process crash
 catch (Exception e) {
     NLog.LogManager.GetCurrentClassLogger().Error(e, "运行异常");
 }
+#pragma warning restore CA1031
 finally {
     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
         PowerGuard.SetThreadExecutionState(EXECUTION_STATE.ES_CONTINUOUS);
