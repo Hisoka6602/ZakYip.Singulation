@@ -336,6 +336,12 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
 
             // 命令已下发（仅观测，不要阻塞，不要 Task.Run）
             _axisEventAggregator.CommandIssued += (s, e) => {
+                // 记录厂商SDK调用失败的情况（返回值非0表示失败）
+                if (e.Result != 0)
+                {
+                    _log.VendorSdkUnexpectedResult(e.Axis.Value, e.Invocation, e.Result);
+                }
+                
                 var json = JsonConvert.SerializeObject(new { e.Axis, e.Invocation });
                 var bytes = Encoding.UTF8.GetBytes(json);
                 _ = _ctlChannel.Writer.WriteAsync(new TransportEvent(

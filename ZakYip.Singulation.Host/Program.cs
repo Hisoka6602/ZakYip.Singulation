@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.SignalR;
 using ZakYip.Singulation.Core.Enums;
@@ -172,6 +173,7 @@ var host = Host.CreateDefaultBuilder(args)
         // 初始化由 AxisBootstrapper 后台服务异步完成，避免阻塞 Kestrel 启动
         services.AddSingleton<IBusAdapter>(sp => {
             var store = sp.GetRequiredService<IControllerOptionsStore>();
+            var logger = sp.GetRequiredService<ILogger<IBusAdapter>>();
 
             // 1) 同步获取配置（LiteDB 本身是本地存取，同步拿即可）
             var dto = store.GetAsync().GetAwaiter().GetResult();
@@ -181,11 +183,18 @@ var host = Host.CreateDefaultBuilder(args)
             switch (vendor) {
                 case "leadshine":
                 case "ltdmc":
-                    return new LeadshineLtdmcBusAdapter(
+                    var leadshineAdapter = new LeadshineLtdmcBusAdapter(
                         cardNo: (ushort)dto.Template.Card,
                         portNo: (ushort)dto.Template.Port,  // ← 修正强转
                         controllerIp: dto.ControllerIp
                     );
+                    
+                    // 订阅总线适配器错误事件以记录日志
+                    leadshineAdapter.ErrorOccurred += (_, errorMessage) => {
+                        logger.LogWarning("总线适配器错误: {ErrorMessage}", errorMessage);
+                    };
+                    
+                    return leadshineAdapter;
 
                 // 未来接别的厂商：在这里新增 case
                 // case "inovance": return new InovanceBusAdapter(...);
