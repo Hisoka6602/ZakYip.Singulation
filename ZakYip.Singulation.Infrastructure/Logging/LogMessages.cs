@@ -89,6 +89,39 @@ public static partial class LogMessages
         int axisId,
         string errorMessage);
 
+    // ==================== Vendor SDK Call Logs ====================
+
+    [LoggerMessage(
+        EventId = 2100,
+        Level = LogLevel.Warning,
+        Message = "厂商SDK调用失败: 轴={AxisId}, 方法={MethodName}, 返回值={ReturnCode}")]
+    public static partial void VendorSdkCallFailed(
+        this ILogger logger,
+        int axisId,
+        string methodName,
+        int returnCode);
+
+    [LoggerMessage(
+        EventId = 2101,
+        Level = LogLevel.Warning,
+        Message = "厂商SDK调用非预期结果: 轴={AxisId}, 调用={Invocation}, 返回值={ReturnCode}")]
+    public static partial void VendorSdkUnexpectedResult(
+        this ILogger logger,
+        int axisId,
+        string invocation,
+        int returnCode);
+
+    [LoggerMessage(
+        EventId = 2102,
+        Level = LogLevel.Error,
+        Message = "厂商SDK调用异常: 轴={AxisId}, 方法={MethodName}, 错误消息={ErrorMessage}")]
+    public static partial void VendorSdkException(
+        this ILogger logger,
+        Exception exception,
+        int axisId,
+        string methodName,
+        string errorMessage);
+
     // ==================== Protocol Codec Logs ====================
 
     [LoggerMessage(
