@@ -9,6 +9,7 @@ using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Drivers.Abstractions;
 using static System.Runtime.CompilerServices.RuntimeHelpers;
+using NLog;
 
 namespace ZakYip.Singulation.Drivers.Leadshine
 {
@@ -21,6 +22,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
     /// </remarks>
     public sealed class LeadshineLtdmcBusAdapter : IBusAdapter
     {
+        private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
         private readonly ushort _cardNo;
         private readonly ushort _portNo;
         private readonly string? _controllerIp;
@@ -151,9 +153,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                         if (ret != 0)
                         {
                             var msg = $"LTDMC init 返回: {ret}";
+                            _logger.Error($"【面板控制器初始化失败】方法：{(_controllerIp is null ? "dmc_board_init" : "dmc_board_init_eth")}，返回值：{ret}（预期：0），卡号：{_cardNo}");
                             SetError(msg);
                             return new(false, msg);
                         }
+                        _logger.Info($"【面板控制器初始化成功】方法：{(_controllerIp is null ? "dmc_board_init" : "dmc_board_init_eth")}，返回值：{ret}，卡号：{_cardNo}");
                     }
                     catch (OperationCanceledException)
                     {
@@ -175,6 +179,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                         LTDMC.nmc_get_errcode(_cardNo, _portNo, ref errcode);
                         if (errcode != 0)
                         {
+                            _logger.Warn($"【面板控制器总线异常检测】方法：nmc_get_errcode，错误码：{errcode}（预期：0），卡号：{_cardNo}，端口：{_portNo}，尝试次数：{attempt}");
                             // 本次尝试仅做一次复位：偶数尝试→软复位；奇数尝试→冷复位
                             var useSoftReset = (attempt % 2 == 0);
 
@@ -190,9 +195,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                                     if (rc != 0)
                                     {
                                         var msg = $"软复位失败: rc={rc}";
+                                        _logger.Error($"【面板控制器软复位失败】方法：dmc_board_close，返回值：{rc}（预期：0），卡号：{_cardNo}");
                                         SetError(msg);
                                         return new(false, msg);
                                     }
+                                    _logger.Info($"【面板控制器软复位成功】方法：dmc_soft_reset + dmc_board_close，返回值：{rc}，卡号：{_cardNo}");
                                     await Task.Delay(TimeSpan.FromSeconds(10), ct); // 恢复时间
                                 }
                                 else
@@ -217,9 +224,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                             if (errcode != 0)
                             {
                                 var msg = $"总线异常未恢复: err={errcode}";
+                                _logger.Error($"【面板控制器总线异常未恢复】方法：nmc_get_errcode，错误码：{errcode}（预期：0），卡号：{_cardNo}，端口：{_portNo}");
                                 SetError(msg);
                                 return new(false, msg);
                             }
+                            _logger.Info($"【面板控制器总线异常已恢复】错误码：{errcode}，卡号：{_cardNo}，端口：{_portNo}");
                         }
                     }
                     catch (OperationCanceledException)
@@ -271,6 +280,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 var ret = LTDMC.nmc_get_total_slaves(_cardNo, _portNo, ref total);
                 if (ret != 0)
                 {
+                    _logger.Error($"【面板控制器获取轴数失败】方法：nmc_get_total_slaves，返回值：{ret}（预期：0），卡号：{_cardNo}，端口：{_portNo}");
                     throw new InvalidOperationException($"nmc_get_total_slaves failed, ret={ret}");
                 }
 
@@ -291,6 +301,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 var ret = LTDMC.nmc_get_errcode(_cardNo, _portNo, ref err);
                 if (ret != 0)
                 {
+                    _logger.Error($"【面板控制器获取错误码失败】方法：nmc_get_errcode，返回值：{ret}（预期：0），卡号：{_cardNo}，端口：{_portNo}");
                     throw new InvalidOperationException($"nmc_get_errcode failed, ret={ret}");
                 }
 
@@ -308,6 +319,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         {
             ct.ThrowIfCancellationRequested();
 
+            _logger.Info($"【面板控制器冷复位开始】卡号：{_cardNo}");
             var success = await Safe(async () =>
             {
                 // 执行冷复位并检查返回值
@@ -315,20 +327,24 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 var rc = LTDMC.dmc_board_close();
                 if (rc != 0)
                 {
+                    _logger.Error($"【面板控制器冷复位失败】方法：dmc_board_close，返回值：{rc}（预期：0），卡号：{_cardNo}");
                     throw new InvalidOperationException($"Cold reset failed for card {_cardNo} with error code {rc}. Verify hardware connection and card status.");
                 }
+                _logger.Info($"【面板控制器冷复位成功】方法：dmc_cool_reset + dmc_board_close，返回值：{rc}，卡号：{_cardNo}");
 
                 await CloseAsync(ct).ConfigureAwait(false);
                 await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
                 var initResult = await InitializeAsync(ct).ConfigureAwait(false);
                 if (!initResult.Key)
                 {
+                    _logger.Error($"【面板控制器冷复位后初始化失败】原因：{initResult.Value}，卡号：{_cardNo}");
                     throw new InvalidOperationException($"Initialization after reset failed: {initResult.Value}");
                 }
             }, "ResetAsync");
 
             if (!success)
             {
+                _logger.Error($"【面板控制器冷复位流程失败】卡号：{_cardNo}");
                 SetError("ResetAsync: 冷复位流程执行失败。");
             }
         }
@@ -346,11 +362,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         {
             ct.ThrowIfCancellationRequested();
 
+            _logger.Info($"【面板控制器热复位开始】卡号：{_cardNo}");
             var success = await Safe(async () =>
             {
                 // 若未初始化，直接初始化即可
                 if (!IsInitialized)
                 {
+                    _logger.Info($"【面板控制器未初始化，执行初始化】卡号：{_cardNo}");
                     var (key, value) = await InitializeAsync(ct).ConfigureAwait(false);
                     IsInitialized = key;
                     return;
@@ -360,8 +378,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 var retSoft = LTDMC.dmc_soft_reset(_cardNo);
                 if (retSoft != 0)
                 {
+                    _logger.Error($"【面板控制器热复位失败】方法：dmc_soft_reset，返回值：{retSoft}（预期：0），卡号：{_cardNo}");
                     throw new InvalidOperationException($"dmc_soft_reset failed, ret={retSoft}");
                 }
+                _logger.Info($"【面板控制器热复位成功】方法：dmc_soft_reset，返回值：{retSoft}，卡号：{_cardNo}");
 
                 // 2) 关闭当前连接
                 LTDMC.dmc_board_close();
@@ -373,20 +393,24 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 // 4) 重新初始化（仅支持以太网）
                 if (string.IsNullOrWhiteSpace(_controllerIp))
                 {
+                    _logger.Error($"【面板控制器热复位失败】原因：热复位需要配置控制器IP地址，卡号：{_cardNo}");
                     throw new InvalidOperationException("WarmReset requires controller IP for dmc_board_init_eth.");
                 }
 
                 var retInit = LTDMC.dmc_board_init_eth(_cardNo, _controllerIp);
                 if (retInit != 0)
                 {
+                    _logger.Error($"【面板控制器热复位后初始化失败】方法：dmc_board_init_eth，返回值：{retInit}（预期：0），卡号：{_cardNo}");
                     throw new InvalidOperationException($"dmc_board_init_eth failed, ret={retInit}");
                 }
+                _logger.Info($"【面板控制器热复位后初始化成功】方法：dmc_board_init_eth，返回值：{retInit}，卡号：{_cardNo}");
 
                 IsInitialized = true;
             }, "WarmResetAsync");
 
             if (!success)
             {
+                _logger.Error($"【面板控制器热复位流程失败】卡号：{_cardNo}");
                 SetError("WarmResetAsync: 热复位流程执行失败。");
             }
         }
