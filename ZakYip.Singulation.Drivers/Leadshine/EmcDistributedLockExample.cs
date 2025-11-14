@@ -237,9 +237,13 @@ namespace ZakYip.Singulation.Examples
             Console.WriteLine("   → 触发 EmcResetNotificationReceived 事件");
             Console.WriteLine("   → 触发 ReconnectionStarting 事件（应用程序暂停操作并保存状态）");
             Console.WriteLine("   → **所有雷赛方法调用和 IO 监控被自动阻止**");
-            Console.WriteLine("   → 自动关闭当前连接");
+            Console.WriteLine("   → **先把所有轴速度设置成 0**");
+            Console.WriteLine("   → **失能所有轴并且状态为 [停止]**");
+            Console.WriteLine("   → 调用 LTDMC.dmc_board_close() 关闭当前连接");
             Console.WriteLine("   → 等待恢复时间（冷复位: 15秒，热复位: 2秒）");
-            Console.WriteLine("   → 自动重新初始化连接");
+            Console.WriteLine("   → **在其他实例未完成复位/重置操作之前不能操作轴和IO**");
+            Console.WriteLine("   → 调用 LTDMC.dmc_board_init/dmc_board_init_eth 重新连接");
+            Console.WriteLine("   → **不直接调用 InitializeAsync 因为这样有可能又重置了**");
             Console.WriteLine("   → 触发 ReconnectionCompleted 事件（应用程序恢复操作）");
             Console.WriteLine("   → **解除所有操作阻止**");
             Console.WriteLine();

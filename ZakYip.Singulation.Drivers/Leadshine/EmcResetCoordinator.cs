@@ -41,20 +41,24 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             _cardNo = cardNo;
             _mmfName = $"Global\\ZakYip_EMC_Reset_Card{cardNo}";
 
-            try
+            // 检查平台是否支持命名内存映射文件（仅 Windows）
+            if (OperatingSystem.IsWindows())
             {
-                // 创建或打开内存映射文件（4KB 足够传输通知）
-                _mmf = MemoryMappedFile.CreateOrOpen(_mmfName, 4096, MemoryMappedFileAccess.ReadWrite);
-                _logger.Info($"[EMC Coordinator] 内存映射文件已创建/打开: {_mmfName}");
+                try
+                {
+                    // 创建或打开内存映射文件（4KB 足够传输通知）
+                    _mmf = MemoryMappedFile.CreateOrOpen(_mmfName, 4096, MemoryMappedFileAccess.ReadWrite);
+                    _logger.Info($"[EMC Coordinator] 内存映射文件已创建/打开: {_mmfName}");
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, $"[EMC Coordinator] 创建内存映射文件失败: {_mmfName}");
+                    _mmf = null;
+                }
             }
-            catch (PlatformNotSupportedException ex)
+            else
             {
-                _logger.Warn(ex, $"[EMC Coordinator] 当前平台不支持命名内存映射文件，复位通知功能将被禁用: {_mmfName}");
-                _mmf = null;
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, $"[EMC Coordinator] 创建内存映射文件失败: {_mmfName}");
+                _logger.Warn($"[EMC Coordinator] 当前平台不支持命名内存映射文件，复位通知功能将被禁用: {_mmfName}");
                 _mmf = null;
             }
 
