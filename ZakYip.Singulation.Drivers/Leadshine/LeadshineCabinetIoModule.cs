@@ -35,6 +35,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         
         /// <summary>是否已释放资源。</summary>
         private bool _disposed;
+        
+        /// <summary>是否已暂停轮询。</summary>
+        private volatile bool _isPaused;
 
         // 按键状态缓存（用于边沿检测）
         /// <summary>上次急停按键状态。</summary>
@@ -207,6 +210,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
         private async Task PollingLoopAsync(CancellationToken ct) {
             while (!ct.IsCancellationRequested) {
                 try {
+                    // 如果已暂停，跳过本次轮询
+                    if (_isPaused)
+                    {
+                        await Task.Delay(100, ct).ConfigureAwait(false);
+                        continue;
+                    }
+                    
                     LeadshineCabinetIoOptions currentOptions;
                     lock (_optionsLock) {
                         currentOptions = _options;
@@ -348,6 +358,28 @@ namespace ZakYip.Singulation.Drivers.Leadshine {
                 _logger.LogInformation(
                     "控制面板 IO 配置已更新：急停={EmergencyStopBit}, 停止={StopBit}, 启动={StartBit}, 复位={ResetBit}, 轮询间隔={PollingMs}ms",
                     _options.CabinetInputPoint.EmergencyStop, _options.CabinetInputPoint.Stop, _options.CabinetInputPoint.Start, _options.CabinetInputPoint.Reset, _options.PollingIntervalMs);
+            }
+        }
+        
+        /// <summary>
+        /// 暂停 IO 轮询（例如在重新连接期间）。
+        /// </summary>
+        public void PausePolling() {
+            if (!_isPaused)
+            {
+                _isPaused = true;
+                _logger.LogInformation("雷赛控制面板 IO 轮询已暂停");
+            }
+        }
+        
+        /// <summary>
+        /// 恢复 IO 轮询。
+        /// </summary>
+        public void ResumePolling() {
+            if (_isPaused)
+            {
+                _isPaused = false;
+                _logger.LogInformation("雷赛控制面板 IO 轮询已恢复");
             }
         }
 

@@ -113,11 +113,11 @@ namespace ZakYip.Singulation.Examples
         }
 
         /// <summary>
-        /// 示例 3：实现应对复位通知的策略。
+        /// 示例 3：实现应对复位通知的策略（使用自动重新连接功能）。
         /// </summary>
         public static async Task Example3_ResetHandlingStrategy()
         {
-            Console.WriteLine("=== 示例 3：实现应对复位通知的策略 ===\n");
+            Console.WriteLine("=== 示例 3：实现应对复位通知的策略（使用自动重新连接）===\n");
 
             var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100");
 
@@ -125,57 +125,50 @@ namespace ZakYip.Singulation.Examples
             var isOperating = false;
             var savedState = new object(); // 假设的状态对象
 
-            // 订阅复位通知并实现完整的应对策略
-            adapter.EmcResetNotificationReceived += async (sender, args) =>
+            // 订阅重新连接开始事件
+            adapter.ReconnectionStarting += (sender, e) =>
             {
-                var notification = args.Notification;
-
-                Console.WriteLine($"\n⚠️  收到复位通知 - {notification.ResetType}");
-
+                Console.WriteLine("\n⚠️  重新连接开始 - 所有操作将被阻止");
+                
                 // 步骤 1：暂停所有操作
                 if (isOperating)
                 {
-                    Console.WriteLine("   [1/5] 暂停所有操作...");
+                    Console.WriteLine("   [1/3] 暂停所有操作...");
                     isOperating = false;
                     // 实际代码：await StopAllAxes();
                 }
 
                 // 步骤 2：保存当前状态
-                Console.WriteLine("   [2/5] 保存当前状态...");
+                Console.WriteLine("   [2/3] 保存当前状态...");
                 // 实际代码：await SaveStateAsync(savedState);
-
+                
                 // 步骤 3：标记为"等待恢复"
-                Console.WriteLine("   [3/5] 标记为等待恢复状态...");
+                Console.WriteLine("   [3/3] 标记为等待恢复状态...");
+            };
+            
+            // 订阅重新连接完成事件
+            adapter.ReconnectionCompleted += (sender, e) =>
+            {
+                Console.WriteLine("\n✓ 重新连接完成 - 操作已解除阻止");
+                
+                // 恢复状态并继续操作
+                Console.WriteLine("   恢复状态并继续操作...");
+                // 实际代码：await RestoreStateAsync(savedState);
+                isOperating = true;
+            };
 
-                // 步骤 4：等待预计的恢复时间
-                var waitTime = notification.EstimatedRecoverySeconds + 2; // 额外 2 秒缓冲
-                Console.WriteLine($"   [4/5] 等待 {waitTime} 秒以确保复位完成...");
-                await Task.Delay(TimeSpan.FromSeconds(waitTime));
-
-                // 步骤 5：重新初始化并恢复状态
-                Console.WriteLine("   [5/5] 重新初始化连接...");
-                try
-                {
-                    var initResult = await adapter.InitializeAsync();
-                    if (initResult.Key)
-                    {
-                        Console.WriteLine("   ✓ 重新连接成功");
-                        // 实际代码：await RestoreStateAsync(savedState);
-                        isOperating = true;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"   ✗ 重新连接失败: {initResult.Value}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"   ✗ 恢复过程异常: {ex.Message}");
-                }
+            // 订阅复位通知（可选，用于额外的日志记录）
+            adapter.EmcResetNotificationReceived += (sender, args) =>
+            {
+                var notification = args.Notification;
+                Console.WriteLine($"\n⚠️  收到复位通知 - {notification.ResetType}");
+                Console.WriteLine($"    来源: {notification.ProcessName}({notification.ProcessId})");
+                Console.WriteLine($"    预计恢复时间: {notification.EstimatedRecoverySeconds} 秒");
+                Console.WriteLine("    适配器将自动处理重新连接...");
             };
 
             Console.WriteLine("应对策略已配置，等待复位通知...");
-            Console.WriteLine("（在实际应用中，这个处理器会在后台持续运行）\n");
+            Console.WriteLine("（适配器会自动处理 Close → Wait → Reconnect，期间所有操作被阻止）\n");
 
             // 清理
             await adapter.CloseAsync();
@@ -242,15 +235,19 @@ namespace ZakYip.Singulation.Examples
             Console.WriteLine("3. 实例 B 和 C 自动响应：");
             Console.WriteLine("   → 通过轮询检测到复位通知");
             Console.WriteLine("   → 触发 EmcResetNotificationReceived 事件");
-            Console.WriteLine("   → 应用程序暂停操作并保存状态");
-            Console.WriteLine("   → 等待 15 秒（冷复位恢复时间）");
-            Console.WriteLine("   → 重新初始化连接");
-            Console.WriteLine("   → 恢复操作");
+            Console.WriteLine("   → 触发 ReconnectionStarting 事件（应用程序暂停操作并保存状态）");
+            Console.WriteLine("   → **所有雷赛方法调用和 IO 监控被自动阻止**");
+            Console.WriteLine("   → 自动关闭当前连接");
+            Console.WriteLine("   → 等待恢复时间（冷复位: 15秒，热复位: 2秒）");
+            Console.WriteLine("   → 自动重新初始化连接");
+            Console.WriteLine("   → 触发 ReconnectionCompleted 事件（应用程序恢复操作）");
+            Console.WriteLine("   → **解除所有操作阻止**");
             Console.WriteLine();
 
             Console.WriteLine("结果：");
             Console.WriteLine("✓ 所有实例协同完成复位");
             Console.WriteLine("✓ 无数据丢失");
+            Console.WriteLine("✓ 重新连接期间操作被自动阻止，避免冲突");
             Console.WriteLine("✓ 系统平滑过渡\n");
         }
 

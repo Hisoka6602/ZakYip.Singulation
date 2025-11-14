@@ -3,6 +3,7 @@ using System;
 using csLTDMC;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
@@ -30,6 +31,26 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         private readonly object _errorLock = new object();
         private readonly IEmcResourceLock _resourceLock;
         private readonly EmcResetCoordinator _resetCoordinator;
+        
+        /// <summary>
+        /// 用于保护操作的信号量，确保在重新连接期间阻止其他操作。
+        /// </summary>
+        private readonly SemaphoreSlim _operationSemaphore = new SemaphoreSlim(1, 1);
+        
+        /// <summary>
+        /// 指示当前是否正在执行重新连接操作。
+        /// </summary>
+        private volatile bool _isReconnecting;
+        
+        /// <summary>
+        /// 当开始重新连接时触发（在调用 Close 之前）。
+        /// </summary>
+        public event EventHandler? ReconnectionStarting;
+        
+        /// <summary>
+        /// 当重新连接完成时触发（在重新初始化之后）。
+        /// </summary>
+        public event EventHandler? ReconnectionCompleted;
 
         /// <summary>
         /// 获取最后一次操作的错误信息（线程安全）。如果最近一次操作成功，此值为 null。
@@ -95,11 +116,116 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             
             // 向上层传播事件
             EmcResetNotificationReceived?.Invoke(this, e);
+            
+            // 触发重新连接流程（异步执行，不阻塞事件处理）
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await HandleReconnectionAsync(e.Notification, CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Error(ex, "[LeadshineBusAdapter] 处理重新连接失败");
+                }
+            });
+        }
+        
+        /// <summary>
+        /// 处理重新连接流程：关闭连接 → 等待恢复 → 重新初始化。
+        /// <para>
+        /// 在此过程中，所有其他操作将被阻塞，直到重新连接完成。
+        /// </para>
+        /// </summary>
+        /// <param name="notification">复位通知信息。</param>
+        /// <param name="ct">取消令牌。</param>
+        private async Task HandleReconnectionAsync(EmcResetNotification notification, CancellationToken ct)
+        {
+            // 获取操作信号量，阻止所有其他操作
+            await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            
+            try
+            {
+                _isReconnecting = true;
+                _logger.Info($"[LeadshineBusAdapter] 开始重新连接流程，卡号: {_cardNo}");
+                
+                // 触发重新连接开始事件
+                ReconnectionStarting?.Invoke(this, EventArgs.Empty);
+                
+                // 步骤 1：关闭当前连接
+                _logger.Info($"[LeadshineBusAdapter] 步骤 1/3：关闭当前连接");
+                await CloseAsync(ct).ConfigureAwait(false);
+                
+                // 步骤 2：等待预计的恢复时间
+                var waitTime = TimeSpan.FromSeconds(notification.EstimatedRecoverySeconds + 2); // 额外 2 秒缓冲
+                _logger.Info($"[LeadshineBusAdapter] 步骤 2/3：等待 {waitTime.TotalSeconds} 秒以确保复位完成");
+                await Task.Delay(waitTime, ct).ConfigureAwait(false);
+                
+                // 步骤 3：重新初始化连接
+                _logger.Info($"[LeadshineBusAdapter] 步骤 3/3：重新初始化连接");
+                var initResult = await InitializeInternalAsync(ct).ConfigureAwait(false);
+                
+                if (initResult.Key)
+                {
+                    _logger.Info($"[LeadshineBusAdapter] 重新连接成功，卡号: {_cardNo}");
+                }
+                else
+                {
+                    _logger.Error($"[LeadshineBusAdapter] 重新连接失败: {initResult.Value}，卡号: {_cardNo}");
+                    SetError($"重新连接失败: {initResult.Value}");
+                }
+                
+                // 触发重新连接完成事件
+                ReconnectionCompleted?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, $"[LeadshineBusAdapter] 重新连接过程异常，卡号: {_cardNo}");
+                SetError($"重新连接过程异常: {ex.Message}");
+            }
+            finally
+            {
+                _isReconnecting = false;
+                _operationSemaphore.Release();
+                _logger.Info($"[LeadshineBusAdapter] 重新连接流程结束，卡号: {_cardNo}");
+            }
         }
 
         public bool IsInitialized { get; private set; }
+        
+        /// <summary>
+        /// 获取一个值，指示当前是否正在执行重新连接操作。
+        /// <para>
+        /// 在重新连接期间，所有雷赛方法调用和 IO 监控应被阻止。
+        /// </para>
+        /// </summary>
+        public bool IsReconnecting => _isReconnecting;
 
         public async Task<KeyValuePair<bool, string>> InitializeAsync(CancellationToken ct = default)
+        {
+            // 获取操作信号量（除非已经在重新连接流程中）
+            if (!_isReconnecting)
+            {
+                await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            }
+            
+            try
+            {
+                return await InitializeInternalAsync(ct).ConfigureAwait(false);
+            }
+            finally
+            {
+                if (!_isReconnecting)
+                {
+                    _operationSemaphore.Release();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// 内部初始化方法，假定调用者已持有操作信号量。
+        /// </summary>
+        private async Task<KeyValuePair<bool, string>> InitializeInternalAsync(CancellationToken ct = default)
         {
             return await Safe<KeyValuePair<bool, string>>(async () =>
             {
@@ -286,22 +412,41 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>任务。</returns>
-        public Task CloseAsync(CancellationToken ct = default)
+        public async Task CloseAsync(CancellationToken ct = default)
         {
-            return Safe(() =>
+            // 如果正在重新连接，则内部调用，不需要获取信号量
+            if (!_isReconnecting)
             {
-                if (!IsInitialized)
-                    return Task.CompletedTask;
+                await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            }
+            
+            try
+            {
+                await Safe(() =>
+                {
+                    if (!IsInitialized)
+                        return Task.CompletedTask;
 
-                LTDMC.dmc_board_close();
-                IsInitialized = false;
-                
-                // 释放分布式资源
-                _resourceLock?.Dispose();
-                _resetCoordinator?.Dispose();
-                
-                return Task.CompletedTask;
-            }, "CloseAsync");
+                    LTDMC.dmc_board_close();
+                    IsInitialized = false;
+                    
+                    // 仅在非重新连接流程中释放分布式资源
+                    if (!_isReconnecting)
+                    {
+                        _resourceLock?.Dispose();
+                        _resetCoordinator?.Dispose();
+                    }
+                    
+                    return Task.CompletedTask;
+                }, "CloseAsync").ConfigureAwait(false);
+            }
+            finally
+            {
+                if (!_isReconnecting)
+                {
+                    _operationSemaphore.Release();
+                }
+            }
         }
 
         /// <summary>
@@ -309,20 +454,34 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>轴数量；若通信失败，返回 0。</returns>
-        public Task<int> GetAxisCountAsync(CancellationToken ct = default)
+        public async Task<int> GetAxisCountAsync(CancellationToken ct = default)
         {
-            return Safe(() =>
+            if (_isReconnecting)
             {
-                ushort total = 0;
-                var ret = LTDMC.nmc_get_total_slaves(_cardNo, _portNo, ref total);
-                if (ret != 0)
+                _logger.Warn($"[LeadshineBusAdapter] GetAxisCountAsync 被阻止：当前正在重新连接");
+                return 0;
+            }
+            
+            await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                return await Safe(() =>
                 {
-                    _logger.Error($"【面板控制器获取轴数失败】方法：nmc_get_total_slaves，返回值：{ret}（预期：0），卡号：{_cardNo}，端口：{_portNo}");
-                    throw new InvalidOperationException($"nmc_get_total_slaves failed, ret={ret}");
-                }
+                    ushort total = 0;
+                    var ret = LTDMC.nmc_get_total_slaves(_cardNo, _portNo, ref total);
+                    if (ret != 0)
+                    {
+                        _logger.Error($"【面板控制器获取轴数失败】方法：nmc_get_total_slaves，返回值：{ret}（预期：0），卡号：{_cardNo}，端口：{_portNo}");
+                        throw new InvalidOperationException($"nmc_get_total_slaves failed, ret={ret}");
+                    }
 
-                return Task.FromResult((int)total);
-            }, "GetAxisCountAsync", defaultValue: 0);
+                    return Task.FromResult((int)total);
+                }, "GetAxisCountAsync", defaultValue: 0).ConfigureAwait(false);
+            }
+            finally
+            {
+                _operationSemaphore.Release();
+            }
         }
 
         /// <summary>
@@ -330,20 +489,34 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>错误码；若通信失败，返回 -999。</returns>
-        public Task<int> GetErrorCodeAsync(CancellationToken ct = default)
+        public async Task<int> GetErrorCodeAsync(CancellationToken ct = default)
         {
-            return Safe(() =>
+            if (_isReconnecting)
             {
-                ushort err = 0;
-                var ret = LTDMC.nmc_get_errcode(_cardNo, _portNo, ref err);
-                if (ret != 0)
+                _logger.Warn($"[LeadshineBusAdapter] GetErrorCodeAsync 被阻止：当前正在重新连接");
+                return -999;
+            }
+            
+            await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                return await Safe(() =>
                 {
-                    _logger.Error($"【面板控制器获取错误码失败】方法：nmc_get_errcode，返回值：{ret}（预期：0），卡号：{_cardNo}，端口：{_portNo}");
-                    throw new InvalidOperationException($"nmc_get_errcode failed, ret={ret}");
-                }
+                    ushort err = 0;
+                    var ret = LTDMC.nmc_get_errcode(_cardNo, _portNo, ref err);
+                    if (ret != 0)
+                    {
+                        _logger.Error($"【面板控制器获取错误码失败】方法：nmc_get_errcode，返回值：{ret}（预期：0），卡号：{_cardNo}，端口：{_portNo}");
+                        throw new InvalidOperationException($"nmc_get_errcode failed, ret={ret}");
+                    }
 
-                return Task.FromResult((int)err);
-            }, "GetErrorCodeAsync", defaultValue: -999);
+                    return Task.FromResult((int)err);
+                }, "GetErrorCodeAsync", defaultValue: -999).ConfigureAwait(false);
+            }
+            finally
+            {
+                _operationSemaphore.Release();
+            }
         }
 
         /// <summary>
@@ -362,21 +535,32 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         public async Task ResetAsync(CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
+            
+            if (_isReconnecting)
+            {
+                _logger.Warn($"[LeadshineBusAdapter] ResetAsync 被阻止：当前正在重新连接");
+                throw new InvalidOperationException("Cannot perform reset while reconnecting");
+            }
+            
+            // 获取操作信号量
+            await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
 
             _logger.Info($"【面板控制器冷复位开始】卡号：{_cardNo}");
             
-            // 尝试获取分布式锁（30 秒超时）
-            var lockAcquired = await _resourceLock.TryAcquireAsync(TimeSpan.FromSeconds(30), ct);
-            if (!lockAcquired)
-            {
-                var errorMsg = "无法获取 EMC 资源锁，可能有其他实例正在执行复位操作";
-                _logger.Error($"【面板控制器冷复位失败】{errorMsg}");
-                SetError(errorMsg);
-                throw new InvalidOperationException(errorMsg);
-            }
-
             try
             {
+                // 尝试获取分布式锁（30 秒超时）
+                var lockAcquired = await _resourceLock.TryAcquireAsync(TimeSpan.FromSeconds(30), ct);
+                if (!lockAcquired)
+                {
+                    var errorMsg = "无法获取 EMC 资源锁，可能有其他实例正在执行复位操作";
+                    _logger.Error($"【面板控制器冷复位失败】{errorMsg}");
+                    SetError(errorMsg);
+                    throw new InvalidOperationException(errorMsg);
+                }
+
+                try
+                {
                 // 广播复位通知到其他进程
                 _logger.Info($"【面板控制器冷复位】广播通知到其他进程，卡号：{_cardNo}");
                 await _resetCoordinator.BroadcastResetNotificationAsync(EmcResetType.Cold, ct);
@@ -411,12 +595,18 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     _logger.Error($"【面板控制器冷复位流程失败】卡号：{_cardNo}");
                     SetError("ResetAsync: 冷复位流程执行失败。");
                 }
+                }
+                finally
+                {
+                    // 释放分布式锁
+                    _resourceLock.Release();
+                    _logger.Info($"【面板控制器冷复位】已释放资源锁，卡号：{_cardNo}");
+                }
             }
             finally
             {
-                // 释放分布式锁
-                _resourceLock.Release();
-                _logger.Info($"【面板控制器冷复位】已释放资源锁，卡号：{_cardNo}");
+                // 释放操作信号量
+                _operationSemaphore.Release();
             }
         }
 
@@ -439,21 +629,32 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         public async Task WarmResetAsync(CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
+            
+            if (_isReconnecting)
+            {
+                _logger.Warn($"[LeadshineBusAdapter] WarmResetAsync 被阻止：当前正在重新连接");
+                throw new InvalidOperationException("Cannot perform warm reset while reconnecting");
+            }
+            
+            // 获取操作信号量
+            await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
 
             _logger.Info($"【面板控制器热复位开始】卡号：{_cardNo}");
             
-            // 尝试获取分布式锁（30 秒超时）
-            var lockAcquired = await _resourceLock.TryAcquireAsync(TimeSpan.FromSeconds(30), ct);
-            if (!lockAcquired)
-            {
-                var errorMsg = "无法获取 EMC 资源锁，可能有其他实例正在执行复位操作";
-                _logger.Error($"【面板控制器热复位失败】{errorMsg}");
-                SetError(errorMsg);
-                throw new InvalidOperationException(errorMsg);
-            }
-
             try
             {
+                // 尝试获取分布式锁（30 秒超时）
+                var lockAcquired = await _resourceLock.TryAcquireAsync(TimeSpan.FromSeconds(30), ct);
+                if (!lockAcquired)
+                {
+                    var errorMsg = "无法获取 EMC 资源锁，可能有其他实例正在执行复位操作";
+                    _logger.Error($"【面板控制器热复位失败】{errorMsg}");
+                    SetError(errorMsg);
+                    throw new InvalidOperationException(errorMsg);
+                }
+
+                try
+                {
                 // 广播复位通知到其他进程
                 _logger.Info($"【面板控制器热复位】广播通知到其他进程，卡号：{_cardNo}");
                 await _resetCoordinator.BroadcastResetNotificationAsync(EmcResetType.Warm, ct);
@@ -511,12 +712,18 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     _logger.Error($"【面板控制器热复位流程失败】卡号：{_cardNo}");
                     SetError("WarmResetAsync: 热复位流程执行失败。");
                 }
+                }
+                finally
+                {
+                    // 释放分布式锁
+                    _resourceLock.Release();
+                    _logger.Info($"【面板控制器热复位】已释放资源锁，卡号：{_cardNo}");
+                }
             }
             finally
             {
-                // 释放分布式锁
-                _resourceLock.Release();
-                _logger.Info($"【面板控制器热复位】已释放资源锁，卡号：{_cardNo}");
+                // 释放操作信号量
+                _operationSemaphore.Release();
             }
         }
 
@@ -694,32 +901,47 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 throw new ArgumentNullException(nameof(requests));
             if (nodeIds.Count != requests.Count)
                 throw new ArgumentException("节点 ID 列表和请求列表长度必须一致", nameof(nodeIds));
-
-            var results = new Dictionary<ushort, LeadshineBatchPdoOperations.BatchWriteResult[]>();
-
-            // 并行处理多个轴的批量写入
-            var tasks = new Task<(ushort nodeId, LeadshineBatchPdoOperations.BatchWriteResult[] result)>[nodeIds.Count];
-
-            for (int i = 0; i < nodeIds.Count; i++)
+            
+            if (_isReconnecting)
             {
-                var nodeId = nodeIds[i];
-                var request = requests[i];
-                tasks[i] = Task.Run(async () =>
+                _logger.Warn($"[LeadshineBusAdapter] BatchWriteMultipleAxesAsync 被阻止：当前正在重新连接");
+                return new Dictionary<ushort, LeadshineBatchPdoOperations.BatchWriteResult[]>();
+            }
+            
+            await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            
+            try
+            {
+                var results = new Dictionary<ushort, LeadshineBatchPdoOperations.BatchWriteResult[]>();
+
+                // 并行处理多个轴的批量写入
+                var tasks = new Task<(ushort nodeId, LeadshineBatchPdoOperations.BatchWriteResult[] result)>[nodeIds.Count];
+
+                for (int i = 0; i < nodeIds.Count; i++)
                 {
-                    var result = await LeadshineBatchPdoOperations.BatchWriteRxPdoAsync(
-                        _cardNo, _portNo, nodeId, request, ct).ConfigureAwait(false);
-                    return (nodeId, result);
-                }, ct);
+                    var nodeId = nodeIds[i];
+                    var request = requests[i];
+                    tasks[i] = Task.Run(async () =>
+                    {
+                        var result = await LeadshineBatchPdoOperations.BatchWriteRxPdoAsync(
+                            _cardNo, _portNo, nodeId, request, ct).ConfigureAwait(false);
+                        return (nodeId, result);
+                    }, ct);
+                }
+
+                var allResults = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+                foreach (var (nodeId, result) in allResults)
+                {
+                    results[nodeId] = result;
+                }
+
+                return results;
             }
-
-            var allResults = await Task.WhenAll(tasks).ConfigureAwait(false);
-
-            foreach (var (nodeId, result) in allResults)
+            finally
             {
-                results[nodeId] = result;
+                _operationSemaphore.Release();
             }
-
-            return results;
         }
 
         /// <summary>
@@ -738,32 +960,47 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             {
                 throw new ArgumentException("节点 ID 列表和请求列表长度必须一致");
             }
-
-            var results = new Dictionary<ushort, LeadshineBatchPdoOperations.BatchReadResult[]>();
-
-            // 并行处理多个轴的批量读取
-            var tasks = new Task<(ushort nodeId, LeadshineBatchPdoOperations.BatchReadResult[] result)>[nodeIds.Count];
-
-            for (int i = 0; i < nodeIds.Count; i++)
+            
+            if (_isReconnecting)
             {
-                var nodeId = nodeIds[i];
-                var request = requests[i];
-                tasks[i] = Task.Run(async () =>
+                _logger.Warn($"[LeadshineBusAdapter] BatchReadMultipleAxesAsync 被阻止：当前正在重新连接");
+                return new Dictionary<ushort, LeadshineBatchPdoOperations.BatchReadResult[]>();
+            }
+            
+            await _operationSemaphore.WaitAsync(ct).ConfigureAwait(false);
+            
+            try
+            {
+                var results = new Dictionary<ushort, LeadshineBatchPdoOperations.BatchReadResult[]>();
+
+                // 并行处理多个轴的批量读取
+                var tasks = new Task<(ushort nodeId, LeadshineBatchPdoOperations.BatchReadResult[] result)>[nodeIds.Count];
+
+                for (int i = 0; i < nodeIds.Count; i++)
                 {
-                    var result = await LeadshineBatchPdoOperations.BatchReadTxPdoAsync(
-                        _cardNo, _portNo, nodeId, request, ct).ConfigureAwait(false);
-                    return (nodeId, result);
-                }, ct);
+                    var nodeId = nodeIds[i];
+                    var request = requests[i];
+                    tasks[i] = Task.Run(async () =>
+                    {
+                        var result = await LeadshineBatchPdoOperations.BatchReadTxPdoAsync(
+                            _cardNo, _portNo, nodeId, request, ct).ConfigureAwait(false);
+                        return (nodeId, result);
+                    }, ct);
+                }
+
+                var allResults = await Task.WhenAll(tasks).ConfigureAwait(false);
+
+                foreach (var (nodeId, result) in allResults)
+                {
+                    results[nodeId] = result;
+                }
+
+                return results;
             }
-
-            var allResults = await Task.WhenAll(tasks).ConfigureAwait(false);
-
-            foreach (var (nodeId, result) in allResults)
+            finally
             {
-                results[nodeId] = result;
+                _operationSemaphore.Release();
             }
-
-            return results;
         }
 
         #endregion 批量操作优化方法
