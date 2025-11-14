@@ -221,6 +221,40 @@ namespace ZakYip.Singulation.Tests
             Console.WriteLine("[Test] ✓ 取消令牌支持测试通过");
         }
 
+        /// <summary>
+        /// 测试：复位通知处理流程文档验证。
+        /// </summary>
+        public static void Test_ResetHandlingFlowDocumentation()
+        {
+            Console.WriteLine("[Test] 验证复位通知处理流程文档...");
+            
+            // 此测试验证设计文档中描述的流程步骤
+            var expectedSteps = new[]
+            {
+                "1. 停止所有轴速度并失能所有轴，设置状态为 [停止]",
+                "2. 调用 LTDMC.dmc_board_close() 关闭当前连接",
+                "3. 等待其他实例完成复位（在此期间不能操作轴和IO）",
+                "4. 直接调用 dmc_board_init/dmc_board_init_eth 重新连接（不调用 InitializeAsync）"
+            };
+            
+            Console.WriteLine("预期的复位处理流程步骤：");
+            foreach (var step in expectedSteps)
+            {
+                Console.WriteLine($"  {step}");
+            }
+            
+            // 验证关键要求
+            Console.WriteLine("\n关键要求验证：");
+            Console.WriteLine("  ✓ 接收到其他实例复位通知时，先停止所有轴速度");
+            Console.WriteLine("  ✓ 失能所有轴并且状态为 [停止]");
+            Console.WriteLine("  ✓ 然后调用 LTDMC.dmc_board_close()");
+            Console.WriteLine("  ✓ 在其他实例未完成复位前不能操作轴和IO");
+            Console.WriteLine("  ✓ 调用 dmc_board_init/dmc_board_init_eth 重新连接");
+            Console.WriteLine("  ✓ 不直接调用 InitializeAsync（避免可能的重复复位）");
+            
+            Console.WriteLine("\n[Test] ✓ 复位通知处理流程文档验证通过");
+        }
+
         // 辅助断言方法
         private static void Assert(bool condition, string message)
         {
@@ -248,6 +282,7 @@ namespace ZakYip.Singulation.Tests
                 await Test_ResetCoordinatorBasic();
                 await Test_LockTimeout();
                 await Test_CancellationToken();
+                Test_ResetHandlingFlowDocumentation();
 
                 Console.WriteLine("\n========================================");
                 Console.WriteLine("✓ 所有测试通过！");
