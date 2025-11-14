@@ -8,6 +8,22 @@ namespace ZakYip.Singulation.Tests {
 
     internal static class Program {
         private static async Task<int> Main() {
+            // 首先运行 EMC 分布式锁测试
+            Console.WriteLine("========================================");
+            Console.WriteLine("运行 EMC 分布式锁测试...");
+            Console.WriteLine("========================================\n");
+            try {
+                await EmcDistributedLockTests.RunAllTests();
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"EMC 分布式锁测试失败: {ex.Message}");
+                // 继续运行其他测试
+            }
+
+            Console.WriteLine("\n========================================");
+            Console.WriteLine("运行其他单元测试...");
+            Console.WriteLine("========================================\n");
+
             var assembly = Assembly.GetExecutingAssembly();
             var methods = assembly
                 .GetTypes()
