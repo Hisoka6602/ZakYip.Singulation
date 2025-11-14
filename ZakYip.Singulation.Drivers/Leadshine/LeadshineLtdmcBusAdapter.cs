@@ -28,6 +28,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         private readonly string? _controllerIp;
         private volatile string? _lastErrorMessage;
         private readonly object _errorLock = new object();
+        private readonly IEmcResourceLock _resourceLock;
+        private readonly EmcResetCoordinator _resetCoordinator;
 
         /// <summary>
         /// 获取最后一次操作的错误信息（线程安全）。如果最近一次操作成功，此值为 null。
@@ -53,6 +55,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         public event Action<IBusAdapter, string>? ErrorOccurred;
 
         /// <summary>
+        /// 当接收到其他进程的 EMC 复位通知时触发。
+        /// <para>
+        /// 应用程序应订阅此事件，以便在其他实例执行复位时采取适当的应对措施（如暂停操作、保存状态等）。
+        /// </para>
+        /// </summary>
+        public event EventHandler<EmcResetEventArgs>? EmcResetNotificationReceived;
+
+        /// <summary>
         /// 初始化一个新的雷赛 LTD-MC 总线适配器实例。
         /// </summary>
         /// <param name="cardNo">控制器卡号（通常为 0）。</param>
@@ -63,6 +73,28 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             _cardNo = cardNo;
             _portNo = portNo;
             _controllerIp = string.IsNullOrWhiteSpace(controllerIp) ? null : controllerIp;
+            
+            // 初始化分布式锁（基于卡号）
+            _resourceLock = new EmcNamedMutexLock($"CardNo_{cardNo}");
+            
+            // 初始化复位协调器
+            _resetCoordinator = new EmcResetCoordinator(cardNo, enablePolling: true);
+            _resetCoordinator.ResetNotificationReceived += OnResetNotificationReceived;
+            
+            _logger.Info($"[LeadshineBusAdapter] 已初始化分布式锁和复位协调器，卡号: {cardNo}");
+        }
+
+        /// <summary>
+        /// 处理来自其他进程的复位通知。
+        /// </summary>
+        private void OnResetNotificationReceived(object? sender, EmcResetEventArgs e)
+        {
+            _logger.Warn($"[LeadshineBusAdapter] 收到 EMC 复位通知 - 卡号: {e.Notification.CardNo}, " +
+                        $"类型: {e.Notification.ResetType}, 来源: {e.Notification.ProcessName}({e.Notification.ProcessId}), " +
+                        $"预计恢复时间: {e.Notification.EstimatedRecoverySeconds}秒");
+            
+            // 向上层传播事件
+            EmcResetNotificationReceived?.Invoke(this, e);
         }
 
         public bool IsInitialized { get; private set; }
@@ -263,6 +295,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
                 LTDMC.dmc_board_close();
                 IsInitialized = false;
+                
+                // 释放分布式资源
+                _resourceLock?.Dispose();
+                _resetCoordinator?.Dispose();
+                
                 return Task.CompletedTask;
             }, "CloseAsync");
         }
@@ -312,6 +349,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// <summary>
         /// 执行控制器冷复位（如需）；通常用于错误码非 0 的场景。
         /// 冷复位会断电重启控制器，耗时约 15 秒。
+        /// <para>
+        /// 此方法会：
+        /// 1. 获取分布式锁以确保独占访问
+        /// 2. 广播复位通知到其他进程
+        /// 3. 执行冷复位操作
+        /// 4. 释放分布式锁
+        /// </para>
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>任务。</returns>
@@ -320,32 +364,59 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             ct.ThrowIfCancellationRequested();
 
             _logger.Info($"【面板控制器冷复位开始】卡号：{_cardNo}");
-            var success = await Safe(async () =>
+            
+            // 尝试获取分布式锁（30 秒超时）
+            var lockAcquired = await _resourceLock.TryAcquireAsync(TimeSpan.FromSeconds(30), ct);
+            if (!lockAcquired)
             {
-                // 执行冷复位并检查返回值
-                LTDMC.dmc_cool_reset(_cardNo);
-                var rc = LTDMC.dmc_board_close();
-                if (rc != 0)
-                {
-                    _logger.Error($"【面板控制器冷复位失败】方法：dmc_board_close，返回值：{rc}（预期：0），卡号：{_cardNo}");
-                    throw new InvalidOperationException($"Cold reset failed for card {_cardNo} with error code {rc}. Verify hardware connection and card status.");
-                }
-                _logger.Info($"【面板控制器冷复位成功】方法：dmc_cool_reset + dmc_board_close，返回值：{rc}，卡号：{_cardNo}");
+                var errorMsg = "无法获取 EMC 资源锁，可能有其他实例正在执行复位操作";
+                _logger.Error($"【面板控制器冷复位失败】{errorMsg}");
+                SetError(errorMsg);
+                throw new InvalidOperationException(errorMsg);
+            }
 
-                await CloseAsync(ct).ConfigureAwait(false);
-                await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
-                var initResult = await InitializeAsync(ct).ConfigureAwait(false);
-                if (!initResult.Key)
-                {
-                    _logger.Error($"【面板控制器冷复位后初始化失败】原因：{initResult.Value}，卡号：{_cardNo}");
-                    throw new InvalidOperationException($"Initialization after reset failed: {initResult.Value}");
-                }
-            }, "ResetAsync");
-
-            if (!success)
+            try
             {
-                _logger.Error($"【面板控制器冷复位流程失败】卡号：{_cardNo}");
-                SetError("ResetAsync: 冷复位流程执行失败。");
+                // 广播复位通知到其他进程
+                _logger.Info($"【面板控制器冷复位】广播通知到其他进程，卡号：{_cardNo}");
+                await _resetCoordinator.BroadcastResetNotificationAsync(EmcResetType.Cold, ct);
+
+                // 给其他进程一些时间接收通知并准备
+                await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+
+                var success = await Safe(async () =>
+                {
+                    // 执行冷复位并检查返回值
+                    LTDMC.dmc_cool_reset(_cardNo);
+                    var rc = LTDMC.dmc_board_close();
+                    if (rc != 0)
+                    {
+                        _logger.Error($"【面板控制器冷复位失败】方法：dmc_board_close，返回值：{rc}（预期：0），卡号：{_cardNo}");
+                        throw new InvalidOperationException($"Cold reset failed for card {_cardNo} with error code {rc}. Verify hardware connection and card status.");
+                    }
+                    _logger.Info($"【面板控制器冷复位成功】方法：dmc_cool_reset + dmc_board_close，返回值：{rc}，卡号：{_cardNo}");
+
+                    await CloseAsync(ct).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
+                    var initResult = await InitializeAsync(ct).ConfigureAwait(false);
+                    if (!initResult.Key)
+                    {
+                        _logger.Error($"【面板控制器冷复位后初始化失败】原因：{initResult.Value}，卡号：{_cardNo}");
+                        throw new InvalidOperationException($"Initialization after reset failed: {initResult.Value}");
+                    }
+                }, "ResetAsync");
+
+                if (!success)
+                {
+                    _logger.Error($"【面板控制器冷复位流程失败】卡号：{_cardNo}");
+                    SetError("ResetAsync: 冷复位流程执行失败。");
+                }
+            }
+            finally
+            {
+                // 释放分布式锁
+                _resourceLock.Release();
+                _logger.Info($"【面板控制器冷复位】已释放资源锁，卡号：{_cardNo}");
             }
         }
 
@@ -355,6 +426,13 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// 热复位通常只会重置通信/状态机，不掉电，耗时短（1~2 秒）。
         /// 若未初始化，将尝试直接初始化。
         /// </para>
+        /// <para>
+        /// 此方法会：
+        /// 1. 获取分布式锁以确保独占访问
+        /// 2. 广播复位通知到其他进程
+        /// 3. 执行热复位操作
+        /// 4. 释放分布式锁
+        /// </para>
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>任务。</returns>
@@ -363,55 +441,82 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             ct.ThrowIfCancellationRequested();
 
             _logger.Info($"【面板控制器热复位开始】卡号：{_cardNo}");
-            var success = await Safe(async () =>
+            
+            // 尝试获取分布式锁（30 秒超时）
+            var lockAcquired = await _resourceLock.TryAcquireAsync(TimeSpan.FromSeconds(30), ct);
+            if (!lockAcquired)
             {
-                // 若未初始化，直接初始化即可
-                if (!IsInitialized)
-                {
-                    _logger.Info($"【面板控制器未初始化，执行初始化】卡号：{_cardNo}");
-                    var (key, value) = await InitializeAsync(ct).ConfigureAwait(false);
-                    IsInitialized = key;
-                    return;
-                }
+                var errorMsg = "无法获取 EMC 资源锁，可能有其他实例正在执行复位操作";
+                _logger.Error($"【面板控制器热复位失败】{errorMsg}");
+                SetError(errorMsg);
+                throw new InvalidOperationException(errorMsg);
+            }
 
-                // 1) 软复位控制器
-                var retSoft = LTDMC.dmc_soft_reset(_cardNo);
-                if (retSoft != 0)
-                {
-                    _logger.Error($"【面板控制器热复位失败】方法：dmc_soft_reset，返回值：{retSoft}（预期：0），卡号：{_cardNo}");
-                    throw new InvalidOperationException($"dmc_soft_reset failed, ret={retSoft}");
-                }
-                _logger.Info($"【面板控制器热复位成功】方法：dmc_soft_reset，返回值：{retSoft}，卡号：{_cardNo}");
-
-                // 2) 关闭当前连接
-                LTDMC.dmc_board_close();
-                IsInitialized = false;
-
-                // 3) 等待控制器复位（官方建议 300~1500ms）
-                await Task.Delay(TimeSpan.FromMilliseconds(800), ct).ConfigureAwait(false);
-
-                // 4) 重新初始化（仅支持以太网）
-                if (string.IsNullOrWhiteSpace(_controllerIp))
-                {
-                    _logger.Error($"【面板控制器热复位失败】原因：热复位需要配置控制器IP地址，卡号：{_cardNo}");
-                    throw new InvalidOperationException("WarmReset requires controller IP for dmc_board_init_eth.");
-                }
-
-                var retInit = LTDMC.dmc_board_init_eth(_cardNo, _controllerIp);
-                if (retInit != 0)
-                {
-                    _logger.Error($"【面板控制器热复位后初始化失败】方法：dmc_board_init_eth，返回值：{retInit}（预期：0），卡号：{_cardNo}");
-                    throw new InvalidOperationException($"dmc_board_init_eth failed, ret={retInit}");
-                }
-                _logger.Info($"【面板控制器热复位后初始化成功】方法：dmc_board_init_eth，返回值：{retInit}，卡号：{_cardNo}");
-
-                IsInitialized = true;
-            }, "WarmResetAsync");
-
-            if (!success)
+            try
             {
-                _logger.Error($"【面板控制器热复位流程失败】卡号：{_cardNo}");
-                SetError("WarmResetAsync: 热复位流程执行失败。");
+                // 广播复位通知到其他进程
+                _logger.Info($"【面板控制器热复位】广播通知到其他进程，卡号：{_cardNo}");
+                await _resetCoordinator.BroadcastResetNotificationAsync(EmcResetType.Warm, ct);
+
+                // 给其他进程一些时间接收通知并准备
+                await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+                var success = await Safe(async () =>
+                {
+                    // 若未初始化，直接初始化即可
+                    if (!IsInitialized)
+                    {
+                        _logger.Info($"【面板控制器未初始化，执行初始化】卡号：{_cardNo}");
+                        var (key, value) = await InitializeAsync(ct).ConfigureAwait(false);
+                        IsInitialized = key;
+                        return;
+                    }
+
+                    // 1) 软复位控制器
+                    var retSoft = LTDMC.dmc_soft_reset(_cardNo);
+                    if (retSoft != 0)
+                    {
+                        _logger.Error($"【面板控制器热复位失败】方法：dmc_soft_reset，返回值：{retSoft}（预期：0），卡号：{_cardNo}");
+                        throw new InvalidOperationException($"dmc_soft_reset failed, ret={retSoft}");
+                    }
+                    _logger.Info($"【面板控制器热复位成功】方法：dmc_soft_reset，返回值：{retSoft}，卡号：{_cardNo}");
+
+                    // 2) 关闭当前连接
+                    LTDMC.dmc_board_close();
+                    IsInitialized = false;
+
+                    // 3) 等待控制器复位（官方建议 300~1500ms）
+                    await Task.Delay(TimeSpan.FromMilliseconds(800), ct).ConfigureAwait(false);
+
+                    // 4) 重新初始化（仅支持以太网）
+                    if (string.IsNullOrWhiteSpace(_controllerIp))
+                    {
+                        _logger.Error($"【面板控制器热复位失败】原因：热复位需要配置控制器IP地址，卡号：{_cardNo}");
+                        throw new InvalidOperationException("WarmReset requires controller IP for dmc_board_init_eth.");
+                    }
+
+                    var retInit = LTDMC.dmc_board_init_eth(_cardNo, _controllerIp);
+                    if (retInit != 0)
+                    {
+                        _logger.Error($"【面板控制器热复位后初始化失败】方法：dmc_board_init_eth，返回值：{retInit}（预期：0），卡号：{_cardNo}");
+                        throw new InvalidOperationException($"dmc_board_init_eth failed, ret={retInit}");
+                    }
+                    _logger.Info($"【面板控制器热复位后初始化成功】方法：dmc_board_init_eth，返回值：{retInit}，卡号：{_cardNo}");
+
+                    IsInitialized = true;
+                }, "WarmResetAsync");
+
+                if (!success)
+                {
+                    _logger.Error($"【面板控制器热复位流程失败】卡号：{_cardNo}");
+                    SetError("WarmResetAsync: 热复位流程执行失败。");
+                }
+            }
+            finally
+            {
+                // 释放分布式锁
+                _resourceLock.Release();
+                _logger.Info($"【面板控制器热复位】已释放资源锁，卡号：{_cardNo}");
             }
         }
 
