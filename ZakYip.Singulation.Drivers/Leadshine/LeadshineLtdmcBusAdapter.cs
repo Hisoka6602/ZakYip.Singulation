@@ -161,29 +161,15 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     {
                         // 步骤 1：设置目标速度为 0 (0x60FF - Target Velocity)
                         var zeroVelocity = new byte[4]; // INT32，值为 0
-                        var writeVelRet = LTDMC.nmc_write_rxpdo(_cardNo, _portNo, nodeId, 0x60FF, 0, 32, zeroVelocity);
-                        if (writeVelRet != 0)
-                        {
-                            _logger.Warn($"[LeadshineBusAdapter] 设置轴 {nodeId} 速度为 0 失败，ret={writeVelRet}");
-                        }
+                        WritePdoQuietly(nodeId, 0x60FF, 0, 32, zeroVelocity, "设置速度为0");
 
                         // 步骤 2：执行 QuickStop (ControlWord = 0x0002)
-                        var quickStopCmd = BitConverter.GetBytes((ushort)0x0002);
-                        var quickStopRet = LTDMC.nmc_write_rxpdo(_cardNo, _portNo, nodeId, 0x6040, 0, 16, quickStopCmd);
-                        if (quickStopRet != 0)
-                        {
-                            _logger.Warn($"[LeadshineBusAdapter] 轴 {nodeId} QuickStop 失败，ret={quickStopRet}");
-                        }
+                        WritePdoQuietly(nodeId, 0x6040, 0, 16, BitConverter.GetBytes((ushort)0x0002), "QuickStop");
 
                         await Task.Delay(50, ct).ConfigureAwait(false); // 给予短暂延时确保命令生效
 
                         // 步骤 3：执行 Shutdown (ControlWord = 0x0006) 进入 Ready to Switch On 状态
-                        var shutdownCmd = BitConverter.GetBytes((ushort)0x0006);
-                        var shutdownRet = LTDMC.nmc_write_rxpdo(_cardNo, _portNo, nodeId, 0x6040, 0, 16, shutdownCmd);
-                        if (shutdownRet != 0)
-                        {
-                            _logger.Warn($"[LeadshineBusAdapter] 轴 {nodeId} Shutdown 失败，ret={shutdownRet}");
-                        }
+                        WritePdoQuietly(nodeId, 0x6040, 0, 16, BitConverter.GetBytes((ushort)0x0006), "Shutdown");
 
                         _logger.Debug($"[LeadshineBusAdapter] 轴 {nodeId} 已停止并失能");
                     }
@@ -202,6 +188,18 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         }
 
         /// <summary>
+        /// 写入 PDO 数据的辅助方法，失败时仅记录警告而不抛出异常。
+        /// </summary>
+        private void WritePdoQuietly(ushort nodeId, ushort index, ushort subIndex, ushort bitLength, byte[] data, string operation)
+        {
+            var ret = LTDMC.nmc_write_rxpdo(_cardNo, _portNo, nodeId, index, subIndex, bitLength, data);
+            if (ret != 0)
+            {
+                _logger.Warn($"[LeadshineBusAdapter] 轴 {nodeId} {operation} 失败，ret={ret}");
+            }
+        }
+
+        /// <summary>
         /// 直接使用 LTDMC API 重新连接，不触发完整的 InitializeAsync 流程。
         /// <para>
         /// 这避免了在 InitializeAsync 中可能触发的额外复位操作。
@@ -213,29 +211,24 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         {
             try
             {
-                _logger.Info($"[LeadshineBusAdapter] 开始直接重新连接，卡号: {_cardNo}");
+                var isEthernet = _controllerIp is not null;
+                var methodName = isEthernet ? "dmc_board_init_eth" : "dmc_board_init";
+                
+                _logger.Info($"[LeadshineBusAdapter] 开始直接重新连接，卡号: {_cardNo}，方法: {methodName}");
 
                 // 使用 Task.Run 避免阻塞
                 var initRet = await Task.Run(() =>
-                {
-                    if (_controllerIp is null)
-                    {
-                        return LTDMC.dmc_board_init();
-                    }
-                    else
-                    {
-                        return LTDMC.dmc_board_init_eth(_cardNo, _controllerIp);
-                    }
-                }, ct).ConfigureAwait(false);
+                    isEthernet ? LTDMC.dmc_board_init_eth(_cardNo, _controllerIp!) : LTDMC.dmc_board_init(),
+                    ct).ConfigureAwait(false);
 
                 if (initRet != 0)
                 {
-                    _logger.Error($"[LeadshineBusAdapter] 直接重新连接失败，方法：{(_controllerIp is null ? "dmc_board_init" : "dmc_board_init_eth")}，返回值：{initRet}（预期：0），卡号：{_cardNo}");
+                    _logger.Error($"[LeadshineBusAdapter] 直接重新连接失败，方法：{methodName}，返回值：{initRet}（预期：0），卡号：{_cardNo}");
                     SetError($"直接重新连接失败: ret={initRet}");
                     return false;
                 }
 
-                _logger.Info($"[LeadshineBusAdapter] 直接重新连接成功，方法：{(_controllerIp is null ? "dmc_board_init" : "dmc_board_init_eth")}，返回值：{initRet}，卡号：{_cardNo}");
+                _logger.Info($"[LeadshineBusAdapter] 直接重新连接成功，方法：{methodName}，返回值：{initRet}，卡号：{_cardNo}");
                 IsInitialized = true;
                 return true;
             }
