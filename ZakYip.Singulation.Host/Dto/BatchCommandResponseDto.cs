@@ -16,6 +16,6 @@ namespace ZakYip.Singulation.Host.Dto {
         /// 各轴的执行结果集合。
         /// </summary>
         [Required(ErrorMessage = "执行结果集合不能为空")]
-        public List<AxisCommandResultDto> Results { get; set; } = new();
+        public List<AxisCommandResultDto> Results { get; init; } = new();
     }
 }

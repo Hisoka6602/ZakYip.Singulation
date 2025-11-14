@@ -25,10 +25,10 @@ namespace ZakYip.Singulation.Drivers.Common {
         /// <summary>是否反转</summary>
         public bool IsReverse { get; init; }
         /// <summary>丝杠螺距 (mm/转)</summary>
-        public decimal ScrewPitchMm { get; set; }
+        public decimal ScrewPitchMm { get; init; }
 
         /// <summary>皮带轮直径 (mm)</summary>
-        public decimal PulleyDiameterMm { get; set; }
+        public decimal PulleyDiameterMm { get; init; }
         /// <summary>辊筒直径 (mm)</summary>
         public required decimal PulleyPitchDiameterMm { get; set; }
 
@@ -42,15 +42,15 @@ namespace ZakYip.Singulation.Drivers.Common {
         public decimal MaxDecelRpmPerSec { get; set; } = 1511m;
 
         /// <summary>写速度命令最小间隔（节流防抖）。</summary>
-        public TimeSpan MinWriteInterval { get; set; } = TimeSpan.FromMilliseconds(5);
+        public TimeSpan MinWriteInterval { get; init; } = TimeSpan.FromMilliseconds(5);
 
         /// <summary>连续失败次数阈值，超过后触发降级/断线。</summary>
-        public int ConsecutiveFailThreshold { get; set; } = 5;
+        public int ConsecutiveFailThreshold { get; init; } = 5;
 
         /// <summary>启用健康监测（进入降级后启动 Ping 循环）。</summary>
-        public bool EnableHealthMonitor { get; set; } = true;
+        public bool EnableHealthMonitor { get; init; } = true;
 
         /// <summary>健康监测 Ping 间隔。</summary>
-        public TimeSpan HealthPingInterval { get; set; } = TimeSpan.FromMilliseconds(500);
+        public TimeSpan HealthPingInterval { get; init; } = TimeSpan.FromMilliseconds(500);
     }
 }

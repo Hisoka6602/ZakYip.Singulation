@@ -17,7 +17,7 @@ namespace ZakYip.Singulation.Host.Dto {
         /// </remarks>
         [Required(ErrorMessage = "IO 端口编号不能为空")]
         [Range(0, 1023, ErrorMessage = "IO 端口编号必须在 0-1023 之间")]
-        public int BitNumber { get; set; }
+        public int BitNumber { get; init; }
 
         /// <summary>
         /// IO 电平状态（High=1 或 Low=0）。
@@ -26,6 +26,6 @@ namespace ZakYip.Singulation.Host.Dto {
         /// 设置输出 IO 的电平状态：High (高电平，1) 或 Low (低电平，0)。
         /// </remarks>
         [Required(ErrorMessage = "IO 状态不能为空")]
-        public IoState State { get; set; }
+        public IoState State { get; init; }
     }
 }
