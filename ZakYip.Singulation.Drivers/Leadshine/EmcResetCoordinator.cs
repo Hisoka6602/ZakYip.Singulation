@@ -47,9 +47,15 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 _mmf = MemoryMappedFile.CreateOrOpen(_mmfName, 4096, MemoryMappedFileAccess.ReadWrite);
                 _logger.Info($"[EMC Coordinator] 内存映射文件已创建/打开: {_mmfName}");
             }
+            catch (PlatformNotSupportedException ex)
+            {
+                _logger.Warn(ex, $"[EMC Coordinator] 当前平台不支持命名内存映射文件，复位通知功能将被禁用: {_mmfName}");
+                _mmf = null;
+            }
             catch (Exception ex)
             {
                 _logger.Error(ex, $"[EMC Coordinator] 创建内存映射文件失败: {_mmfName}");
+                _mmf = null;
             }
 
             // 启动轮询接收通知
