@@ -81,7 +81,9 @@ namespace ZakYip.Singulation.Benchmarks {
                 catch (OperationCanceledException) {
                     break;
                 }
+#pragma warning disable CA1031 // 监控循环捕获所有异常以保证测试持续运行
                 catch (Exception ex) {
+#pragma warning restore CA1031
                     Console.WriteLine($"监控错误: {ex.Message}");
                 }
             }
@@ -107,7 +109,9 @@ namespace ZakYip.Singulation.Benchmarks {
                 catch (OperationCanceledException) {
                     break;
                 }
+#pragma warning disable CA1031 // 工作负载循环捕获所有异常以统计错误率
                 catch (Exception ex) {
+#pragma warning restore CA1031
                     errorCount++;
                     Console.WriteLine($"工作负载错误 #{errorCount}: {ex.Message}");
                 }

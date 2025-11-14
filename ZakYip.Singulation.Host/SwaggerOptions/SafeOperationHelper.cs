@@ -22,7 +22,11 @@ public static class SafeOperationHelper
         {
             action();
         }
+        // 故意捕获所有异常，这是安全隔离器的设计目的
+        // Intentionally catching all exceptions - this is the purpose of safe operation isolation
+#pragma warning disable CA1031
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             // 记录异常但不抛出，确保不阻塞主流程
             logger?.LogWarning(ex, "安全隔离器捕获异常 - 操作: {OperationName}. 已忽略异常以确保服务继续运行。", operationName);
@@ -44,7 +48,11 @@ public static class SafeOperationHelper
             action();
             return true;
         }
+        // 故意捕获所有异常，这是安全隔离器的设计目的
+        // Intentionally catching all exceptions - this is the purpose of safe operation isolation
+#pragma warning disable CA1031
         catch (Exception ex)
+#pragma warning restore CA1031
         {
             logger?.LogWarning(ex, "安全隔离器捕获异常 - 操作: {OperationName}. 已忽略异常以确保服务继续运行。", operationName);
             return false;
