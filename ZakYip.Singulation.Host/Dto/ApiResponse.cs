@@ -12,16 +12,16 @@ namespace ZakYip.Singulation.Host.Dto {
         /// <summary>操作是否成功</summary>
         [SwaggerSchema(Description = "操作是否成功，true 表示成功，false 表示失败")]
         [Required]
-        public bool Result { get; set; }
+        public bool Result { get; init; }
         
         /// <summary>响应消息</summary>
         [SwaggerSchema(Description = "响应消息，用于向客户端提供操作结果的文字说明")]
         [Required]
-        public string Msg { get; set; } = string.Empty;
+        public string Msg { get; init; } = string.Empty;
         
         /// <summary>返回数据</summary>
         [SwaggerSchema(Description = "返回的数据对象，类型根据具体接口而定", Nullable = true)]
-        public T? Data { get; set; }
+        public T? Data { get; init; }
 
         /// <summary>
         /// 成功响应

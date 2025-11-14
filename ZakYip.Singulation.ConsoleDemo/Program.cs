@@ -121,11 +121,13 @@ internal static class Program {
 #pragma warning restore CA1031
         finally {
             // 停机并释放
+#pragma warning disable CA1031 // 清理阶段故意捕获所有异常以确保程序正常退出
             try {
                 controller.StopAllAsync(CancellationToken.None).GetAwaiter().GetResult();
                 controller.DisposeAllAsync(CancellationToken.None).GetAwaiter().GetResult();
             }
             catch { /* 忽略收尾异常 */ }
+#pragma warning restore CA1031
             provider?.Dispose();
         }
     }
