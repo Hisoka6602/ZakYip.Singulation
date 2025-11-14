@@ -132,7 +132,123 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         }
         
         /// <summary>
-        /// 处理重新连接流程：关闭连接 → 等待恢复 → 重新初始化。
+        /// 停止所有轴的速度（设置目标速度为 0）并失能所有轴。
+        /// <para>
+        /// 直接通过 LTDMC API 操作所有从站节点，无需通过 IAxisDrive 实例。
+        /// 这是在接收到复位通知时的关键步骤，确保所有轴安全停止。
+        /// </para>
+        /// </summary>
+        /// <param name="ct">取消令牌。</param>
+        private async Task StopAndDisableAllAxesAsync(CancellationToken ct)
+        {
+            try
+            {
+                // 获取总线上的轴数量
+                ushort totalSlaves = 0;
+                var ret = LTDMC.nmc_get_total_slaves(_cardNo, _portNo, ref totalSlaves);
+                if (ret != 0 || totalSlaves == 0)
+                {
+                    _logger.Warn($"[LeadshineBusAdapter] 无法获取轴数量或没有轴，跳过停止和失能操作。ret={ret}, totalSlaves={totalSlaves}");
+                    return;
+                }
+
+                _logger.Info($"[LeadshineBusAdapter] 开始停止并失能 {totalSlaves} 个轴");
+
+                // 遍历所有从站节点（节点地址通常从 1 开始）
+                for (ushort nodeId = 1; nodeId <= totalSlaves; nodeId++)
+                {
+                    try
+                    {
+                        // 步骤 1：设置目标速度为 0 (0x60FF - Target Velocity)
+                        var zeroVelocity = new byte[4]; // INT32，值为 0
+                        var writeVelRet = LTDMC.nmc_write_rxpdo(_cardNo, _portNo, nodeId, 0x60FF, 0, 32, zeroVelocity);
+                        if (writeVelRet != 0)
+                        {
+                            _logger.Warn($"[LeadshineBusAdapter] 设置轴 {nodeId} 速度为 0 失败，ret={writeVelRet}");
+                        }
+
+                        // 步骤 2：执行 QuickStop (ControlWord = 0x0002)
+                        var quickStopCmd = BitConverter.GetBytes((ushort)0x0002);
+                        var quickStopRet = LTDMC.nmc_write_rxpdo(_cardNo, _portNo, nodeId, 0x6040, 0, 16, quickStopCmd);
+                        if (quickStopRet != 0)
+                        {
+                            _logger.Warn($"[LeadshineBusAdapter] 轴 {nodeId} QuickStop 失败，ret={quickStopRet}");
+                        }
+
+                        await Task.Delay(50, ct).ConfigureAwait(false); // 给予短暂延时确保命令生效
+
+                        // 步骤 3：执行 Shutdown (ControlWord = 0x0006) 进入 Ready to Switch On 状态
+                        var shutdownCmd = BitConverter.GetBytes((ushort)0x0006);
+                        var shutdownRet = LTDMC.nmc_write_rxpdo(_cardNo, _portNo, nodeId, 0x6040, 0, 16, shutdownCmd);
+                        if (shutdownRet != 0)
+                        {
+                            _logger.Warn($"[LeadshineBusAdapter] 轴 {nodeId} Shutdown 失败，ret={shutdownRet}");
+                        }
+
+                        _logger.Debug($"[LeadshineBusAdapter] 轴 {nodeId} 已停止并失能");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(ex, $"[LeadshineBusAdapter] 处理轴 {nodeId} 时发生异常");
+                    }
+                }
+
+                _logger.Info($"[LeadshineBusAdapter] 所有轴已停止并失能，状态：[停止]");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "[LeadshineBusAdapter] StopAndDisableAllAxesAsync 执行失败");
+            }
+        }
+
+        /// <summary>
+        /// 直接使用 LTDMC API 重新连接，不触发完整的 InitializeAsync 流程。
+        /// <para>
+        /// 这避免了在 InitializeAsync 中可能触发的额外复位操作。
+        /// </para>
+        /// </summary>
+        /// <param name="ct">取消令牌。</param>
+        /// <returns>连接是否成功。</returns>
+        private async Task<bool> ReconnectDirectAsync(CancellationToken ct)
+        {
+            try
+            {
+                _logger.Info($"[LeadshineBusAdapter] 开始直接重新连接，卡号: {_cardNo}");
+
+                // 使用 Task.Run 避免阻塞
+                var initRet = await Task.Run(() =>
+                {
+                    if (_controllerIp is null)
+                    {
+                        return LTDMC.dmc_board_init();
+                    }
+                    else
+                    {
+                        return LTDMC.dmc_board_init_eth(_cardNo, _controllerIp);
+                    }
+                }, ct).ConfigureAwait(false);
+
+                if (initRet != 0)
+                {
+                    _logger.Error($"[LeadshineBusAdapter] 直接重新连接失败，方法：{(_controllerIp is null ? "dmc_board_init" : "dmc_board_init_eth")}，返回值：{initRet}（预期：0），卡号：{_cardNo}");
+                    SetError($"直接重新连接失败: ret={initRet}");
+                    return false;
+                }
+
+                _logger.Info($"[LeadshineBusAdapter] 直接重新连接成功，方法：{(_controllerIp is null ? "dmc_board_init" : "dmc_board_init_eth")}，返回值：{initRet}，卡号：{_cardNo}");
+                IsInitialized = true;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, $"[LeadshineBusAdapter] 直接重新连接异常，卡号: {_cardNo}");
+                SetError($"直接重新连接异常: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 处理重新连接流程：停止所有轴 → 失能所有轴 → 关闭连接 → 等待恢复 → 重新连接。
         /// <para>
         /// 在此过程中，所有其他操作将被阻塞，直到重新连接完成。
         /// </para>
@@ -152,27 +268,31 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 // 触发重新连接开始事件
                 ReconnectionStarting?.Invoke(this, EventArgs.Empty);
                 
-                // 步骤 1：关闭当前连接
-                _logger.Info($"[LeadshineBusAdapter] 步骤 1/3：关闭当前连接");
+                // 步骤 1：停止所有轴速度并失能所有轴，设置状态为 [停止]
+                _logger.Info($"[LeadshineBusAdapter] 步骤 1/4：停止所有轴速度并失能所有轴");
+                await StopAndDisableAllAxesAsync(ct).ConfigureAwait(false);
+                
+                // 步骤 2：关闭当前连接
+                _logger.Info($"[LeadshineBusAdapter] 步骤 2/4：关闭当前连接");
                 await CloseAsync(ct).ConfigureAwait(false);
                 
-                // 步骤 2：等待预计的恢复时间
+                // 步骤 3：等待预计的恢复时间（在其他实例完成复位/重置操作之前不能操作轴和IO）
                 var waitTime = TimeSpan.FromSeconds(notification.EstimatedRecoverySeconds + 2); // 额外 2 秒缓冲
-                _logger.Info($"[LeadshineBusAdapter] 步骤 2/3：等待 {waitTime.TotalSeconds} 秒以确保复位完成");
+                _logger.Info($"[LeadshineBusAdapter] 步骤 3/4：等待 {waitTime.TotalSeconds} 秒以确保其他实例完成复位");
                 await Task.Delay(waitTime, ct).ConfigureAwait(false);
                 
-                // 步骤 3：重新初始化连接
-                _logger.Info($"[LeadshineBusAdapter] 步骤 3/3：重新初始化连接");
-                var initResult = await InitializeInternalAsync(ct).ConfigureAwait(false);
+                // 步骤 4：直接重新连接（使用 dmc_board_init/dmc_board_init_eth，而不是 InitializeAsync）
+                _logger.Info($"[LeadshineBusAdapter] 步骤 4/4：直接重新连接（不调用 InitializeAsync）");
+                var reconnectSuccess = await ReconnectDirectAsync(ct).ConfigureAwait(false);
                 
-                if (initResult.Key)
+                if (reconnectSuccess)
                 {
                     _logger.Info($"[LeadshineBusAdapter] 重新连接成功，卡号: {_cardNo}");
                 }
                 else
                 {
-                    _logger.Error($"[LeadshineBusAdapter] 重新连接失败: {initResult.Value}，卡号: {_cardNo}");
-                    SetError($"重新连接失败: {initResult.Value}");
+                    _logger.Error($"[LeadshineBusAdapter] 重新连接失败，卡号: {_cardNo}");
+                    SetError("重新连接失败");
                 }
                 
                 // 触发重新连接完成事件
