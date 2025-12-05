@@ -87,7 +87,7 @@ try {
 
 **步骤1**: 在 `SafeOperationHelper.cs` 中注入 `ICabinetIsolator`
 
-**当前代码** (`SafeOperationHelper.cs`):
+#### 当前代码 (`SafeOperationHelper.cs`):
 ```csharp
 public static class SafeOperationHelper
 {
@@ -138,7 +138,7 @@ public class SafeOperationHelper
 
 **步骤2**: 更新调用代码
 
-**当前**:
+#### 当前:
 ```csharp
 SafeOperationHelper.SafeExecute(
     () => { /* 操作 */ },

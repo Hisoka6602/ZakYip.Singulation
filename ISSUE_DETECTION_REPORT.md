@@ -315,7 +315,7 @@ public async Task UpdateStateAsync(int axisId, AxisState state) {
 
 **问题描述**: 未发现使用 `+` 进行字符串拼接的性能问题。
 
-**评估**: 良好！代码中适当使用了字符串插值 `$""` 和 `StringBuilder`。
+**评估**: 良好！代码中适当使用了字符串插值 `$""` 和 `StringBuilder`。。
 
 ---
 
