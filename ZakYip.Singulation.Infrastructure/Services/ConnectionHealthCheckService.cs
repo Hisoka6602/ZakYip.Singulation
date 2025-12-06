@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading;
@@ -41,19 +40,13 @@ public sealed class ConnectionHealthCheckService
             _upstreamPort = _upstreamTransport.RemotePort;
         }
         
-        // 尝试从控制器获取雷赛IP（假设从BusAdapter可以获取）
+        // 尝试从控制器获取雷赛IP
         if (_axisController != null)
         {
             try
             {
-                // 尝试获取第一个轴驱动的BusAdapter
-                var firstAxis = _axisController.GetAllAxes().FirstOrDefault();
-                if (firstAxis != null && firstAxis.BusAdapter is LeadshineLtdmcBusAdapter leadshineAdapter)
-                {
-                    // BusAdapter包含控制器IP信息，通过反射或者公共属性获取
-                    // 注意：LeadshineLtdmcBusAdapter可能没有公开IP属性，需要检查
-                    _leadshineIp = GetLeadshineIpFromAdapter(leadshineAdapter);
-                }
+                var busAdapter = _axisController.Bus as LeadshineLtdmcBusAdapter;
+                _leadshineIp = busAdapter?.ControllerIp;
             }
             catch (Exception ex)
             {
@@ -71,17 +64,12 @@ public sealed class ConnectionHealthCheckService
         
         var result = new ConnectionHealthCheckResult
         {
-            CheckedAt = DateTime.Now
+            CheckedAt = DateTime.Now,
+            LeadshineConnection = await CheckLeadshineConnectionAsync(ct),
+            UpstreamConnection = _upstreamTransport != null && !string.IsNullOrEmpty(_upstreamIp) 
+                ? await CheckUpstreamConnectionAsync(ct) 
+                : null
         };
-        
-        // 检查雷赛连接
-        result.LeadshineConnection = await CheckLeadshineConnectionAsync(ct);
-        
-        // 检查上游连接（如果配置了）
-        if (_upstreamTransport != null && !string.IsNullOrEmpty(_upstreamIp))
-        {
-            result.UpstreamConnection = await CheckUpstreamConnectionAsync(ct);
-        }
         
         _logger.LogInformation("连接健康检查完成 - 雷赛: {LeadshineConnected}, 上游: {UpstreamConnected}",
             result.LeadshineConnection.IsConnected,
@@ -107,7 +95,7 @@ public sealed class ConnectionHealthCheckService
             // 1. 检查IP是否可达（Ping）
             if (!string.IsNullOrEmpty(_leadshineIp))
             {
-                var pingResult = await PingHostAsync(_leadshineIp, timeoutMs: 1000, ct);
+                var pingResult = await PingHostAsync(_leadshineIp, 1000, ct);
                 health.IsPingable = pingResult.Success;
                 health.PingTimeMs = pingResult.RoundtripTime;
                 
@@ -132,12 +120,12 @@ public sealed class ConnectionHealthCheckService
             {
                 try
                 {
-                    var axes = _axisController.GetAllAxes();
-                    health.IsInitialized = axes.Any();
+                    var drives = _axisController.Drives;
+                    health.IsInitialized = drives != null && drives.Any();
                     
                     if (health.IsInitialized)
                     {
-                        diagnostics.Add($"✓ 控制器已初始化 ({axes.Count()} 个轴)");
+                        diagnostics.Add($"✓ 控制器已初始化 ({drives.Count} 个轴)");
                     }
                     else
                     {
@@ -189,7 +177,7 @@ public sealed class ConnectionHealthCheckService
             // 1. 检查IP是否可达（Ping）
             if (!string.IsNullOrEmpty(_upstreamIp))
             {
-                var pingResult = await PingHostAsync(_upstreamIp, timeoutMs: 1000, ct);
+                var pingResult = await PingHostAsync(_upstreamIp, 1000, ct);
                 health.IsPingable = pingResult.Success;
                 health.PingTimeMs = pingResult.RoundtripTime;
                 
@@ -277,69 +265,54 @@ public sealed class ConnectionHealthCheckService
     }
     
     /// <summary>
-    /// 从雷赛BusAdapter获取IP地址
+    /// Ping结果内部类
     /// </summary>
-    private string? GetLeadshineIpFromAdapter(LeadshineLtdmcBusAdapter adapter)
+    private class PingResult
     {
-        try
-        {
-            return adapter.ControllerIp;
-        }
-        catch
-        {
-            return null;
-        }
+        public bool Success { get; set; }
+        public long? RoundtripTime { get; set; }
+        public string? ErrorMessage { get; set; }
     }
 }
 
 /// <summary>
 /// 连接健康检查结果
 /// </summary>
-public record ConnectionHealthCheckResult
+public class ConnectionHealthCheckResult
 {
-    public LeadshineConnectionHealth LeadshineConnection { get; init; } = new();
-    public UpstreamConnectionHealth? UpstreamConnection { get; init; }
+    public LeadshineConnectionHealth LeadshineConnection { get; set; } = new();
+    public UpstreamConnectionHealth? UpstreamConnection { get; set; }
     public bool IsHealthy => LeadshineConnection.IsConnected && 
                             (UpstreamConnection == null || UpstreamConnection.IsConnected);
-    public DateTime CheckedAt { get; init; }
+    public DateTime CheckedAt { get; set; }
 }
 
 /// <summary>
 /// 雷赛连接健康状态
 /// </summary>
-public record LeadshineConnectionHealth
+public class LeadshineConnectionHealth
 {
-    public string? IpAddress { get; init; }
-    public bool IsPingable { get; init; }
-    public long? PingTimeMs { get; init; }
-    public bool IsInitialized { get; init; }
+    public string? IpAddress { get; set; }
+    public bool IsPingable { get; set; }
+    public long? PingTimeMs { get; set; }
+    public bool IsInitialized { get; set; }
     public bool IsConnected => IsPingable && IsInitialized;
-    public string? ErrorMessage { get; init; }
-    public List<string> DiagnosticMessages { get; init; } = new();
+    public string? ErrorMessage { get; set; }
+    public List<string> DiagnosticMessages { get; set; } = new();
 }
 
 /// <summary>
 /// 上游连接健康状态
 /// </summary>
-public record UpstreamConnectionHealth
+public class UpstreamConnectionHealth
 {
-    public string? IpAddress { get; init; }
-    public int Port { get; init; }
-    public bool IsPingable { get; init; }
-    public long? PingTimeMs { get; init; }
-    public bool IsTransportConnected { get; init; }
-    public string TransportState { get; init; } = "Unknown";
+    public string? IpAddress { get; set; }
+    public int Port { get; set; }
+    public bool IsPingable { get; set; }
+    public long? PingTimeMs { get; set; }
+    public bool IsTransportConnected { get; set; }
+    public string TransportState { get; set; } = "Unknown";
     public bool IsConnected => IsPingable && IsTransportConnected;
-    public string? ErrorMessage { get; init; }
-    public List<string> DiagnosticMessages { get; init; } = new();
-}
-
-/// <summary>
-/// Ping结果
-/// </summary>
-internal record PingResult
-{
-    public bool Success { get; init; }
-    public long? RoundtripTime { get; init; }
-    public string? ErrorMessage { get; init; }
+    public string? ErrorMessage { get; set; }
+    public List<string> DiagnosticMessages { get; set; } = new();
 }

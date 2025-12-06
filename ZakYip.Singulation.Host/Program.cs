@@ -39,6 +39,7 @@ using ZakYip.Singulation.Infrastructure.Persistence;
 using ZakYip.Singulation.Host.Configuration;
 using System.Runtime.InteropServices;
 using OpenTelemetry.Metrics;
+using ZakYip.Singulation.Transport.Abstractions;
 
 ThreadPool.SetMinThreads(HostConstants.MinWorkerThreads, HostConstants.MinCompletionPortThreads);
 System.Runtime.GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
