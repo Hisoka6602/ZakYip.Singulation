@@ -1,0 +1,126 @@
+#!/bin/bash
+# Git Pre-commit Hook - 影分身防线
+# 安装方法: cp tools/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+echo "🛡️ 运行影分身防线检查..."
+
+# 获取即将提交的C#文件
+CHANGED_CS_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.cs$')
+
+if [ -z "$CHANGED_CS_FILES" ]; then
+    echo "✅ 没有C#文件变更"
+    exit 0
+fi
+
+WARNING_COUNT=0
+
+echo "检查 $(echo "$CHANGED_CS_FILES" | wc -l) 个C#文件..."
+echo ""
+
+# ===== 检查1: 是否使用了项目工具类 =====
+echo "🔍 检查1: 是否正确使用项目工具类..."
+
+for file in $CHANGED_CS_FILES; do
+    if [ ! -f "$file" ]; then
+        continue
+    fi
+    
+    # 检查是否有自己实现的SafeExecute
+    if grep -q "public.*SafeExecute.*Action" "$file" 2>/dev/null; then
+        if ! grep -q "interface.*ICabinetIsolator" "$file" 2>/dev/null; then
+            echo "⚠️  $file 实现了SafeExecute方法"
+            echo "   → 建议使用 ICabinetIsolator.SafeExecute() 接口"
+            WARNING_COUNT=$((WARNING_COUNT + 1))
+        fi
+    fi
+    
+    # 检查是否有手动的try-catch SafeExecute模式
+    if grep -Pzo "try\s*\{[^\}]*action\(\)[^\}]*\}\s*catch\s*\(Exception" "$file" 2>/dev/null; then
+        if ! grep -q "ICabinetIsolator\|SafeOperationIsolator" "$file" 2>/dev/null; then
+            echo "⚠️  $file 可能重复实现了SafeExecute模式"
+            echo "   → 建议使用 ICabinetIsolator.SafeExecute()"
+            WARNING_COUNT=$((WARNING_COUNT + 1))
+        fi
+    fi
+    
+    # 检查是否有手动的事件触发
+    if grep -q "Task\.Run.*=>.*Invoke\|Task\.Run.*{.*Invoke" "$file" 2>/dev/null; then
+        if ! grep -q "LeadshineHelpers\.FireEachNonBlocking" "$file" 2>/dev/null; then
+            echo "⚠️  $file 包含手动事件触发代码"
+            echo "   → 建议使用 LeadshineHelpers.FireEachNonBlocking()"
+            WARNING_COUNT=$((WARNING_COUNT + 1))
+        fi
+    fi
+done
+
+echo ""
+
+# ===== 检查2: 方法复杂度 =====
+echo "🔍 检查2: 方法复杂度..."
+
+for file in $CHANGED_CS_FILES; do
+    if [ ! -f "$file" ]; then
+        continue
+    fi
+    
+    # 简单检查：方法行数
+    METHOD_LINES=$(awk '/^[[:space:]]*(public|private|protected).*\(/ {start=NR} 
+                        /^[[:space:]]*}/ {if(start>0 && NR-start>50) print FILENAME":"start":"NR-start; start=0}' \
+                        "$file" 2>/dev/null)
+    
+    if [ -n "$METHOD_LINES" ]; then
+        echo "⚠️  $file 包含超长方法（>50行）"
+        echo "   → 建议拆分为更小的方法"
+        WARNING_COUNT=$((WARNING_COUNT + 1))
+    fi
+done
+
+echo ""
+
+# ===== 检查3: 重复的代码块 =====
+echo "🔍 检查3: 重复的代码块..."
+
+# 检查是否有多个文件包含相似的代码
+if [ $(echo "$CHANGED_CS_FILES" | wc -l) -gt 1 ]; then
+    # 简单启发式：检查是否有相同的长行
+    TEMP_FILE=$(mktemp)
+    for file in $CHANGED_CS_FILES; do
+        if [ -f "$file" ]; then
+            grep -v "^\s*//\|^\s*$" "$file" | grep ".\{50,\}" >> "$TEMP_FILE" 2>/dev/null || true
+        fi
+    done
+    
+    DUPLICATE_LINES=$(sort "$TEMP_FILE" | uniq -d | wc -l)
+    rm -f "$TEMP_FILE"
+    
+    if [ "$DUPLICATE_LINES" -gt 5 ]; then
+        echo "⚠️  检测到多个文件中可能存在重复代码块"
+        echo "   → 建议提取公共方法或类"
+        WARNING_COUNT=$((WARNING_COUNT + 1))
+    fi
+fi
+
+echo ""
+
+# ===== 总结 =====
+echo "========================================="
+if [ "$WARNING_COUNT" -eq 0 ]; then
+    echo "✅ 所有检查通过！"
+    exit 0
+else
+    echo "⚠️  发现 $WARNING_COUNT 个需要注意的问题"
+    echo ""
+    echo "这些是警告，不会阻止提交，但建议修复。"
+    echo "参考文档: ANTI_DUPLICATION_DEFENSE.md"
+    echo ""
+    
+    # 询问是否继续
+    read -p "是否继续提交? (y/n) " -n 1 -r
+    echo ""
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        exit 0
+    else
+        echo "提交已取消"
+        exit 1
+    fi
+fi

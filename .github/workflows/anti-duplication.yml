@@ -1,0 +1,78 @@
+name: Anti-Duplication Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '**.cs'
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**.cs'
+
+jobs:
+  check-duplication:
+    name: 代码重复检测
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Make scripts executable
+      run: chmod +x tools/*.sh
+    
+    - name: Run duplication check
+      id: duplication-check
+      run: |
+        ./tools/check-duplication.sh
+      continue-on-error: true
+    
+    - name: Check analysis results
+      run: |
+        dotnet tool install --global dotnet-counters || true
+        
+        # 编译项目以运行分析器
+        for project in $(find . -name "*.csproj" -not -path "*/obj/*" -not -path "*/bin/*" -not -path "*MauiApp*"); do
+          echo "分析项目: $project"
+          dotnet build "$project" \
+            -c Release \
+            -p:RunAnalyzers=true \
+            -p:TreatWarningsAsErrors=false \
+            -p:WarningLevel=4 \
+            || true
+        done
+    
+    - name: Generate summary
+      if: always()
+      run: |
+        echo "## 🛡️ 影分身防线检查结果" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.duplication-check.outcome }}" == "success" ]; then
+          echo "✅ **代码重复检查通过**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **发现代码重复问题**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "请查看上方日志了解详情，并参考 \`ANTI_DUPLICATION_DEFENSE.md\` 文档进行改进。" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "📚 相关文档:" >> $GITHUB_STEP_SUMMARY
+        echo "- [影分身防线文档](../blob/main/ANTI_DUPLICATION_DEFENSE.md)" >> $GITHUB_STEP_SUMMARY
+        echo "- [快速修复指南](../blob/main/QUICK_FIX_GUIDE.md)" >> $GITHUB_STEP_SUMMARY
+        echo "- [问题检测报告](../blob/main/ISSUE_DETECTION_REPORT.md)" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Fail if critical issues found
+      if: steps.duplication-check.outcome == 'failure'
+      run: |
+        echo "::error::发现严重的代码重复问题，请修复后再提交"
+        exit 1
