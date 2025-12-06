@@ -177,3 +177,39 @@ dotnet_diagnostic.CA1303.severity = silent
 
 # CA2007: Consider calling ConfigureAwait on the awaited task - silent (not needed in ASP.NET Core)
 dotnet_diagnostic.CA2007.severity = silent
+
+# ===== 影分身防线：防止代码重复的规则 =====
+
+# CA1502: Avoid excessive complexity (圈复杂度)
+dotnet_diagnostic.CA1502.severity = warning
+dotnet_code_quality.CA1502.cyclomatic_complexity = 25
+
+# CA1505: Avoid unmaintainable code (可维护性指数)
+dotnet_diagnostic.CA1505.severity = warning
+dotnet_code_quality.CA1505.maintainability_index = 20
+
+# CA1506: Avoid excessive class coupling (类耦合度)
+dotnet_diagnostic.CA1506.severity = warning
+dotnet_code_quality.CA1506.class_coupling_threshold = 50
+
+# CA1501: Avoid excessive inheritance (继承深度)
+dotnet_diagnostic.CA1501.severity = warning
+dotnet_code_quality.CA1501.inheritance_depth = 5
+
+# IDE0004: Remove unnecessary cast (删除不必要的强制转换)
+dotnet_diagnostic.IDE0004.severity = warning
+
+# IDE0005: Remove unnecessary using directives (删除不必要的using)
+dotnet_diagnostic.IDE0005.severity = warning
+
+# IDE0051: Remove unused private members (删除未使用的私有成员)
+dotnet_diagnostic.IDE0051.severity = warning
+
+# IDE0052: Remove unread private members (删除未读取的私有成员)
+dotnet_diagnostic.IDE0052.severity = warning
+
+# CA1806: Do not ignore method results (不要忽略方法结果)
+dotnet_diagnostic.CA1806.severity = warning
+
+# CA1508: Avoid dead conditional code (避免死代码)
+dotnet_diagnostic.CA1508.severity = warning
