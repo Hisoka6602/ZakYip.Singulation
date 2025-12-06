@@ -34,7 +34,19 @@ jobs:
       id: check-p0
       run: |
         echo "检查关键(P0)技术债务..."
-        P0_COUNT=$(grep -c "优先级\*\*: P0" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        P0_COUNT=$(awk '
+          /^### TD-[0-9]+:/ {in_td=1; is_p0=0; is_pending=0; next}
+          in_td && /\*\*优先级\*\*: P0/ {is_p0=1}
+          in_td && /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
+          /^### / && in_td {
+            if(is_p0 && is_pending) count++
+            in_td=0
+          }
+          END {
+            if(in_td && is_p0 && is_pending) count++
+            print count+0
+          }
+        ' TECHNICAL_DEBT.md)
         
         if [ "$P0_COUNT" -gt 0 ]; then
           echo "❌ 发现 $P0_COUNT 个关键(P0)技术债务"
@@ -47,11 +59,17 @@ jobs:
           echo "发现 $P0_COUNT 个必须处理的关键技术债务：" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          awk '/^### TD-[0-9]+:/ {found=1; item=$0; next} 
-               found && /\*\*优先级\*\*: P0/ {
-                 print item; 
-                 found=0
-               }' TECHNICAL_DEBT.md >> $GITHUB_STEP_SUMMARY
+          awk '
+            /^### TD-[0-9]+:/ {
+              if(in_td && is_p0 && is_pending) print title
+              in_td=1; is_p0=0; is_pending=0; title=$0
+            }
+            in_td && /\*\*优先级\*\*: P0/ {is_p0=1}
+            in_td && /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
+            END {
+              if(in_td && is_p0 && is_pending) print title
+            }
+          ' TECHNICAL_DEBT.md >> $GITHUB_STEP_SUMMARY
           
           exit 1
         else
@@ -66,14 +84,65 @@ jobs:
       run: |
         echo "计算技术债务健康度..."
         
-        P0=$(grep -c "优先级\*\*: P0" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
-        P1=$(grep -c "优先级\*\*: P1" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
-        P2=$(grep -c "优先级\*\*: P2" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
-        P3=$(grep -c "优先级\*\*: P3" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        P0=$(awk '
+          /^### TD-[0-9]+:/ {in_td=1; is_p0=0; is_pending=0; next}
+          in_td && /\*\*优先级\*\*: P0/ {is_p0=1}
+          in_td && /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
+          /^### / && in_td {
+            if(is_p0 && is_pending) count++
+            in_td=0
+          }
+          END {
+            if(in_td && is_p0 && is_pending) count++
+            print count+0
+          }
+        ' TECHNICAL_DEBT.md)
         
-        PENDING=$(grep -c "状态\*\*: ⏳ 待处理" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
-        IN_PROGRESS=$(grep -c "状态\*\*: 🔄 进行中" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
-        DONE=$(grep -c "状态\*\*: ✅ 已完成" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        P1=$(awk '
+          /^### TD-[0-9]+:/ {in_td=1; is_p1=0; is_pending=0; next}
+          in_td && /\*\*优先级\*\*: P1/ {is_p1=1}
+          in_td && /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
+          /^### / && in_td {
+            if(is_p1 && is_pending) count++
+            in_td=0
+          }
+          END {
+            if(in_td && is_p1 && is_pending) count++
+            print count+0
+          }
+        ' TECHNICAL_DEBT.md)
+        
+        P2=$(awk '
+          /^### TD-[0-9]+:/ {in_td=1; is_p2=0; is_pending=0; next}
+          in_td && /\*\*优先级\*\*: P2/ {is_p2=1}
+          in_td && /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
+          /^### / && in_td {
+            if(is_p2 && is_pending) count++
+            in_td=0
+          }
+          END {
+            if(in_td && is_p2 && is_pending) count++
+            print count+0
+          }
+        ' TECHNICAL_DEBT.md)
+        
+        P3=$(awk '
+          /^### TD-[0-9]+:/ {in_td=1; is_p3=0; is_pending=0; next}
+          in_td && /\*\*优先级\*\*: P3/ {is_p3=1}
+          in_td && /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
+          /^### / && in_td {
+            if(is_p3 && is_pending) count++
+            in_td=0
+          }
+          END {
+            if(in_td && is_p3 && is_pending) count++
+            print count+0
+          }
+        ' TECHNICAL_DEBT.md)
+        
+        PENDING=$(grep -c "\*\*状态\*\*: ⏳ 待处理" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        IN_PROGRESS=$(grep -c "\*\*状态\*\*: 🔄 进行中" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        DONE=$(grep -c "\*\*状态\*\*: ✅ 已完成" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
         
         HEALTH=$((100 - P0 * 25 - P1 * 10 - P2 * 3 - P3 * 1))
         
@@ -97,11 +166,17 @@ jobs:
         
         # 提取P1且状态为待处理的项
         P1_PENDING=$(awk '
-          /^### TD-[0-9]+:/ {item=$0; is_p1=0; is_pending=0}
-          /\*\*优先级\*\*: P1/ {is_p1=1}
-          /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
-          is_p1 && is_pending {count++; is_p1=0; is_pending=0}
-          END {print count+0}
+          /^### TD-[0-9]+:/ {in_td=1; is_p1=0; is_pending=0; next}
+          in_td && /\*\*优先级\*\*: P1/ {is_p1=1}
+          in_td && /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
+          /^### / && in_td {
+            if(is_p1 && is_pending) count++
+            in_td=0
+          }
+          END {
+            if(in_td && is_p1 && is_pending) count++
+            print count+0
+          }
         ' TECHNICAL_DEBT.md)
         
         if [ "$P1_PENDING" -gt 0 ]; then
@@ -163,6 +238,6 @@ jobs:
         exit 1
     
     - name: Warn if P1 pending
-      if: steps.check-p1.outputs.p1_pending > 0
+      if: steps.check-p1.outputs.p1_pending != '0'
       run: |
         echo "::warning::发现 ${{ steps.check-p1.outputs.p1_pending }} 个待处理的高优先级(P1)技术债务，建议在此PR中处理"
