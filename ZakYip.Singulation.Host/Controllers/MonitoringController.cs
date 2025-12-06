@@ -15,16 +15,19 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly SystemHealthMonitorService _healthMonitor;
         private readonly FaultDiagnosisService _diagnosisService;
         private readonly ExceptionAggregationService _exceptionAggregation;
+        private readonly ConnectionHealthCheckService? _connectionHealthCheck;
 
         public MonitoringController(
             ILogger<MonitoringController> logger,
             SystemHealthMonitorService healthMonitor,
             FaultDiagnosisService diagnosisService,
-            ExceptionAggregationService exceptionAggregation) {
+            ExceptionAggregationService exceptionAggregation,
+            ConnectionHealthCheckService? connectionHealthCheck = null) {
             _logger = logger;
             _healthMonitor = healthMonitor;
             _diagnosisService = diagnosisService;
             _exceptionAggregation = exceptionAggregation;
+            _connectionHealthCheck = connectionHealthCheck;
         }
 
         /// <summary>
@@ -199,6 +202,77 @@ namespace ZakYip.Singulation.Host.Controllers {
             catch (Exception ex) {
                 _logger.LogError(ex, "获取异常统计信息失败");
                 return StatusCode(500, ApiResponse<object>.Fail("获取异常统计信息失败"));
+            }
+        }
+
+        /// <summary>
+        /// 检查连接健康状态
+        /// </summary>
+        /// <remarks>
+        /// 检查雷赛控制器和上游连接的健康状态。
+        /// 包括：
+        /// - 雷赛控制器IP可达性（Ping）
+        /// - 雷赛控制器初始化状态
+        /// - 上游IP可达性（如果配置）
+        /// - 上游传输层连接状态（如果配置）
+        /// 
+        /// 如果雷赛初始化失败，会先ping IP检查网络连通性，帮助诊断是网络问题还是初始化问题。
+        /// </remarks>
+        /// <param name="ct">取消令牌</param>
+        /// <returns>连接健康检查结果</returns>
+        /// <response code="200">检查成功</response>
+        /// <response code="503">服务不可用（连接健康检查服务未配置）</response>
+        [HttpGet("connection-health")]
+        [SwaggerOperation(
+            Summary = "检查连接健康状态",
+            Description = "检查雷赛控制器和上游连接的健康状态，包括IP可达性、初始化状态和传输层连接状态")]
+        [ProducesResponseType(typeof(ApiResponse<ConnectionHealthDto>), 200)]
+        [ProducesResponseType(typeof(ApiResponse<object>), 503)]
+        [Produces("application/json")]
+        public async Task<IActionResult> GetConnectionHealth(CancellationToken ct) {
+            try {
+                if (_connectionHealthCheck == null) {
+                    return StatusCode(503, ApiResponse<object>.Fail(
+                        "连接健康检查服务未配置。请确保已在依赖注入中注册 ConnectionHealthCheckService"));
+                }
+
+                var result = await _connectionHealthCheck.CheckHealthAsync(ct);
+                
+                // 转换为 DTO
+                var dto = new ConnectionHealthDto
+                {
+                    LeadshineConnection = new LeadshineConnectionStatus
+                    {
+                        IpAddress = result.LeadshineConnection.IpAddress,
+                        IsPingable = result.LeadshineConnection.IsPingable,
+                        PingTimeMs = result.LeadshineConnection.PingTimeMs,
+                        IsInitialized = result.LeadshineConnection.IsInitialized,
+                        ErrorMessage = result.LeadshineConnection.ErrorMessage,
+                        DiagnosticMessages = result.LeadshineConnection.DiagnosticMessages
+                    },
+                    UpstreamConnection = result.UpstreamConnection == null ? null : new UpstreamConnectionStatus
+                    {
+                        IpAddress = result.UpstreamConnection.IpAddress,
+                        Port = result.UpstreamConnection.Port,
+                        IsPingable = result.UpstreamConnection.IsPingable,
+                        PingTimeMs = result.UpstreamConnection.PingTimeMs,
+                        IsTransportConnected = result.UpstreamConnection.IsTransportConnected,
+                        TransportState = result.UpstreamConnection.TransportState,
+                        ErrorMessage = result.UpstreamConnection.ErrorMessage,
+                        DiagnosticMessages = result.UpstreamConnection.DiagnosticMessages
+                    },
+                    CheckedAt = result.CheckedAt
+                };
+
+                var message = dto.IsHealthy 
+                    ? "所有连接健康" 
+                    : "存在连接问题，请查看诊断信息";
+
+                return Ok(ApiResponse<ConnectionHealthDto>.Success(dto, message));
+            }
+            catch (Exception ex) {
+                _logger.LogError(ex, "检查连接健康状态失败");
+                return StatusCode(500, ApiResponse<object>.Fail("检查连接健康状态失败"));
             }
         }
     }

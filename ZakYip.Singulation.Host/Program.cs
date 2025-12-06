@@ -243,6 +243,12 @@ var host = Host.CreateDefaultBuilder(args)
             sp.GetRequiredService<ExceptionAggregationService>()));
         services.AddHostedService(sp => sp.GetRequiredService<RealtimeAxisDataService>());
         services.AddSingleton<FaultDiagnosisService>();
+        
+        // 注册连接健康检查服务
+        services.AddSingleton<ConnectionHealthCheckService>(sp => new ConnectionHealthCheckService(
+            sp.GetRequiredService<ILogger<ConnectionHealthCheckService>>(),
+            sp.GetService<IAxisController>(),
+            sp.GetService<IByteTransport>()));
 
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
