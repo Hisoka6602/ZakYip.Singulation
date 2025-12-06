@@ -64,7 +64,7 @@ public sealed class ConnectionHealthCheckService
         
         var result = new ConnectionHealthCheckResult
         {
-            CheckedAt = DateTime.Now,
+            CheckedAt = DateTime.UtcNow,
             LeadshineConnection = await CheckLeadshineConnectionAsync(ct),
             UpstreamConnection = _upstreamTransport != null && !string.IsNullOrEmpty(_upstreamIp) 
                 ? await CheckUpstreamConnectionAsync(ct) 
@@ -130,7 +130,12 @@ public sealed class ConnectionHealthCheckService
                     else
                     {
                         diagnostics.Add("✗ 控制器未初始化或无可用轴");
-                        if (health.IsPingable && !string.IsNullOrEmpty(_leadshineIp))
+                        if (string.IsNullOrEmpty(_leadshineIp))
+                        {
+                            diagnostics.Add("  提示: 未配置控制器IP地址");
+                            diagnostics.Add("  建议: 如果使用以太网模式，请配置IP地址；如果使用本地PCI模式，请检查硬件连接");
+                        }
+                        else if (health.IsPingable)
                         {
                             diagnostics.Add($"  提示: IP {_leadshineIp} 可达，但控制器初始化失败");
                             diagnostics.Add("  建议: 检查控制器配置和硬件连接");
@@ -236,6 +241,7 @@ public sealed class ConnectionHealthCheckService
     {
         try
         {
+            ct.ThrowIfCancellationRequested();
             using var ping = new Ping();
             var reply = await ping.SendPingAsync(host, timeoutMs);
             

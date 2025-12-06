@@ -248,8 +248,8 @@ namespace ZakYip.Singulation.Host.Controllers {
                 : OperationKeys.ControllerSoftReset;
             var operationName = req.Type == ControllerResetType.Hard ? "硬复位" : "软复位";
             
-            // 检查是否已有操作在进行中
-            if (_operationTracker.IsOperationInProgress(operationKey))
+            // 尝试开始操作
+            if (!_operationTracker.TryBeginOperation(operationKey, $"控制器{operationName}"))
             {
                 var state = _operationTracker.GetOperationState(operationKey);
                 return StatusCode(409, ApiResponse<object>.Fail(
@@ -261,13 +261,6 @@ namespace ZakYip.Singulation.Host.Controllers {
                         StartTime = state?.StartTime,
                         Duration = state?.Duration
                     }));
-            }
-            
-            // 尝试开始操作
-            if (!_operationTracker.TryBeginOperation(operationKey, $"控制器{operationName}"))
-            {
-                return StatusCode(409, ApiResponse<object>.Fail(
-                    $"控制器{operationName}正在进行中，请稍后再试"));
             }
             
             try

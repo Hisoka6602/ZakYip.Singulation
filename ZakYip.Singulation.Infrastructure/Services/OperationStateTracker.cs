@@ -22,8 +22,7 @@ public sealed class OperationStateTracker
         var state = new OperationState
         {
             Name = operationName,
-            StartTime = DateTime.Now,
-            IsInProgress = true
+            StartTime = DateTime.UtcNow
         };
 
         return _operations.TryAdd(operationKey, state);
@@ -45,7 +44,7 @@ public sealed class OperationStateTracker
     /// <returns>如果操作正在进行中返回true</returns>
     public bool IsOperationInProgress(string operationKey)
     {
-        return _operations.TryGetValue(operationKey, out var state) && state.IsInProgress;
+        return _operations.ContainsKey(operationKey);
     }
 
     /// <summary>
@@ -75,14 +74,9 @@ public sealed class OperationStateTracker
         public DateTime StartTime { get; set; }
 
         /// <summary>
-        /// 是否正在进行中
-        /// </summary>
-        public bool IsInProgress { get; set; }
-
-        /// <summary>
         /// 运行时长
         /// </summary>
-        public TimeSpan Duration => DateTime.Now - StartTime;
+        public TimeSpan Duration => DateTime.UtcNow - StartTime;
     }
 }
 

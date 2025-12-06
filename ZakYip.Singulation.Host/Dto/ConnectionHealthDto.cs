@@ -16,7 +16,8 @@ public record ConnectionHealthDto
     public UpstreamConnectionStatus? UpstreamConnection { get; init; }
     
     /// <summary>
-    /// 整体健康状态
+    /// 整体健康状态。
+    /// 当雷赛控制器连接健康（LeadshineConnection.IsConnected 为 true），且上游连接健康（UpstreamConnection.IsConnected 为 true）或未配置（UpstreamConnection 为 null）时，返回 true。
     /// </summary>
     public bool IsHealthy => LeadshineConnection.IsConnected && 
                             (UpstreamConnection == null || UpstreamConnection.IsConnected);
@@ -24,7 +25,7 @@ public record ConnectionHealthDto
     /// <summary>
     /// 检查时间
     /// </summary>
-    public DateTime CheckedAt { get; init; } = DateTime.Now;
+    public DateTime CheckedAt { get; init; } = DateTime.UtcNow;
 }
 
 /// <summary>
@@ -53,7 +54,7 @@ public record LeadshineConnectionStatus
     public bool IsInitialized { get; init; }
     
     /// <summary>
-    /// 控制器是否连接
+    /// 控制器是否连接（IP可达且已初始化）
     /// </summary>
     public bool IsConnected => IsPingable && IsInitialized;
     
@@ -104,7 +105,7 @@ public record UpstreamConnectionStatus
     public string TransportState { get; init; } = "Unknown";
     
     /// <summary>
-    /// 上游是否连接（IP可达且传输层连接）
+    /// 上游是否连接（IP可达且传输层已连接）
     /// </summary>
     public bool IsConnected => IsPingable && IsTransportConnected;
     
