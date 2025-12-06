@@ -53,6 +53,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         public event EventHandler? ReconnectionCompleted;
 
         /// <summary>
+        /// 获取控制器IP地址（以太网模式），若为本地PCI模式则返回 null
+        /// </summary>
+        public string? ControllerIp => _controllerIp;
+
+        /// <summary>
         /// 获取最后一次操作的错误信息（线程安全）。如果最近一次操作成功，此值为 null。
         /// </summary>
         public string? LastErrorMessage

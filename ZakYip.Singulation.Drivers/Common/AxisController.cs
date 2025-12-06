@@ -187,13 +187,34 @@ namespace ZakYip.Singulation.Drivers.Common {
         /// <remarks>
         /// 此方法并行使能所有轴，每个轴之间有 1ms 的启动间隔。
         /// 如果单个轴使能失败，会记录错误但不会中断其他轴的操作。
+        /// 使能后，如果轴没有设置默认速度或默认速度为0，将自动设置为1000mm/s。
         /// </remarks>
-        public Task EnableAllAsync(CancellationToken ct = default) {
+        public async Task EnableAllAsync(CancellationToken ct = default) {
             OnControllerFaulted($"[EnableAllAsync] 开始使能所有轴，轴数={_drives.Count}");
             foreach (var drive in _drives) {
                 OnControllerFaulted($"[EnableAllAsync] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
             }
-            return ForEachDriveAsync(d => d.EnableAsync(ct), ct);
+            
+            // 使能所有轴
+            await ForEachDriveAsync(d => d.EnableAsync(ct), ct);
+            
+            // 检查并设置默认速度：如果轴没有默认速度或默认速度等于0，则设置为1000mm/s
+            for (int i = 0; i < _drives.Count; i++) {
+                var drive = _drives[i];
+                var currentSpeed = drive.LastTargetMmps;
+                
+                if (!currentSpeed.HasValue || currentSpeed.Value == 0) {
+                    const decimal defaultSpeed = 1000m; // 1000 mm/s
+                    OnControllerFaulted($"[EnableAllAsync] 轴={drive.Axis} 未设置速度或速度为0，设置默认速度={defaultSpeed} mm/s");
+                    
+                    try {
+                        await drive.WriteSpeedAsync(defaultSpeed, ct);
+                    }
+                    catch (Exception ex) {
+                        OnControllerFaulted($"[EnableAllAsync] 轴={drive.Axis} 设置默认速度失败: {ex.Message}");
+                    }
+                }
+            }
         }
 
         /// <summary>
