@@ -1,0 +1,168 @@
+name: Technical Debt Check
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  check-tech-debt:
+    name: 技术债务检查
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Make scripts executable
+      run: chmod +x tools/*.sh
+    
+    - name: Check if TECHNICAL_DEBT.md exists
+      id: check-file
+      run: |
+        if [ ! -f "TECHNICAL_DEBT.md" ]; then
+          echo "❌ 错误: 找不到 TECHNICAL_DEBT.md"
+          echo "请创建技术债务追踪文档"
+          exit 1
+        fi
+        echo "✅ 技术债务文档存在"
+    
+    - name: Check for P0 (Critical) technical debt
+      id: check-p0
+      run: |
+        echo "检查关键(P0)技术债务..."
+        P0_COUNT=$(grep -c "优先级\*\*: P0" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        
+        if [ "$P0_COUNT" -gt 0 ]; then
+          echo "❌ 发现 $P0_COUNT 个关键(P0)技术债务"
+          echo "p0_found=true" >> $GITHUB_OUTPUT
+          echo "p0_count=$P0_COUNT" >> $GITHUB_OUTPUT
+          
+          # 提取P0项目
+          echo "## ❌ 关键技术债务 (P0)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "发现 $P0_COUNT 个必须处理的关键技术债务：" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          awk '/^### TD-[0-9]+:/ {found=1; item=$0; next} 
+               found && /\*\*优先级\*\*: P0/ {
+                 print item; 
+                 found=0
+               }' TECHNICAL_DEBT.md >> $GITHUB_STEP_SUMMARY
+          
+          exit 1
+        else
+          echo "✅ 无关键技术债务"
+          echo "p0_found=false" >> $GITHUB_OUTPUT
+          echo "p0_count=0" >> $GITHUB_OUTPUT
+        fi
+      continue-on-error: true
+    
+    - name: Calculate technical debt health score
+      id: health-score
+      run: |
+        echo "计算技术债务健康度..."
+        
+        P0=$(grep -c "优先级\*\*: P0" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        P1=$(grep -c "优先级\*\*: P1" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        P2=$(grep -c "优先级\*\*: P2" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        P3=$(grep -c "优先级\*\*: P3" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        
+        PENDING=$(grep -c "状态\*\*: ⏳ 待处理" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        IN_PROGRESS=$(grep -c "状态\*\*: 🔄 进行中" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        DONE=$(grep -c "状态\*\*: ✅ 已完成" TECHNICAL_DEBT.md 2>/dev/null || echo "0")
+        
+        HEALTH=$((100 - P0 * 25 - P1 * 10 - P2 * 3 - P3 * 1))
+        
+        echo "health=$HEALTH" >> $GITHUB_OUTPUT
+        echo "p0=$P0" >> $GITHUB_OUTPUT
+        echo "p1=$P1" >> $GITHUB_OUTPUT
+        echo "p2=$P2" >> $GITHUB_OUTPUT
+        echo "p3=$P3" >> $GITHUB_OUTPUT
+        echo "pending=$PENDING" >> $GITHUB_OUTPUT
+        echo "in_progress=$IN_PROGRESS" >> $GITHUB_OUTPUT
+        echo "done=$DONE" >> $GITHUB_OUTPUT
+        
+        echo "技术债务健康度: $HEALTH/100"
+        echo "P0: $P0, P1: $P1, P2: $P2, P3: $P3"
+        echo "待处理: $PENDING, 进行中: $IN_PROGRESS, 已完成: $DONE"
+    
+    - name: Check for high priority (P1) pending debt
+      id: check-p1
+      run: |
+        echo "检查高优先级(P1)待处理技术债务..."
+        
+        # 提取P1且状态为待处理的项
+        P1_PENDING=$(awk '
+          /^### TD-[0-9]+:/ {item=$0; is_p1=0; is_pending=0}
+          /\*\*优先级\*\*: P1/ {is_p1=1}
+          /\*\*状态\*\*: ⏳ 待处理/ {is_pending=1}
+          is_p1 && is_pending {count++; is_p1=0; is_pending=0}
+          END {print count+0}
+        ' TECHNICAL_DEBT.md)
+        
+        if [ "$P1_PENDING" -gt 0 ]; then
+          echo "⚠️  发现 $P1_PENDING 个待处理的高优先级(P1)技术债务"
+          echo "p1_pending=$P1_PENDING" >> $GITHUB_OUTPUT
+        else
+          echo "✅ 无待处理的高优先级技术债务"
+          echo "p1_pending=0" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Generate summary
+      if: always()
+      run: |
+        echo "## 🔍 技术债务检查结果" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # 健康度
+        HEALTH="${{ steps.health-score.outputs.health }}"
+        
+        echo "### 技术债务健康度: $HEALTH/100" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "$HEALTH" -ge 90 ]; then
+          echo "✅ **评级: 优秀**" >> $GITHUB_STEP_SUMMARY
+        elif [ "$HEALTH" -ge 75 ]; then
+          echo "✅ **评级: 良好**" >> $GITHUB_STEP_SUMMARY
+        elif [ "$HEALTH" -ge 60 ]; then
+          echo "⚠️ **评级: 一般**" >> $GITHUB_STEP_SUMMARY
+        elif [ "$HEALTH" -ge 45 ]; then
+          echo "🔴 **评级: 需改进**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⛔ **评级: 危险**" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 技术债务统计" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| 优先级 | 数量 |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|------|" >> $GITHUB_STEP_SUMMARY
+        echo "| P0 (关键) | ${{ steps.health-score.outputs.p0 }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| P1 (高) | ${{ steps.health-score.outputs.p1 }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| P2 (中) | ${{ steps.health-score.outputs.p2 }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| P3 (低) | ${{ steps.health-score.outputs.p3 }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| 状态 | 数量 |" >> $GITHUB_STEP_SUMMARY
+        echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+        echo "| ⏳ 待处理 | ${{ steps.health-score.outputs.pending }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| 🔄 进行中 | ${{ steps.health-score.outputs.in_progress }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| ✅ 已完成 | ${{ steps.health-score.outputs.done }} |" >> $GITHUB_STEP_SUMMARY
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "📚 查看完整技术债务列表: [TECHNICAL_DEBT.md](../blob/${{ github.sha }}/TECHNICAL_DEBT.md)" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Fail if P0 exists
+      if: steps.check-p0.outputs.p0_found == 'true'
+      run: |
+        echo "::error::发现 ${{ steps.check-p0.outputs.p0_count }} 个关键(P0)技术债务，必须先处理"
+        exit 1
+    
+    - name: Warn if P1 pending
+      if: steps.check-p1.outputs.p1_pending > 0
+      run: |
+        echo "::warning::发现 ${{ steps.check-p1.outputs.p1_pending }} 个待处理的高优先级(P1)技术债务，建议在此PR中处理"
