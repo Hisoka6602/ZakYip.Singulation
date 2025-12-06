@@ -17,6 +17,7 @@ using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
+using ZakYip.Singulation.Infrastructure.Services;
 
 namespace ZakYip.Singulation.Host.Controllers {
 
@@ -31,6 +32,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly IAxisController _axisController;
         private readonly IControllerOptionsStore _ctrlOptsStore;
         private readonly ILogger<AxesController> _logger;
+        private readonly OperationStateTracker _operationTracker;
 
         /// <summary>
         /// 通过依赖注入构造控制器。
@@ -40,13 +42,15 @@ namespace ZakYip.Singulation.Host.Controllers {
             IAxisLayoutStore layoutStore,
             IAxisController axisController,
             IControllerOptionsStore ctrlOptsStore,
-            ILogger<AxesController> logger) {
+            ILogger<AxesController> logger,
+            OperationStateTracker operationTracker) {
             _registry = registry;
 
             _layoutStore = layoutStore;
             _axisController = axisController;
             _ctrlOptsStore = ctrlOptsStore;
             _logger = logger;
+            _operationTracker = operationTracker;
 
             _axisController.ControllerFaulted += (sender, s) => {
                 _logger.LogError(s);
@@ -238,38 +242,74 @@ namespace ZakYip.Singulation.Host.Controllers {
         [Consumes("application/json")]
         [Produces("application/json")]
         public async Task<ActionResult<object>> ResetController([FromBody] ControllerResetRequestDto req, CancellationToken ct) {
-            // 1) 取模板
-            var opt = await _ctrlOptsStore.GetAsync(ct);
-            var vendor = opt.Vendor;
-            var tpl = opt.Template.ToDriverOptionsTemplate();
-            var ok = await Safe(async () => {
-                switch (req.Type) {
-                    case ControllerResetType.Hard:
-                        await _axisController.Bus.ResetAsync(ct);
-                        break;
+            // 确定操作键
+            var operationKey = req.Type == ControllerResetType.Hard 
+                ? OperationKeys.ControllerHardReset 
+                : OperationKeys.ControllerSoftReset;
+            var operationName = req.Type == ControllerResetType.Hard ? "硬复位" : "软复位";
+            
+            // 检查是否已有操作在进行中
+            if (_operationTracker.IsOperationInProgress(operationKey))
+            {
+                var state = _operationTracker.GetOperationState(operationKey);
+                return StatusCode(409, ApiResponse<object>.Fail(
+                    $"控制器{operationName}正在进行中，请稍后再试",
+                    new
+                    {
+                        InProgress = true,
+                        OperationName = state?.Name,
+                        StartTime = state?.StartTime,
+                        Duration = state?.Duration
+                    }));
+            }
+            
+            // 尝试开始操作
+            if (!_operationTracker.TryBeginOperation(operationKey, $"控制器{operationName}"))
+            {
+                return StatusCode(409, ApiResponse<object>.Fail(
+                    $"控制器{operationName}正在进行中，请稍后再试"));
+            }
+            
+            try
+            {
+                // 1) 取模板
+                var opt = await _ctrlOptsStore.GetAsync(ct);
+                var vendor = opt.Vendor;
+                var tpl = opt.Template.ToDriverOptionsTemplate();
+                var ok = await Safe(async () => {
+                    switch (req.Type) {
+                        case ControllerResetType.Hard:
+                            await _axisController.Bus.ResetAsync(ct);
+                            break;
 
-                    case ControllerResetType.Soft:
-                        await _axisController.Bus.CloseAsync(ct);
-                        var initResult = await _axisController.InitializeAsync(vendor, tpl, opt.OverrideAxisCount, ct);
-                        if (!initResult.Key)
-                        {
-                            throw new InvalidOperationException($"控制器初始化失败: {initResult.Value}");
-                        }
-                        break;
+                        case ControllerResetType.Soft:
+                            await _axisController.Bus.CloseAsync(ct);
+                            var initResult = await _axisController.InitializeAsync(vendor, tpl, opt.OverrideAxisCount, ct);
+                            if (!initResult.Key)
+                            {
+                                throw new InvalidOperationException($"控制器初始化失败: {initResult.Value}");
+                            }
+                            break;
 
-                    default:
-                        throw new ArgumentException("type must be 'hard' or 'soft'");
-                }
+                        default:
+                            throw new ArgumentException("type must be 'hard' or 'soft'");
+                    }
 
-                if (!_axisController.Bus.IsInitialized) {
-                    throw new Exception("控制器复位失败");
-                }
-            });
+                    if (!_axisController.Bus.IsInitialized) {
+                        throw new Exception("控制器复位失败");
+                    }
+                });
 
-            if (!ok)
-                return StatusCode(500, ApiResponse<object>.Fail("控制器复位失败", new { ResetType = req.Type }));
+                if (!ok)
+                    return StatusCode(500, ApiResponse<object>.Fail("控制器复位失败", new { ResetType = req.Type }));
 
-            return Ok(ApiResponse<object>.Success(new { Accepted = true }, "控制器复位成功"));
+                return Ok(ApiResponse<object>.Success(new { Accepted = true }, "控制器复位成功"));
+            }
+            finally
+            {
+                // 确保在操作完成后释放状态
+                _operationTracker.EndOperation(operationKey);
+            }
         }
 
         /// <summary>

@@ -250,6 +250,9 @@ var host = Host.CreateDefaultBuilder(args)
             sp.GetRequiredService<ILogger<ConnectionHealthCheckService>>(),
             sp.GetService<IAxisController>(),
             sp.GetService<IByteTransport>()));
+        
+        // 注册操作状态跟踪服务（防止重复调用）
+        services.AddSingleton<OperationStateTracker>();
 
         // ---------- 安全 ----------
         services.Configure<FrameGuardOptions>(configuration.GetSection("FrameGuard"));
