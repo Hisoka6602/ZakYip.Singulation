@@ -1,12 +1,17 @@
 using System;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions.Cabinet;
 
 namespace ZakYip.Singulation.Host.SwaggerOptions;
 
 /// <summary>
-/// 安全操作辅助类 - 提供统一的异常隔离机制
-/// Safe operation helper - provides unified exception isolation mechanism
+/// 安全操作辅助类 - 使用 ICabinetIsolator 提供统一的异常隔离机制
+/// Safe operation helper - uses ICabinetIsolator for unified exception isolation mechanism
 /// </summary>
+/// <remarks>
+/// 此类现在是 ICabinetIsolator 的薄包装器，专门用于 Swagger 配置场景。
+/// 由于 Swagger 配置代码没有依赖注入上下文，这里提供了一个静态辅助方法。
+/// </remarks>
 public static class SafeOperationHelper
 {
     /// <summary>
@@ -57,5 +62,17 @@ public static class SafeOperationHelper
             logger?.LogWarning(ex, "安全隔离器捕获异常 - 操作: {OperationName}. 已忽略异常以确保服务继续运行。", operationName);
             return false;
         }
+    }
+
+    /// <summary>
+    /// 当有 ICabinetIsolator 实例时使用的安全执行方法
+    /// Safe execute method when ICabinetIsolator instance is available
+    /// </summary>
+    /// <param name="isolator">安全隔离器实例</param>
+    /// <param name="action">要执行的操作</param>
+    /// <param name="operationName">操作名称（用于日志）</param>
+    public static void SafeExecute(ICabinetIsolator isolator, Action action, string operationName)
+    {
+        isolator?.SafeExecute(action, operationName);
     }
 }
