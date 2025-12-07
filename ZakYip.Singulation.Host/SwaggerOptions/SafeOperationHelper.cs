@@ -94,7 +94,6 @@ public static class SafeOperationHelper
             throw new ArgumentNullException(nameof(action));
         }
 
-        // 如果 isolator 为 null，静默返回（这是有意设计的行为）
         isolator?.SafeExecute(action, operationName);
     }
 }
