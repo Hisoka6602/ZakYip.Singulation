@@ -1,9 +1,10 @@
 using Microsoft.Extensions.Logging;
-﻿using System;
+using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Dto;
 
 namespace ZakYip.Singulation.Infrastructure.Runtime {
@@ -13,9 +14,10 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
     /// </summary>
     public class RuntimeStatusProvider : IRuntimeStatusProvider {
         private readonly ILogger<RuntimeStatusProvider> _log;
+        private readonly ISystemClock _clock;
         private readonly object _gate = new();
 
-        private readonly DateTime _startUtc = DateTime.UtcNow;
+        private readonly DateTime _startUtc;
         private readonly Dictionary<string, TransportStatusItem> _transports = new(StringComparer.OrdinalIgnoreCase);
 
         private DateTime? _upHeartbeatUtc;
@@ -30,7 +32,13 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
         /// 初始化 <see cref="RuntimeStatusProvider"/> 类的新实例。
         /// </summary>
         /// <param name="log">日志记录器。</param>
-        public RuntimeStatusProvider(ILogger<RuntimeStatusProvider> log) => _log = log;
+        /// <param name="clock">系统时钟。</param>
+        public RuntimeStatusProvider(ILogger<RuntimeStatusProvider> log, ISystemClock clock)
+        {
+            _log = log;
+            _clock = clock;
+            _startUtc = _clock.UtcNow;
+        }
 
         /// <inheritdoc />
         public SystemRuntimeStatus Snapshot() {
@@ -64,7 +72,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
                     Role = role,
                     Status = status,
                     Remote = remote,
-                    LastStateChangedUtc = DateTime.UtcNow,
+                    LastStateChangedUtc = _clock.UtcNow,
                     ReceivedBytes = item.ReceivedBytes
                 };
             }
@@ -74,7 +82,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime {
         public void OnTransportBytes(string name, int bytes) {
             lock (_gate) {
                 if (!_transports.TryGetValue(name, out var item)) {
-                    item = new TransportStatusItem { Name = name, LastStateChangedUtc = DateTime.UtcNow };
+                    item = new TransportStatusItem { Name = name, LastStateChangedUtc = _clock.UtcNow };
                 }
                 _transports[name] = new TransportStatusItem {
                     Name = name,
