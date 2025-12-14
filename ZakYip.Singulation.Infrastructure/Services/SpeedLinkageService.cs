@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Contracts.Dto;
@@ -33,6 +34,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly IoStatusService _ioStatusService;
         private readonly IAxisController _axisController;
         private readonly ICabinetPipeline _cabinetPipeline;
+        private readonly ISystemClock _clock;
         
         // 用于跟踪每个组的状态：true表示组内所有轴都已停止
         private readonly Dictionary<int, bool> _groupStoppedStates = new();
@@ -57,12 +59,14 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             ISpeedLinkageOptionsStore store,
             IoStatusService ioStatusService,
             IAxisController axisController,
-            ICabinetPipeline cabinetPipeline) {
+            ICabinetPipeline cabinetPipeline,
+            ISystemClock clock) {
             _logger = logger;
             _store = store;
             _ioStatusService = ioStatusService;
             _axisController = axisController;
             _cabinetPipeline = cabinetPipeline;
+            _clock = clock;
         }
 
         /// <summary>
@@ -117,7 +121,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 // 更新统计信息
                 lock (_stateLock) {
                     _totalChecks++;
-                    _lastCheckTime = DateTime.UtcNow;
+                    _lastCheckTime = _clock.UtcNow;
                 }
 
                 // 仅在远程模式下执行速度联动
@@ -164,7 +168,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             catch (Exception ex) {
                 lock (_stateLock) {
                     _totalErrors++;
-                    _lastErrorTime = DateTime.UtcNow;
+                    _lastErrorTime = _clock.UtcNow;
                     _lastError = ex;
                 }
                 _logger.LogError(ex, "检查速度联动时发生异常");

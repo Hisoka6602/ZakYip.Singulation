@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Dto;
@@ -17,15 +18,18 @@ namespace ZakYip.Singulation.Infrastructure.Services {
     public sealed class FaultDiagnosisService {
         private readonly ILogger<FaultDiagnosisService> _logger;
         private readonly IAxisController _axisController;
+        private readonly ISystemClock _clock;
         
         // 内置故障知识库
         private readonly List<FaultKnowledgeEntry> _knowledgeBase;
 
         public FaultDiagnosisService(
             ILogger<FaultDiagnosisService> logger,
-            IAxisController axisController) {
+            IAxisController axisController,
+            ISystemClock clock) {
             _logger = logger;
             _axisController = axisController;
+            _clock = clock;
             _knowledgeBase = InitializeKnowledgeBase();
         }
 
@@ -43,7 +47,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         FaultType = "AXIS_NOT_FOUND",
                         Severity = FaultSeverity.Error,
                         Description = $"未找到轴 {axisId}",
-                        DiagnosedAt = DateTime.Now
+                        DiagnosedAt = _clock.Now
                     });
                 }
 
@@ -114,7 +118,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         "检查总线电缆连接",
                         "查看驱动器错误指示灯"
                     },
-                    DiagnosedAt = DateTime.Now,
+                    DiagnosedAt = _clock.Now,
                     ErrorCode = drive.LastErrorCode
                 };
             }
@@ -149,7 +153,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         "检查运动参数配置",
                         "清除驱动器报警后重试"
                     },
-                    DiagnosedAt = DateTime.Now,
+                    DiagnosedAt = _clock.Now,
                     ErrorCode = errorCode,
                     ErrorMessage = errorMsg
                 };
@@ -172,7 +176,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         "发送使能命令",
                         "检查急停按钮是否释放"
                     },
-                    DiagnosedAt = DateTime.Now
+                    DiagnosedAt = _clock.Now
                 };
             }
 
@@ -202,7 +206,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                                 "检查传动机构是否有卡滞",
                                 "调整驱动器 PID 参数"
                             },
-                            DiagnosedAt = DateTime.Now
+                            DiagnosedAt = _clock.Now
                         };
                     }
                 }
@@ -232,7 +236,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 Description = entry.Description,
                 PossibleCauses = causes,
                 Suggestions = suggestions,
-                DiagnosedAt = DateTime.Now,
+                DiagnosedAt = _clock.Now,
                 ErrorCode = errorCode
             };
         }
