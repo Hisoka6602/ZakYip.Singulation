@@ -1015,6 +1015,10 @@ public async Task Should_Return_Error_When_Invalid_Input()
 2. **禁止**在 PR 描述中说明"这是已有问题 / 与本 PR 无关"
 3. **禁止**把测试失败留给"后续 PR 处理"
 
+**例外情况**:
+- 明确的基础设施故障（如 CI 服务器宕机、网络中断）
+- 已记录在案的已知 flaky tests，且在 issue tracker 中有追踪
+
 ## 15. 代码清理规范
 
 ### 15.1 过时/废弃/重复代码必须立即删除
@@ -1035,6 +1039,33 @@ public async Task Should_Return_Error_When_Invalid_Input()
 **规则**:
 1. 代码中禁止使用 `global using` 指令
 2. 现有的 `global using` 应在后续重构中逐步移除
+
+### 15.3 技术债务文件统一管理
+
+**规则**:
+
+1. **项目根目录下只能有一个技术债务追踪文件**：`TECHNICAL_DEBT.md`
+2. **禁止创建多个技术债务文件**（如 DEBT_CLEANUP_REPORT.md、TODO.md、ISSUES.md 等）
+3. 所有技术债务必须集中在 `TECHNICAL_DEBT.md` 中统一管理
+4. 已完成的技术债务应在同一文件中标记为完成，而非创建新的报告文件
+
+**原因**:
+- 避免多个文件导致信息分散
+- 确保后续 PR 知道应该读取哪个文件
+- 便于统一查看和管理技术债务状态
+
+**示例**:
+
+```markdown
+# TECHNICAL_DEBT.md
+
+## 活跃债务 (Active Debt)
+- [ ] TD-001: 实现 ISystemClock 抽象替代 DateTime.Now
+- [ ] TD-002: 移除 LeadshineLegacyDriver 类
+
+## 已完成债务 (Completed Debt)
+- [x] TD-000: SafeExecute 模式统一（完成于 2025-12-07）
+```
 
 ## 16. 分层架构原则（DDD 分层）
 
@@ -1093,7 +1124,8 @@ public async Task Should_Return_Error_When_Invalid_Input()
 ### PR 完整性
 - [ ] PR 可独立编译、测试通过
 - [ ] 未留下"TODO: 后续PR"标记
-- [ ] 大型 PR 的未完成部分已登记技术债
+- [ ] 大型 PR 的未完成部分已登记到 `TECHNICAL_DEBT.md` 中
+- [ ] 未创建额外的技术债务文件（仅使用 TECHNICAL_DEBT.md）
 
 ### 影分身检查（最重要）
 - [ ] 未创建纯转发 Facade/Adapter/Wrapper/Proxy
@@ -1131,6 +1163,8 @@ public async Task Should_Return_Error_When_Invalid_Input()
 ### 时间处理
 - [ ] 所有时间通过抽象接口（如 `ISystemClock`）获取
 - [ ] 未直接使用 `DateTime.Now` / `DateTime.UtcNow`
+
+**注意**: 当前代码库存在历史技术债务（100+ 处直接使用 DateTime.Now/UtcNow），应在后续重构中逐步修复。新代码应遵守此规范。
 
 ### 并发安全
 - [ ] 跨线程集合使用线程安全容器或锁
@@ -1177,6 +1211,7 @@ public async Task Should_Return_Error_When_Invalid_Input()
 - [ ] 未使用 `global using`
 - [ ] 已删除过时/废弃/重复代码
 - [ ] 未保留 `[Obsolete]` / `Legacy` / `Deprecated` 代码
+- [ ] 技术债务仅记录在 `TECHNICAL_DEBT.md` 中（不创建多个债务文件）
 
 ### 通讯与重试
 - [ ] 连接失败使用无限重试 + 指数退避
