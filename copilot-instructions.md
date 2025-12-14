@@ -893,8 +893,10 @@ public sealed record CreateUserRequest
 **推荐退避策略**:
 ```
 初始退避: 200ms
-指数增长: 200ms → 400ms → 800ms → 1600ms → 2000ms（最大）
+指数增长: 200ms → 400ms → 800ms → 1600ms → 3200ms（达到上限） → 2000ms（最大）
 持续退避: 2000ms, 2000ms, 2000ms, ...（无限重试）
+
+说明：当计算的指数值超过最大退避时间（2000ms）时，使用最大退避时间
 ```
 
 **示例**:
@@ -1183,7 +1185,7 @@ public async Task Should_Return_Error_When_Invalid_Input()
 - [readonly（C# 参考）](https://learn.microsoft.com/zh-cn/dotnet/csharp/language-reference/keywords/readonly)
 - [required 修饰符](https://learn.microsoft.com/zh-cn/dotnet/csharp/language-reference/keywords/required)
 - [文件作用域类型](https://learn.microsoft.com/zh-cn/dotnet/csharp/language-reference/keywords/file)
-- [GENERAL_COPILOT_CODING_STANDARDS.md](https://github.com/Hisoka6602/ZakYip.WheelDiverterSorter/blob/master/docs/GENERAL_COPILOT_CODING_STANDARDS.md)
+- [通用 Copilot 编码标准原文](https://github.com/Hisoka6602/ZakYip.WheelDiverterSorter/blob/master/docs/GENERAL_COPILOT_CODING_STANDARDS.md)（外部参考）
 
 ---
 
