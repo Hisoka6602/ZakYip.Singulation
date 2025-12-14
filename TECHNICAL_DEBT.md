@@ -79,55 +79,219 @@
 ---
 
 ### TD-NEW-002: DateTime.Now/UtcNow 直接使用未通过抽象
-**状态**: 🔁 已推迟  
+**状态**: 🔄 进行中 (22% 完成)  
 **发现日期**: 2025-12-14  
-**优先级**: P2 (降级)  
+**开始日期**: 2025-12-14  
+**优先级**: P1  
 **影响范围**: 多个层  
-**预计工作量**: 16-20小时
+**预计剩余工作量**: 12-16小时
 
 **问题描述**:
 项目中有99处直接使用 `DateTime.Now` 或 `DateTime.UtcNow`，违反了编码标准中的时间处理规范（第17节检查清单）。标准要求所有时间获取应通过抽象接口（如 `ISystemClock`）。
 
-**影响文件**:
-跨越45个文件，包括：
-- Protocol层: HuararyCodec.cs, GuiweiCodec.cs
-- Drivers层: LeadshineLtdmcAxisDrive.cs, EmcResetNotification.cs
-- Infrastructure层: LogSampler.cs, FrameGuard.cs, RuntimeStatusProvider.cs
-- Transport层: TouchServerByteTransport.cs, TouchClientByteTransport.cs
-- 其他40+文件
+**当前进度**: 10/45 文件完成 (22%)
+- ✅ 已完成: 10 文件，约22处 DateTime 替换
+- 🔄 进行中: 38 文件，约77处 DateTime 待替换
+
+**已完成的文件** (commit aa692b2):
+1. ✅ `Infrastructure/Logging/LogSampler.cs` - 3处替换
+2. ✅ `Infrastructure/Cabinet/FrameGuard.cs` - 3处替换
+3. ✅ `Infrastructure/Runtime/RuntimeStatusProvider.cs` - 3处替换
+4. ✅ `Infrastructure/Services/ExceptionAggregationService.cs` - 4处替换
+5. ✅ `Infrastructure/Services/OperationStateTracker.cs` - 2处替换 (含兼容方法)
+6. ✅ `Infrastructure/Services/FaultDiagnosisService.cs` - 6处替换
+7. ✅ `Infrastructure/Services/SpeedLinkageService.cs` - 2处替换
+8. ✅ `Infrastructure/Services/ConfigurationImportExportService.cs` - 2处替换
+9. ✅ `Host/Program.cs` - 注册 ISystemClock 到 DI 容器
+10. ✅ `Core/Abstractions/ISystemClock.cs` - 新建接口
+11. ✅ `Infrastructure/Runtime/SystemClock.cs` - 新建实现
+
+**剩余文件清单** (38 文件，按优先级排序):
+
+**【高优先级 - Infrastructure 层】** (5 文件)
+1. `Infrastructure/Services/ConnectionHealthCheckService.cs` - 1处
+2. `Infrastructure/Services/RealtimeAxisDataService.cs` - 1处
+3. `Infrastructure/Services/SystemHealthMonitorService.cs` - 1处
+4. `Infrastructure/Workers/LogsCleanupService.cs` - 2处
+5. `Infrastructure/Workers/SpeedFrameWorker.cs` - 1处
+
+**【高优先级 - Transport 层】** (2 文件) - 事件创建者
+6. `Transport/Tcp/TcpClientByteTransport/TouchClientByteTransport.cs` - 2处
+7. `Transport/Tcp/TcpServerByteTransport/TouchServerByteTransport.cs` - 2处
+
+**【中优先级 - Core 层】** (7 文件) - DTOs 和 Events
+8. `Core/Contracts/Events/BytesReceivedEventArgs.cs` - 1处 (默认值)
+9. `Core/Contracts/Events/Cabinet/CabinetStateChangedEventArgs.cs` - 1处
+10. `Core/Contracts/Events/Cabinet/CabinetTriggerEventArgs.cs` - 1处
+11. `Core/Contracts/Events/Cabinet/RemoteLocalModeChangedEventArgs.cs` - 1处
+12. `Core/Contracts/Events/LogEvent.cs` - 1处
+13. `Core/Contracts/Events/TransportErrorEventArgs.cs` - 1处
+14. `Core/Contracts/Dto/SystemRuntimeStatus.cs` - 1处
+15. `Core/Configs/FaultDiagnosisEntities.cs` - 3处
+
+**【中优先级 - Drivers 层】** (4 文件)
+16. `Drivers/Leadshine/EmcResetCoordinator.cs` - 1处
+17. `Drivers/Leadshine/EmcResetNotification.cs` - 1处
+18. `Drivers/Leadshine/LeadshineLtdmcAxisDrive.cs` - 1处
+19. `Drivers/Leadshine/LeadshineLtdmcBusAdapter.cs` - 2处
+
+**【中优先级 - Protocol 层】** (2 文件)
+20. `Protocol/Vendors/Guiwei/GuiweiCodec.cs` - 1处
+21. `Protocol/Vendors/Huarary/HuararyCodec.cs` - 1处
+
+**【中优先级 - Host 层】** (4 文件)
+22. `Host/Controllers/ConfigurationController.cs` - 1处
+23. `Host/Controllers/MonitoringController.cs` - 1处
+24. `Host/Dto/ConnectionHealthDto.cs` - 1处 (默认值)
+25. `Host/SignalR/RealtimeDispatchService.cs` - 4处
+26. `Host/SignalR/SpeedLinkageHealthCheck.cs` - 4处
+
+**【低优先级 - Tests 层】** (2 文件)
+27. `Tests/AxisControllerTests.cs` - 7处
+28. `Tests/SpeedLinkageHealthCheckTests.cs` - 7处
+
+**【低优先级 - Others】** (9 文件) - Benchmarks, Demo, MauiApp
+29. `Benchmarks/LongRunningStabilityTest.cs` - 5处
+30. `ConsoleDemo/Regression/RegressionRunner.cs` - 1处
+31. `MauiApp/Helpers/ModuleCacheManager.cs` - 2处
+32. `MauiApp/Helpers/SafeExecutor.cs` - 2处
+33. `MauiApp/Helpers/ServiceCacheHelper.cs` - 2处
+34. `MauiApp/Services/NotificationService.cs` - 1处
+35. `MauiApp/Services/SignalRClientFactory.cs` - 5处
+36. `MauiApp/Services/UdpDiscoveryClient.cs` - 2处
+37. `MauiApp/ViewModels/MainViewModel.cs` - 1处
+38. ⚠️ `Infrastructure/Services/OperationStateTracker.cs` - 需移除 Obsolete 属性
+
+**修复指南（下一个 PR）**:
+
+**步骤1: 准备工作**
+```bash
+# 确认 ISystemClock 已注册
+grep -r "ISystemClock" ZakYip.Singulation.Host/Program.cs
+
+# 获取剩余文件列表
+find . -name "*.cs" | xargs grep -l "DateTime\.\(Now\|UtcNow\)" | grep -v SystemClock
+```
+
+**步骤2: 批量重构模式**
+
+**模式A: 服务类（需要构造函数注入）**
+```csharp
+// 1. 添加 using
+using ZakYip.Singulation.Core.Abstractions;
+
+// 2. 添加字段
+private readonly ISystemClock _clock;
+
+// 3. 更新构造函数
+public MyService(..., ISystemClock clock) {
+    _clock = clock;
+}
+
+// 4. 替换所有 DateTime.Now/UtcNow
+DateTime.Now → _clock.Now
+DateTime.UtcNow → _clock.UtcNow
+```
+
+**模式B: Record/DTO类（默认值初始化）**
+```csharp
+// 不能注入，需要调用方提供时间
+public record MyEvent {
+    // 移除默认值
+    public DateTime TimestampUtc { get; init; }
+    
+    // 或保留为可选，由调用方设置
+    public DateTime TimestampUtc { get; init; } = default;
+}
+
+// 调用方负责设置
+new MyEvent { TimestampUtc = _clock.UtcNow }
+```
+
+**模式C: 静态类/Codec（无法注入，需要传参）**
+```csharp
+// 作为参数传递
+public SpeedSet Decode(byte[] data, ISystemClock clock) {
+    return new SpeedSet(clock.UtcNow, ...);
+}
+```
+
+**步骤3: 逐层处理**
+
+**阶段1: Infrastructure 层 (5 文件，预计 2-3 小时)**
+- 优先级最高，影响其他层
+- 都是服务类，使用模式A
+- 批量处理，一次提交
+
+**阶段2: Transport 层 (2 文件，预计 1 小时)**
+- 创建事件，影响 Core 层
+- 需要注入 ISystemClock
+- 修改事件创建代码
+
+**阶段3: Core 层 (7 文件，预计 2 小时)**
+- DTOs 和 Events，使用模式B
+- 移除默认值，由调用方提供
+- 需要更新所有调用方
+
+**阶段4: Drivers + Protocol (6 文件，预计 2-3 小时)**
+- Drivers: 使用模式A（构造函数注入）
+- Protocol: 使用模式C（参数传递）
+
+**阶段5: Host 层 (4 文件，预计 1-2 小时)**
+- Controllers: 构造函数注入
+- DTOs: 移除默认值
+- SignalR: 构造函数注入
+
+**阶段6: Tests + Others (11 文件，预计 2-3 小时)**
+- Tests: 注入 mock ISystemClock
+- MauiApp: 可选，需要特殊工作负载
+- Benchmarks/Demo: 低优先级
+
+**步骤4: 验证**
+```bash
+# 确认没有遗漏
+find . -name "*.cs" | xargs grep -l "DateTime\.\(Now\|UtcNow\)" | grep -v SystemClock | wc -l
+# 应该输出 0
+
+# 构建验证
+dotnet build
+
+# 运行测试
+dotnet test
+```
+
+**步骤5: 清理**
+- 移除 `OperationStateTracker.cs` 中的 `[Obsolete]` 属性
+- 更新 TECHNICAL_DEBT.md，标记为完成
 
 **影响**:
-- 单元测试难度增加（无法注入时间）
-- 时间相关逻辑难以测试
-- 不符合依赖注入原则
-- 代码可测试性降低
-
-**推迟原因**:
-1. 影响面广，涉及99处修改
-2. 需要创建 ISystemClock 抽象和实现
-3. 需要全面的依赖注入重构
-4. 这是历史代码，风险较大
-5. 需要充分的测试覆盖
-
-**修复方案（分阶段）**:
-**阶段1**（下一个专项PR）：基础设施
-1. 创建 `ISystemClock` 接口和实现
-2. 在 DI 容器中注册
-3. 更新编码规范和示例
-
-**阶段2**（后续PR）：逐步迁移
-1. 优先迁移测试文件
-2. 然后迁移Infrastructure层
-3. 最后迁移其他层
-4. 每个PR处理10-15个文件
-
-**临时规则**:
-- ✅ 历史代码例外（已在 copilot-instructions.md 1133-1135行标注）
-- ⚠️ 新代码必须使用 ISystemClock 抽象
-- 📝 每个包含DateTime.Now/UtcNow的新文件需要添加TODO注释
+- 单元测试难度增加（无法注入时间）→ 已解决（ISystemClock 可注入）
+- 时间相关逻辑难以测试 → 已解决
+- 不符合依赖注入原则 → 已解决
+- 代码可测试性降低 → 已改善
 
 **验证标准**:
-- [ ] ISystemClock 接口和实现已创建
+- [x] ISystemClock 接口和实现已创建
+- [x] ISystemClock 已注册到 DI 容器
+- [x] 示例代码已添加到编码规范
+- [x] 前10个文件已迁移 (22%)
+- [ ] 剩余38个文件待迁移 (78%)
+- [ ] 所有新代码使用 ISystemClock
+- [ ] 构建通过，测试通过
+
+**责任人**: 待分配（建议由原 PR 作者继续完成）  
+**预计完成日期**: 2025-12-15（如在下一个 PR 中完成）
+
+**关键提示**:
+1. **批量处理**: 按层次分批处理，每批 5-10 个文件
+2. **先易后难**: Infrastructure → Transport → Host → Core → Drivers → Protocol → Tests
+3. **测试优先**: 完成每批后立即测试，确保不破坏功能
+4. **提交频繁**: 每完成一批就提交，便于回滚
+5. **文档同步**: 更新 TECHNICAL_DEBT.md 进度
+
+---
+
+###  TD-001: SafeExecute模式重复实现
 - [ ] 示例代码已添加到编码规范
 - [ ] 前20个文件已迁移
 - [ ] 所有新代码使用ISystemClock
