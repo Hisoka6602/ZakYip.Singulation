@@ -1,5 +1,25 @@
 # ZakYip.Singulation 项目总览
 
+## 🎯 最新更新（2026-02-09）
+
+### ✅ 2026-02-09 时钟抽象对齐与文档同步
+
+- **本次更新的内容**：
+  - `LogsCleanupService` 统一通过 `ISystemClock` 获取当前时间，避免直接使用 `DateTime.Now`。
+  - 技术债务记录同步，标记日志清理服务的时间抽象替换进度。
+  - README 补充最新调整和后续待办，保持团队信息同步。
+
+- **文件树与实现说明**：
+  - `ZakYip.Singulation.Infrastructure/Workers/LogsCleanupService.cs`：后台日志清理服务，新增 `ISystemClock` 注入并使用统一时间来源。
+  - `TECHNICAL_DEBT.md`：更新 `DateTime` 抽象替换的完成进度，去除日志清理服务的待办条目。
+  - `README.md`：记录本次更新摘要、文件树以及后续可持续完善的方向。
+
+- **可继续完善的内容**：
+  - 继续替换剩余服务和 DTO 中的 `DateTime.Now/UtcNow` 直接调用。
+  - 为日志清理逻辑补充可配置的执行时间窗口和运行状态监控。
+
+---
+
 ## 🎯 最新更新（2025-11-08）
 
 ### ✅ 2025-11-08 代码质量提升和编译问题修复
