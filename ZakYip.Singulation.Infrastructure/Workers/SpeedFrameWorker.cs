@@ -45,8 +45,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             IAxisLayoutStore axisLayoutStore,
             IFrameGuard frameGuard,
             ICabinetPipeline cabinetPipeline,
-            IndicatorLightService? indicatorLightService = null,
-            ISystemClock? clock = null) {
+            ISystemClock clock,
+            IndicatorLightService? indicatorLightService = null) {
             _log = log;
             _hub = hub;
             _codec = codec;
@@ -55,8 +55,9 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _axisLayoutStore = axisLayoutStore;
             _frameGuard = frameGuard;
             _cabinetPipeline = cabinetPipeline;
+            ArgumentNullException.ThrowIfNull(clock);
+            _clock = clock;
             _indicatorLightService = indicatorLightService;
-            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {

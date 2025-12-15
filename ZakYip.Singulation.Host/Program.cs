@@ -254,9 +254,9 @@ var host = Host.CreateDefaultBuilder(args)
         // 注册连接健康检查服务
         services.AddSingleton<ConnectionHealthCheckService>(sp => new ConnectionHealthCheckService(
             sp.GetRequiredService<ILogger<ConnectionHealthCheckService>>(),
+            sp.GetRequiredService<ISystemClock>(),
             sp.GetService<IAxisController>(),
-            sp.GetService<IByteTransport>(),
-            sp.GetRequiredService<ISystemClock>()));
+            sp.GetService<IByteTransport>()));
         
         // 注册操作状态跟踪服务（防止重复调用）
         services.AddSingleton<OperationStateTracker>();
