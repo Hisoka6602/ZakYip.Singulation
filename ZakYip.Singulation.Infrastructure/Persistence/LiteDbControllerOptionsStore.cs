@@ -19,7 +19,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
     /// 基于 LiteDB 的控制器选项持久化存储，使用内存缓存减少数据库访问。
     /// </summary>
     public sealed class LiteDbControllerOptionsStore : IControllerOptionsStore {
-        private const string Key = "default";
+        private const string Key = LiteDbConstants.DefaultKey;
         private const string CacheKey = "controller_options_cache";
         private const string ErrorMessage = "读取DB配置异常：ControllerOptions";
         

@@ -20,7 +20,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
     /// <summary>LiteDB 实现：单文档配置（Id = "default"），使用内存缓存减少数据库访问。集合：upstream_codec_options</summary>
     public sealed class LiteDbUpstreamCodecOptionsStore : IUpstreamCodecOptionsStore, IDisposable {
         private const string CollName = "upstream_codec_options";
-        private const string Key = "default";
+        private const string Key = Persistence.LiteDbConstants.DefaultKey;
         private const string CacheKey = "upstream_codec_options_cache";
         private const string ErrorMessage = "读取DB配置异常：UpstreamCodecOptions";
         

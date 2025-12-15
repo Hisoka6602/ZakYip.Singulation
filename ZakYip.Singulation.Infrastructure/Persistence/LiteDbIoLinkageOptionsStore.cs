@@ -17,7 +17,7 @@ namespace ZakYip.Singulation.Infrastructure.Persistence {
     /// <summary>基于 LiteDB 的 IoLinkageOptions 单文档存储实现，使用内存缓存减少数据库访问。</summary>
     public sealed class LiteDbIoLinkageOptionsStore : IIoLinkageOptionsStore {
         private const string CollName = "io_linkage_options";
-        private const string Key = "default";
+        private const string Key = LiteDbConstants.DefaultKey;
         private const string CacheKey = "io_linkage_options_cache";
         private const string ErrorMessage = "读取DB配置异常：IoLinkageOptions";
 

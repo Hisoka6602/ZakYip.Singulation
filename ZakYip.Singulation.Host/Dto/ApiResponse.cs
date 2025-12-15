@@ -8,7 +8,7 @@ namespace ZakYip.Singulation.Host.Dto {
     /// </summary>
     /// <typeparam name="T">返回数据类型</typeparam>
     [SwaggerSchema(Description = "统一的 API 响应格式，包含执行结果、消息和数据")]
-    public record class ApiResponse<T> {
+    public sealed record class ApiResponse<T> {
         /// <summary>操作是否成功</summary>
         [SwaggerSchema(Description = "操作是否成功，true 表示成功，false 表示失败")]
         [Required]
