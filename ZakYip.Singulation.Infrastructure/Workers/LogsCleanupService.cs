@@ -1,6 +1,7 @@
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ZakYip.Singulation.Core.Abstractions;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
@@ -13,12 +14,15 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
     public class LogsCleanupService : Microsoft.Extensions.Hosting.BackgroundService {
         private readonly ILogger<LogsCleanupService> _logger;
         private readonly LogsCleanupOptions _options;
+        private readonly ISystemClock _clock;
 
         public LogsCleanupService(
             ILogger<LogsCleanupService> logger,
-            IOptions<LogsCleanupOptions> options) {
+            IOptions<LogsCleanupOptions> options,
+            ISystemClock clock) {
             _logger = logger;
             _options = options.Value;
+            _clock = clock;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -32,9 +36,9 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 catch (Exception ex) {
                     _logger.LogError(ex, "日志清理时发生错误");
                 }
-                
+
                 // 每天执行一次清理（凌晨2点执行）
-                var now = DateTime.Now;
+                var now = _clock.Now;
                 var nextRun = now.Date.AddDays(1).AddHours(2);
                 var delay = nextRun - now;
                 
@@ -55,7 +59,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 return;
             }
 
-            var now = DateTime.Now;
+            var now = _clock.Now;
             var deletedCount = 0;
             var totalSize = 0L;
 
@@ -68,7 +72,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     var creationTime = File.GetCreationTime(file);
                     var age = (now - creationTime).TotalDays;
                     
-                    int retentionDays = GetRetentionDays(fileName);
+                    var retentionDays = GetRetentionDays(fileName);
                     
                     if (age > retentionDays) {
                         var fileInfo = new FileInfo(file);
