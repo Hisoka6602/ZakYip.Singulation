@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Infrastructure.Runtime;
 using ZakYip.Singulation.Infrastructure.Logging;
 using ZakYip.Singulation.Core.Contracts;
@@ -17,12 +18,13 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
     public sealed class HeartbeatWorker : BackgroundService {
         private readonly ILogger<HeartbeatWorker> _log;
         private readonly IUpstreamFrameHub _hub;
-        private readonly LogSampler _logSampler = new();
+        private readonly LogSampler _logSampler;
         private long _heartbeatSequence = 0;
 
-        public HeartbeatWorker(ILogger<HeartbeatWorker> log, IUpstreamFrameHub hub) {
+        public HeartbeatWorker(ILogger<HeartbeatWorker> log, IUpstreamFrameHub hub, ISystemClock clock) {
             _log = log;
             _hub = hub;
+            _logSampler = new LogSampler(clock);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {

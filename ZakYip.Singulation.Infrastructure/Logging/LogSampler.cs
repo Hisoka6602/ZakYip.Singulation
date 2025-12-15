@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using ZakYip.Singulation.Core.Abstractions;
 
 namespace ZakYip.Singulation.Infrastructure.Logging;
 
@@ -11,6 +12,16 @@ namespace ZakYip.Singulation.Infrastructure.Logging;
 public sealed class LogSampler
 {
     private readonly ConcurrentDictionary<string, SamplerState> _samplers = new();
+    private readonly ISystemClock _clock;
+
+    /// <summary>
+    /// 初始化 LogSampler
+    /// </summary>
+    /// <param name="clock">系统时钟抽象</param>
+    public LogSampler(ISystemClock clock)
+    {
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+    }
 
     /// <summary>
     /// 判断是否应该记录日志（基于采样频率）
@@ -34,7 +45,7 @@ public sealed class LogSampler
         // 每达到采样率的倍数时记录一次
         if (count % samplingRate == 0)
         {
-            state.LastLogTime = DateTime.UtcNow;
+            state.LastLogTime = _clock.UtcNow;
             return true;
         }
 
@@ -52,7 +63,7 @@ public sealed class LogSampler
     {
         var state = _samplers.GetOrAdd(key, _ => new SamplerState());
 
-        var now = DateTime.UtcNow;
+        var now = _clock.UtcNow;
         if (now - state.LastLogTime >= minInterval)
         {
             state.LastLogTime = now;

@@ -35,6 +35,7 @@ using ZakYip.Singulation.Infrastructure.Transport;
 using ZakYip.Singulation.Protocol.Vendors.Huarary;
 using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Abstractions.Realtime;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Infrastructure.Persistence;
 using ZakYip.Singulation.Host.Configuration;
 using System.Runtime.InteropServices;
@@ -136,6 +137,9 @@ var host = Host.CreateDefaultBuilder(args)
 
         // ---------- Memory Cache ----------
         services.AddMemoryCache();
+
+        // ---------- System Clock (时间抽象) ----------
+        services.AddSingleton<ISystemClock, SystemClock>();
 
         // ---------- Swagger ----------
         services.AddEndpointsApiExplorer();

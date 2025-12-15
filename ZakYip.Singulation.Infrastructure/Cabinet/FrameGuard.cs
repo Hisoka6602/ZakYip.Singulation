@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Core.Enums;
@@ -23,13 +24,14 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         private readonly FrameGuardOptions _options;
         private readonly IUpstreamFrameHub _hub;
         private readonly IUpstreamOptionsStore _upstreamOptionsStore;
+        private readonly ISystemClock _clock;
 
         // 序列窗口：用于检测重复序列号
         private readonly Queue<int> _window = new();
         private readonly HashSet<int> _seen = new();
         private readonly object _gate = new();
 
-        private DateTime _lastHeartbeatUtc = DateTime.UtcNow;
+        private DateTime _lastHeartbeatUtc;
         private IDisposable? _heartbeatSubscription;
         private Task? _heartbeatTask;
         private Task? _watchdogTask;
@@ -44,17 +46,21 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         /// <param name="options">帧保护选项。</param>
         /// <param name="hub">上游帧中心。</param>
         /// <param name="upstreamOptionsStore">上游选项存储。</param>
+        /// <param name="clock">系统时钟。</param>
         public FrameGuard(
             ILogger<FrameGuard> log,
             ICabinetPipeline safety,
             IOptions<FrameGuardOptions> options,
             IUpstreamFrameHub hub,
-            IUpstreamOptionsStore upstreamOptionsStore) {
+            IUpstreamOptionsStore upstreamOptionsStore,
+            ISystemClock clock) {
             _log = log;
             _safety = safety;
             _options = options.Value;
             _hub = hub;
             _upstreamOptionsStore = upstreamOptionsStore;
+            _clock = clock;
+            _lastHeartbeatUtc = _clock.UtcNow;
             _safety.StateChanged += OnSafetyStateChanged;
         }
 
@@ -107,7 +113,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         }
 
         /// <inheritdoc />
-        public void ReportHeartbeat() => _lastHeartbeatUtc = DateTime.UtcNow;
+        public void ReportHeartbeat() => _lastHeartbeatUtc = _clock.UtcNow;
 
         /// <inheritdoc />
         public async ValueTask DisposeAsync() {
@@ -163,7 +169,7 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         private async Task RunHeartbeatWatchdogAsync(CancellationToken ct) {
             var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(200));
             while (await timer.WaitForNextTickAsync(ct).ConfigureAwait(false)) {
-                var elapsed = DateTime.UtcNow - _lastHeartbeatUtc;
+                var elapsed = _clock.UtcNow - _lastHeartbeatUtc;
                 if (elapsed > _options.HeartbeatTimeout && !_heartbeatDegraded) {
                     _heartbeatDegraded = _safety.TryEnterDegraded(CabinetTriggerKind.HeartbeatTimeout, $"heartbeat timeout {elapsed.TotalMilliseconds:F0}ms");
                     if (_heartbeatDegraded) {

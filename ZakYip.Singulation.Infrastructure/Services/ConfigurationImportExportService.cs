@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Core.Utils;
@@ -19,6 +20,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly IControllerOptionsStore _controllerStore;
         private readonly ISpeedLinkageOptionsStore _speedLinkageStore;
         private readonly IIoLinkageOptionsStore _ioLinkageStore;
+        private readonly ISystemClock _clock;
 
         private static readonly JsonSerializerOptions JsonOptions = new() {
             WriteIndented = true,
@@ -33,11 +35,13 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             ILogger<ConfigurationImportExportService> logger,
             IControllerOptionsStore controllerStore,
             ISpeedLinkageOptionsStore speedLinkageStore,
-            IIoLinkageOptionsStore ioLinkageStore) {
+            IIoLinkageOptionsStore ioLinkageStore,
+            ISystemClock clock) {
             _logger = logger;
             _controllerStore = controllerStore;
             _speedLinkageStore = speedLinkageStore;
             _ioLinkageStore = ioLinkageStore;
+            _clock = clock;
         }
 
         /// <summary>
@@ -48,7 +52,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             public string Version { get; init; } = "1.0.0";
             
             /// <summary>导出时间戳</summary>
-            public DateTime ExportedAt { get; init; } = DateTime.UtcNow;
+            public DateTime ExportedAt { get; init; }
             
             /// <summary>配置包描述</summary>
             public string? Description { get; init; }

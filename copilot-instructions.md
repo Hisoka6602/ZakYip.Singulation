@@ -2,6 +2,26 @@
 
 本文档定义了 ZakYip.Singulation 项目的 C# 编码规范和最佳实践。所有代码贡献者应遵循这些指南以确保代码质量、可维护性和一致性。
 
+## 核心原则
+
+本规范基于以下核心原则：
+
+1. **零容忍影分身**：重复代码是最危险的技术债务，必须立即消除
+2. **零容忍冗余代码**：未使用的代码是隐形负担，必须立即删除
+3. **PR 完整性**：小型 PR 必须完整，大型 PR 必须登记技术债
+4. **Id 类型统一**：所有内部 Id 使用 `long` 类型
+5. **完整的 API 文档**：所有 API 端点必须有详细的 Swagger 注释
+6. **使用现代 C# 特性**：record, readonly struct, file class, required, init
+7. **启用可空引用类型**：明确表达可空性
+8. **通过抽象接口访问系统资源**：时间、基础设施
+9. **确保线程安全和并发正确性**
+10. **保持方法短小精悍**：单一职责
+11. **遵循清晰的命名约定**
+12. **遵守分层架构原则**
+13. **充分的测试覆盖**
+
+**违规后果**: 任何违反本文档规则的修改，均视为**无效修改**，不得合并到主分支。
+
 ## 1. 使用 required + init 实现更安全的对象创建
 
 确保某些属性在对象创建时必须被设置，通过避免部分初始化的对象来减少错误。
@@ -530,7 +550,674 @@ List<string> list = new();
 - [ ] 代码通过编译，无警告
 - [ ] 遵循项目命名约定
 
-## 9. 参考资源
+## 9. 影分身零容忍策略（Anti-Duplication）
+
+### 核心原则
+
+**影分身 = 重复代码 = 最危险的技术债务**
+
+重复代码会导致：
+- 修改时需要同步多处
+- 容易遗漏某些副本
+- 测试覆盖率下降
+- 维护成本倍增
+
+### 9.1 严禁的影分身模式
+
+#### ❌ 禁止：转发 Facade/Adapter/Wrapper
+
+```csharp
+// 不要：纯粹的转发包装
+public class UserServiceWrapper
+{
+    private readonly IUserService _inner;
+    
+    public Task<User> GetUserAsync(string id)
+        => _inner.GetUserAsync(id);  // 纯转发，没有价值
+}
+```
+
+#### ❌ 禁止：重复定义工具方法
+
+```csharp
+// 不要：在多个地方定义相同的工具方法
+// 文件 A
+public static class StringHelpers
+{
+    public static bool IsNullOrWhiteSpace(string value)
+        => string.IsNullOrWhiteSpace(value);
+}
+
+// 文件 B
+public static class TextUtils
+{
+    public static bool IsEmpty(string value)
+        => string.IsNullOrWhiteSpace(value);  // 重复！
+}
+```
+
+#### ❌ 禁止：重复定义 DTO/Model
+
+```csharp
+// 不要：定义结构相同但名称不同的 DTO
+public record UserDto(string Name, string Email);
+public record UserModel(string Name, string Email);  // 重复！
+public record UserInfo(string Name, string Email);   // 重复！
+```
+
+#### ❌ 禁止：重复定义常量
+
+```csharp
+// 不要：在多个地方定义相同的常量
+public class ConfigA
+{
+    public const int MaxRetries = 3;
+}
+
+public class ConfigB
+{
+    public const int MaxRetries = 3;  // 重复！
+}
+```
+
+### 9.2 消除影分身的方法
+
+✅ **提取共享工具类**
+✅ **提取基类或接口**
+✅ **使用组合替代继承**
+✅ **定义统一的常量类**
+✅ **使用依赖注入共享服务**
+
+### 9.3 Code Review 必查项
+
+- [ ] 是否有纯转发的 Facade/Adapter/Wrapper
+- [ ] 是否有重复的工具方法
+- [ ] 是否有结构相同的 DTO/Model
+- [ ] 是否有重复定义的常量
+- [ ] 历史影分身是否已清理（如果涉及相关模块）
+
+## 10. 冗余代码零容忍策略
+
+### 核心原则
+
+**冗余代码 = 未使用的代码 = 隐形负担**
+
+未使用的代码会导致：
+- 增加代码阅读和理解难度
+- 误导开发者
+- 增加维护成本
+- 降低代码质量
+
+### 10.1 严禁的冗余模式
+
+#### ❌ 禁止：定义从未注册的服务
+
+```csharp
+// 不要：定义服务但从未在 DI 中注册
+public class UnusedService : IUnusedService
+{
+    // 从未在 Startup.cs 或 Program.cs 中注册
+}
+```
+
+#### ❌ 禁止：注册从未使用的服务
+
+```csharp
+// 不要：注册服务但从未被注入
+services.AddScoped<INeverUsedService, NeverUsedService>();
+// 整个项目中没有任何地方注入 INeverUsedService
+```
+
+#### ❌ 禁止：注入从未调用的服务
+
+```csharp
+// 不要：注入服务但从未调用其方法
+public class Controller
+{
+    private readonly IUnusedService _unused;  // 注入但从未使用
+    
+    public Controller(IUnusedService unused)
+    {
+        _unused = unused;
+    }
+}
+```
+
+#### ❌ 禁止：定义从未使用的方法和属性
+
+```csharp
+// 不要：定义方法但从未调用
+public class Service
+{
+    public void UsedMethod() { }
+    
+    public void NeverCalledMethod() { }  // 从未被调用
+}
+```
+
+### 10.2 消除冗余代码的方法
+
+✅ **删除未注册的服务定义**
+✅ **删除未使用的服务注册**
+✅ **删除未调用的服务注入**
+✅ **删除未使用的方法和属性**
+✅ **使用代码分析工具检测死代码**
+
+### 10.3 Code Review 必查项
+
+- [ ] 是否有从未注册的服务
+- [ ] 是否有注册但未使用的服务
+- [ ] 是否有注入但未调用的服务
+- [ ] 是否有从未使用的方法和属性
+- [ ] 是否有从未使用的类型
+
+## 11. Id 类型统一规范
+
+### 核心原则
+
+**所有内部 Id 统一使用 `long` 类型**
+
+### 11.1 规则
+
+- ✅ 所有实体 Id 使用 `long`
+- ✅ 所有数据库主键使用 `long`
+- ✅ 所有 API 的 Id 参数使用 `long`
+- ❌ 禁止混用 `int` 和 `long` 作为同一语义的 Id
+
+### 11.2 示例
+
+```csharp
+// ✅ 正确：统一使用 long
+public class User
+{
+    public long Id { get; set; }
+}
+
+public class Order
+{
+    public long Id { get; set; }
+    public long UserId { get; set; }
+}
+
+// API Controller
+[HttpGet("{id}")]
+public async Task<IActionResult> GetUser(long id)  // ✅ long
+{
+    // ...
+}
+
+// ❌ 错误：混用 int 和 long
+public class User
+{
+    public int Id { get; set; }  // ❌ 应该用 long
+}
+
+public class Order
+{
+    public long Id { get; set; }
+    public int UserId { get; set; }  // ❌ 不一致！
+}
+```
+
+### 11.3 外部系统 Id
+
+对于外部系统的 Id，如果其类型不是 `long`，应：
+- 明确标注其来源和类型
+- 在边界层进行类型转换
+- 使用有意义的名称区分
+
+```csharp
+// ✅ 正确：明确标注外部 Id
+public class IntegrationDto
+{
+    public long InternalOrderId { get; set; }  // 内部 Id，long
+    public string ExternalOrderId { get; set; }  // 外部系统 Id，string
+}
+```
+
+## 12. API 文档规范（Swagger 注释）
+
+### 核心原则
+
+**所有 API 端点必须有完整的 Swagger 注释**
+
+### 12.1 Controller 注释
+
+```csharp
+/// <summary>
+/// 用户管理 API
+/// </summary>
+/// <remarks>
+/// 提供用户的增删改查功能，包括：
+/// - 用户注册
+/// - 用户信息查询
+/// - 用户信息更新
+/// </remarks>
+[ApiController]
+[Route("api/[controller]")]
+public class UsersController : ControllerBase
+{
+    // ...
+}
+```
+
+### 12.2 Action 注释
+
+```csharp
+/// <summary>
+/// 创建新用户
+/// </summary>
+/// <remarks>
+/// 创建一个新的用户账户。
+/// 
+/// 业务规则：
+/// - 用户名必须唯一
+/// - 邮箱必须唯一
+/// - 密码必须满足复杂度要求
+/// </remarks>
+/// <param name="request">用户创建请求</param>
+/// <returns>创建成功的用户信息</returns>
+/// <response code="200">创建成功</response>
+/// <response code="400">请求参数无效</response>
+/// <response code="409">用户名或邮箱已存在</response>
+/// <response code="500">服务器内部错误</response>
+[HttpPost]
+[ProducesResponseType(typeof(UserDto), 200)]
+[ProducesResponseType(typeof(ProblemDetails), 400)]
+[ProducesResponseType(typeof(ProblemDetails), 409)]
+[ProducesResponseType(typeof(ProblemDetails), 500)]
+[SwaggerOperation(
+    Summary = "创建新用户",
+    Description = "创建一个新的用户账户",
+    OperationId = "CreateUser",
+    Tags = new[] { "Users" }
+)]
+public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
+{
+    // ...
+}
+```
+
+### 12.3 DTO 注释
+
+```csharp
+/// <summary>
+/// 用户创建请求
+/// </summary>
+public sealed record CreateUserRequest
+{
+    /// <summary>
+    /// 用户名（必填）
+    /// </summary>
+    /// <example>john_doe</example>
+    [Required(ErrorMessage = "用户名不能为空")]
+    [StringLength(50, MinimumLength = 3, ErrorMessage = "用户名长度必须在 3-50 个字符之间")]
+    public required string UserName { get; init; }
+    
+    /// <summary>
+    /// 电子邮箱（必填）
+    /// </summary>
+    /// <example>john@example.com</example>
+    [Required(ErrorMessage = "邮箱不能为空")]
+    [EmailAddress(ErrorMessage = "邮箱格式不正确")]
+    public required string Email { get; init; }
+    
+    /// <summary>
+    /// 初始密码（必填）
+    /// </summary>
+    /// <remarks>
+    /// 密码必须至少包含 8 个字符，包括大小写字母、数字和特殊字符
+    /// </remarks>
+    /// <example>P@ssw0rd123</example>
+    [Required(ErrorMessage = "密码不能为空")]
+    [StringLength(100, MinimumLength = 8, ErrorMessage = "密码长度必须在 8-100 个字符之间")]
+    public required string Password { get; init; }
+}
+```
+
+### 12.4 Code Review 检查点
+
+- [ ] 所有 Controller 类有 `<summary>` 注释
+- [ ] 所有 Action 方法有 `[SwaggerOperation]` 特性
+- [ ] 所有 Action 方法标注了所有可能的响应码
+- [ ] 所有 DTO 属性有 `<summary>` 注释
+- [ ] 复杂字段有 `<remarks>` 详细说明
+- [ ] 关键字段有 `<example>` 示例值
+
+## 13. 通讯与重试原则
+
+### 13.1 客户端连接失败应无限重试 + 指数退避
+
+**原则**: 与外部系统的连接采用**无限重试**策略，使用指数退避算法。
+
+**推荐退避策略**:
+```
+初始退避: 200ms
+指数增长序列: 
+  尝试1: 200ms
+  尝试2: 400ms (200ms × 2)
+  尝试3: 800ms (400ms × 2)
+  尝试4: 1600ms (800ms × 2)
+  尝试5: 2000ms (1600ms × 2 = 3200ms，但被限制为最大值 2000ms)
+  尝试6+: 2000ms, 2000ms, 2000ms, ...（无限重试，持续使用最大值）
+
+说明：采用指数退避算法，每次失败后延迟时间翻倍，但不超过最大退避时间（2000ms）
+```
+
+**示例**:
+
+```csharp
+// ✅ 正确：无限重试，指数退避
+public class ExternalServiceClient
+{
+    private const int InitialBackoffMs = 200;
+    private const int MaxBackoffMs = 2000;
+    
+    public async Task ConnectWithRetryAsync(CancellationToken cancellationToken)
+    {
+        int backoffMs = InitialBackoffMs;
+        int attemptCount = 0;
+        
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                attemptCount++;
+                _logger.LogInformation($"尝试连接外部服务（第 {attemptCount} 次）...");
+                
+                await ConnectAsync();
+                
+                _logger.LogInformation("成功连接到外部服务");
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning($"连接失败，{backoffMs}ms 后重试: {ex.Message}");
+                
+                await Task.Delay(backoffMs, cancellationToken);
+                
+                // 指数退避，但不超过最大值
+                backoffMs = Math.Min(backoffMs * 2, MaxBackoffMs);
+            }
+        }
+    }
+}
+```
+
+### 13.2 请求失败应记录日志但不自动重试
+
+**原则**: 单次请求失败**只记录日志**，不进行自动重试，由调用方决定如何处理。
+
+**示例**:
+
+```csharp
+// ✅ 正确：请求失败只记录日志
+public async Task<bool> SendRequestAsync(string requestId, object payload)
+{
+    try
+    {
+        await _httpClient.PostAsJsonAsync("/api/endpoint", payload);
+        
+        _logger.LogInformation($"请求已发送: {requestId}");
+        return true;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"发送请求失败: {requestId}");
+        return false;  // ✅ 不重试，由调用方处理
+    }
+}
+```
+
+## 14. 测试与质量保证
+
+### 14.1 单元测试覆盖核心逻辑
+
+**原则**: 核心业务逻辑必须有充分的单元测试覆盖。
+
+**测试覆盖率目标**:
+- 领域层：≥ 85%
+- 应用层：≥ 80%
+- 基础设施层：≥ 70%
+- 表示层：≥ 60%
+
+### 14.2 禁止删除或注释测试
+
+**原则**: **严格禁止**注释或删除现有的测试用例来绕过规则检查。
+
+**示例**:
+
+```csharp
+// ❌ 错误：注释测试
+// [Fact]
+// public async Task Should_Return_Error_When_Invalid_Input()
+// {
+//     // 这个测试失败了，先注释掉
+// }
+
+// ✅ 正确：修复代码或更新测试
+[Fact]
+public async Task Should_Return_Error_When_Invalid_Input()
+{
+    // 修复代码使测试通过
+    // 或更新测试以反映新的业务规则
+    var result = await _service.ProcessAsync("");
+    Assert.False(result.IsSuccess);
+    Assert.Contains("Invalid input", result.ErrorMessage);
+}
+```
+
+### 14.3 所有测试失败必须在当前 PR 中修复
+
+**规则**:
+
+1. 任意测试失败，一旦在本 PR 的 CI 中出现，就视为本 PR 的工作内容，**必须在当前 PR 中修复**
+2. **禁止**在 PR 描述中说明"这是已有问题 / 与本 PR 无关"
+3. **禁止**把测试失败留给"后续 PR 处理"
+
+**例外情况**:
+- 明确的基础设施故障（如 CI 服务器宕机、网络中断）
+- 已记录在案的已知 flaky tests，且在 issue tracker 中有追踪
+
+## 15. 代码清理规范
+
+### 15.1 过时/废弃/重复代码必须立即删除
+
+**规则**:
+
+1. 一旦新增实现已经覆盖旧实现，旧实现必须在**同一个 PR 中立即删除**
+2. 相同语义的两套实现不允许并存
+3. 不允许通过 `[Obsolete]`、`Legacy`、`Deprecated` 等方式长期保留废弃代码
+
+**禁止行为**:
+- ❌ 新实现已投入使用，却仍长时间保留旧实现
+- ❌ 为了"兼容历史"同时维护两套等价实现
+- ❌ 新增代码继续依赖已明确不推荐使用的旧实现
+
+### 15.2 禁止使用 global using
+
+**规则**:
+1. 代码中禁止使用 `global using` 指令
+2. 现有的 `global using` 应在后续重构中逐步移除
+
+### 15.3 技术债务文件统一管理
+
+**规则**:
+
+1. **项目根目录下只能有一个技术债务追踪文件**：`TECHNICAL_DEBT.md`
+2. **禁止创建多个技术债务文件**（如 DEBT_CLEANUP_REPORT.md、TODO.md、ISSUES.md 等）
+3. 所有技术债务必须集中在 `TECHNICAL_DEBT.md` 中统一管理
+4. 已完成的技术债务应在同一文件中标记为完成，而非创建新的报告文件
+
+**原因**:
+- 避免多个文件导致信息分散
+- 确保后续 PR 知道应该读取哪个文件
+- 便于统一查看和管理技术债务状态
+
+**示例**:
+
+```markdown
+# TECHNICAL_DEBT.md
+
+## 活跃债务 (Active Debt)
+- [ ] TD-001: 实现 ISystemClock 抽象替代 DateTime.Now
+- [ ] TD-002: 移除 LeadshineLegacyDriver 类
+
+## 已完成债务 (Completed Debt)
+- [x] TD-000: SafeExecute 模式统一（完成于 2025-12-07）
+```
+
+## 16. 分层架构原则（DDD 分层）
+
+### 架构层次
+
+```
+┌─────────────────────────────────────┐
+│        Presentation（表示层）         │
+│  - API Controllers                   │
+│  - 输入验证                          │
+└─────────────────────────────────────┘
+              ↓ 依赖
+┌─────────────────────────────────────┐
+│       Application（应用层）           │
+│  - 业务编排                          │
+│  - 用例实现                          │
+└─────────────────────────────────────┘
+              ↓ 依赖
+┌─────────────────────────────────────┐
+│         Domain（领域层）              │
+│  - 领域模型                          │
+│  - 业务规则                          │
+└─────────────────────────────────────┘
+              ↓ 依赖
+┌─────────────────────────────────────┐
+│    Infrastructure（基础设施层）       │
+│  - 数据持久化                        │
+│  - 外部系统通信                      │
+└─────────────────────────────────────┘
+```
+
+### 层次依赖规则
+
+- 上层可以依赖下层
+- 下层**不得**依赖上层
+- 同层之间通过接口通信
+- 基础设施层实现领域层定义的接口（依赖反转）
+
+### Presentation 层职责（严格限制）
+
+**允许的职责**:
+- ✅ API Controller 端点定义（仅调用应用层服务）
+- ✅ 输入模型验证
+- ✅ 响应格式化
+
+**禁止的行为**:
+- ❌ 直接包含业务逻辑
+- ❌ 直接访问数据库或仓储
+- ❌ 直接访问外部系统
+- ❌ 复杂的数据处理和转换
+
+## 17. 完整的代码审查清单
+
+在提交代码前，请检查：
+
+### PR 完整性
+- [ ] PR 可独立编译、测试通过
+- [ ] 未留下"TODO: 后续PR"标记
+- [ ] 大型 PR 的未完成部分已登记到 `TECHNICAL_DEBT.md` 中
+- [ ] 未创建额外的技术债务文件（仅使用 TECHNICAL_DEBT.md）
+
+### 影分身检查（最重要）
+- [ ] 未创建纯转发 Facade/Adapter/Wrapper/Proxy
+- [ ] 未重复定义相同的工具方法
+- [ ] 未重复定义相同结构的 DTO/Model
+- [ ] 未重复定义相同的 Options/Settings
+- [ ] 未在多处定义相同的常量
+- [ ] 已清理历史影分身（如果涉及相关模块）
+
+### 冗余代码检查
+- [ ] 未定义从未在 DI 中注册的服务
+- [ ] 未注册从未被注入使用的服务
+- [ ] 未注入从未调用的服务
+- [ ] 未定义从未使用的方法和属性
+- [ ] 未定义从未使用的类型
+- [ ] 已清理发现的冗余代码
+
+### 类型使用
+- [ ] DTO 和只读数据使用 `record` / `record struct`
+- [ ] 小型值类型使用 `readonly struct`
+- [ ] 工具类使用 `file` 作用域类型
+- [ ] 必填属性使用 `required + init`
+
+### Id 类型规范
+- [ ] 所有内部 Id 统一使用 `long` 类型
+- [ ] 未混用 `int` 和 `long` 作为同一语义的 Id
+- [ ] 外部系统 Id 类型有明确说明
+- [ ] Id 类型转换在边界层进行
+
+### 可空引用类型
+- [ ] 启用可空引用类型（`Nullable=enable`）
+- [ ] 未新增 `#nullable disable`
+- [ ] 明确区分可空和不可空引用
+
+### 时间处理
+- [ ] 所有时间通过抽象接口（如 `ISystemClock`）获取
+- [ ] 未直接使用 `DateTime.Now` / `DateTime.UtcNow`
+
+**注意**: 当前代码库存在历史技术债务（100+ 处直接使用 DateTime.Now/UtcNow），应在后续重构中逐步修复。新代码应遵守此规范。
+
+### 并发安全
+- [ ] 跨线程集合使用线程安全容器或锁
+- [ ] 无数据竞争风险
+
+### 异常处理
+- [ ] 后台服务使用安全执行包装器
+- [ ] 异常信息清晰具体
+
+### API 设计
+- [ ] 请求模型使用 `record + required + 验证`
+- [ ] 响应使用统一的包装类型
+- [ ] **所有 API 端点有完整的 Swagger 注释**
+- [ ] Controller 类有 `<summary>` 注释
+- [ ] Action 方法有 `[SwaggerOperation]` 特性
+- [ ] Action 方法标注了所有可能的响应码（200、400、404、500等）
+- [ ] DTO 属性有 `<summary>` 注释
+- [ ] 复杂字段有 `<remarks>` 和 `<example>`
+
+### 方法设计
+- [ ] 方法短小（< 30 行）
+- [ ] 单一职责
+- [ ] 清晰的命名
+- [ ] `async` 方法包含 `await` 操作符
+
+### 命名约定
+- [ ] 遵循 PascalCase / camelCase 约定
+- [ ] 接口以 `I` 开头
+- [ ] 异步方法以 `Async` 结尾
+- [ ] 私有字段使用 `_camelCase` 前缀
+- [ ] 命名空间与文件夹结构匹配
+
+### 分层架构
+- [ ] 遵循分层职责
+- [ ] 表示层不包含业务逻辑
+- [ ] 通过接口访问基础设施
+
+### 测试
+- [ ] 核心逻辑有单元测试覆盖
+- [ ] 所有测试通过
+- [ ] 未删除或注释测试
+
+### 代码清理
+- [ ] 未使用 `global using`
+- [ ] 已删除过时/废弃/重复代码
+- [ ] 未保留 `[Obsolete]` / `Legacy` / `Deprecated` 代码
+- [ ] 技术债务仅记录在 `TECHNICAL_DEBT.md` 中（不创建多个债务文件）
+
+### 通讯与重试
+- [ ] 连接失败使用无限重试 + 指数退避
+- [ ] 请求失败只记录日志，不自动重试
+
+## 18. 参考资源
 
 - [C# 编码约定（Microsoft 官方）](https://learn.microsoft.com/zh-cn/dotnet/csharp/fundamentals/coding-style/coding-conventions)
 - [Records（C# 参考）](https://learn.microsoft.com/zh-cn/dotnet/csharp/language-reference/builtin-types/record)
@@ -538,9 +1225,22 @@ List<string> list = new();
 - [readonly（C# 参考）](https://learn.microsoft.com/zh-cn/dotnet/csharp/language-reference/keywords/readonly)
 - [required 修饰符](https://learn.microsoft.com/zh-cn/dotnet/csharp/language-reference/keywords/required)
 - [文件作用域类型](https://learn.microsoft.com/zh-cn/dotnet/csharp/language-reference/keywords/file)
+- [通用 Copilot 编码标准原文](https://github.com/Hisoka6602/ZakYip.WheelDiverterSorter/blob/master/docs/GENERAL_COPILOT_CODING_STANDARDS.md)（外部参考）
 
 ---
 
-**版本**: 1.0  
-**最后更新**: 2024-11-14  
+**版本**: 2.0  
+**最后更新**: 2025-12-14  
 **维护者**: ZakYip.Singulation 团队
+
+**更新说明**: 
+- 整合了通用 Copilot 编码标准
+- 新增影分身零容忍策略
+- 新增冗余代码零容忍策略
+- 新增 Id 类型统一规范
+- 新增完整的 API 文档规范（Swagger 注释）
+- 新增通讯与重试原则
+- 增强测试与质量保证要求
+- 新增代码清理规范
+- 新增分层架构原则
+- 更新完整的代码审查清单

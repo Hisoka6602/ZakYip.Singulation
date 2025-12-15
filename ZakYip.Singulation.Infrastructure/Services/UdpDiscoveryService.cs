@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Infrastructure.Logging;
 
 namespace ZakYip.Singulation.Infrastructure.Services;
@@ -17,16 +18,18 @@ public class UdpDiscoveryService : BackgroundService
 {
     private readonly ILogger<UdpDiscoveryService> _logger;
     private readonly UdpDiscoveryOptions _options;
-    private readonly LogSampler _logSampler = new();
+    private readonly LogSampler _logSampler;
     private UdpClient? _udpClient;
     private long _broadcastSequence = 0;
 
     public UdpDiscoveryService(
         ILogger<UdpDiscoveryService> logger,
-        IOptions<UdpDiscoveryOptions> options)
+        IOptions<UdpDiscoveryOptions> options,
+        ISystemClock clock)
     {
         _logger = logger;
         _options = options.Value;
+        _logSampler = new LogSampler(clock);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

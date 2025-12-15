@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Exceptions;
 using ZakYip.Singulation.Infrastructure.Logging;
 
@@ -18,16 +19,19 @@ namespace ZakYip.Singulation.Infrastructure.Services;
 public sealed class ExceptionAggregationService : BackgroundService
 {
     private readonly ILogger<ExceptionAggregationService> _logger;
+    private readonly ISystemClock _clock;
     private readonly ConcurrentQueue<ExceptionRecord> _exceptionQueue = new();
     private readonly ConcurrentDictionary<string, ExceptionStatistics> _exceptionStats = new();
     private readonly TimeSpan _aggregationInterval = TimeSpan.FromMinutes(5);
     private readonly TimeSpan _reportInterval = TimeSpan.FromMinutes(15);
     private readonly int _maxQueueSize = 10000;
-    private DateTime _lastReportTime = DateTime.UtcNow;
+    private DateTime _lastReportTime;
 
-    public ExceptionAggregationService(ILogger<ExceptionAggregationService> logger)
+    public ExceptionAggregationService(ILogger<ExceptionAggregationService> logger, ISystemClock clock)
     {
         _logger = logger;
+        _clock = clock;
+        _lastReportTime = _clock.UtcNow;
     }
 
     /// <summary>
@@ -44,7 +48,7 @@ public sealed class ExceptionAggregationService : BackgroundService
         {
             Exception = exception,
             Context = context ?? "Unknown",
-            Timestamp = DateTime.UtcNow,
+            Timestamp = _clock.UtcNow,
             ExceptionType = exception.GetType().Name,
             Message = exception.Message,
             StackTrace = exception.StackTrace
@@ -80,10 +84,10 @@ public sealed class ExceptionAggregationService : BackgroundService
                 await AggregateExceptionsAsync(stoppingToken);
 
                 // 定期上报统计信息
-                if (DateTime.UtcNow - _lastReportTime >= _reportInterval)
+                if (_clock.UtcNow - _lastReportTime >= _reportInterval)
                 {
                     ReportStatistics();
-                    _lastReportTime = DateTime.UtcNow;
+                    _lastReportTime = _clock.UtcNow;
                 }
             }
         }
@@ -165,7 +169,7 @@ public sealed class ExceptionAggregationService : BackgroundService
         }
 
         // 清理旧统计数据（保留最近的数据）
-        var cutoffTime = DateTime.UtcNow.AddHours(-1);
+        var cutoffTime = _clock.UtcNow.AddHours(-1);
         var keysToRemove = _exceptionStats
             .Where(kvp => kvp.Value.LastOccurrence < cutoffTime && kvp.Value.Count < 5)
             .Select(kvp => kvp.Key)

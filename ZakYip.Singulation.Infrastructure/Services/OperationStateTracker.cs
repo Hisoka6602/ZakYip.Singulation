@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using ZakYip.Singulation.Core.Abstractions;
 
 namespace ZakYip.Singulation.Infrastructure.Services;
 
@@ -10,6 +11,16 @@ namespace ZakYip.Singulation.Infrastructure.Services;
 public sealed class OperationStateTracker
 {
     private readonly ConcurrentDictionary<string, OperationState> _operations = new();
+    private readonly ISystemClock _clock;
+
+    /// <summary>
+    /// 初始化操作状态跟踪器
+    /// </summary>
+    /// <param name="clock">系统时钟</param>
+    public OperationStateTracker(ISystemClock clock)
+    {
+        _clock = clock;
+    }
 
     /// <summary>
     /// 尝试开始一个操作
@@ -22,7 +33,7 @@ public sealed class OperationStateTracker
         var state = new OperationState
         {
             Name = operationName,
-            StartTime = DateTime.UtcNow
+            StartTime = _clock.UtcNow
         };
 
         return _operations.TryAdd(operationKey, state);
@@ -74,9 +85,11 @@ public sealed class OperationStateTracker
         public DateTime StartTime { get; set; }
 
         /// <summary>
-        /// 运行时长
+        /// 获取运行时长
         /// </summary>
-        public TimeSpan Duration => DateTime.UtcNow - StartTime;
+        /// <param name="clock">系统时钟（用于获取当前时间）</param>
+        /// <returns>运行时长</returns>
+        public TimeSpan GetDuration(ISystemClock clock) => clock.UtcNow - StartTime;
     }
 }
 
