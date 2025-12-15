@@ -16,6 +16,7 @@ using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Infrastructure.Telemetry;
 using ZakYip.Singulation.Infrastructure.Services;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Abstractions;
 
 namespace ZakYip.Singulation.Infrastructure.Workers {
 
@@ -33,6 +34,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
         private readonly IFrameGuard _frameGuard;
         private readonly ICabinetPipeline _cabinetPipeline;
         private readonly IndicatorLightService? _indicatorLightService;
+        private readonly ISystemClock _clock;
 
         public SpeedFrameWorker(
             ILogger<SpeedFrameWorker> log,
@@ -43,7 +45,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             IAxisLayoutStore axisLayoutStore,
             IFrameGuard frameGuard,
             ICabinetPipeline cabinetPipeline,
-            IndicatorLightService? indicatorLightService = null) {
+            IndicatorLightService? indicatorLightService = null,
+            ISystemClock? clock = null) {
             _log = log;
             _hub = hub;
             _codec = codec;
@@ -53,6 +56,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _frameGuard = frameGuard;
             _cabinetPipeline = cabinetPipeline;
             _indicatorLightService = indicatorLightService;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -107,7 +111,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                         sw.Stop();
                         SingulationMetrics.Instance.LoopDuration.Record(sw.Elapsed.TotalMilliseconds);
                         if (speedSet.TimestampUtc != default) {
-                            var rtt = (DateTime.UtcNow - speedSet.TimestampUtc).TotalMilliseconds;
+                            var rtt = (_clock.UtcNow - speedSet.TimestampUtc).TotalMilliseconds;
                             if (rtt >= 0)
                                 SingulationMetrics.Instance.FrameRtt.Record(rtt);
                         }

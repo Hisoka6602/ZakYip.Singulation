@@ -25,7 +25,7 @@ public record ConnectionHealthDto
     /// <summary>
     /// 检查时间
     /// </summary>
-    public DateTime CheckedAt { get; init; } = DateTime.UtcNow;
+    public required DateTime CheckedAt { get; init; }
 }
 
 /// <summary>

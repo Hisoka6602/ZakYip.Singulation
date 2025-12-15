@@ -5,6 +5,7 @@ using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Drivers.Leadshine;
 using ZakYip.Singulation.Transport.Abstractions;
@@ -20,6 +21,7 @@ public sealed class ConnectionHealthCheckService
     private readonly ILogger<ConnectionHealthCheckService> _logger;
     private readonly IAxisController? _axisController;
     private readonly IByteTransport? _upstreamTransport;
+    private readonly ISystemClock _clock;
     private readonly string? _leadshineIp;
     private readonly string? _upstreamIp;
     private readonly int _upstreamPort;
@@ -27,11 +29,13 @@ public sealed class ConnectionHealthCheckService
     public ConnectionHealthCheckService(
         ILogger<ConnectionHealthCheckService> logger,
         IAxisController? axisController = null,
-        IByteTransport? upstreamTransport = null)
+        IByteTransport? upstreamTransport = null,
+        ISystemClock? clock = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _axisController = axisController;
         _upstreamTransport = upstreamTransport;
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         
         // 尝试从传输层获取上游IP和端口
         if (_upstreamTransport != null)
@@ -64,7 +68,7 @@ public sealed class ConnectionHealthCheckService
         
         var result = new ConnectionHealthCheckResult
         {
-            CheckedAt = DateTime.UtcNow,
+            CheckedAt = _clock.UtcNow,
             LeadshineConnection = await CheckLeadshineConnectionAsync(ct),
             UpstreamConnection = _upstreamTransport != null && !string.IsNullOrEmpty(_upstreamIp) 
                 ? await CheckUpstreamConnectionAsync(ct) 

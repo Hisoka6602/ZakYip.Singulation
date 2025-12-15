@@ -79,7 +79,7 @@
 ---
 
 ### TD-NEW-002: DateTime.Now/UtcNow 直接使用未通过抽象
-**状态**: 🔄 进行中 (24% 完成)
+**状态**: 🔄 进行中 (53% 完成)
 **发现日期**: 2025-12-14  
 **开始日期**: 2025-12-14  
 **优先级**: P1  
@@ -89,9 +89,9 @@
 **问题描述**:
 项目中有99处直接使用 `DateTime.Now` 或 `DateTime.UtcNow`，违反了编码标准中的时间处理规范（第17节检查清单）。标准要求所有时间获取应通过抽象接口（如 `ISystemClock`）。
 
-**当前进度**: 12/49 文件完成 (约24%)
-- ✅ 已完成: 12 文件，约24处 DateTime 替换
-- 🔄 进行中: 37 文件，约75处 DateTime 待替换
+**当前进度**: 26/49 文件完成 (约53%)
+- ✅ 已完成: 26 文件，约40处 DateTime 替换
+- 🔄 进行中: 23 文件，约35处 DateTime 待替换
 
 **已完成的文件** (commit aa692b2):
 1. ✅ `Infrastructure/Logging/LogSampler.cs` - 3处替换
@@ -109,60 +109,63 @@
 **新增完成的文件** (commit d87953b):
 12. ✅ `Infrastructure/Workers/LogsCleanupService.cs` - 2处替换（类：LogsCleanupService，使用 ISystemClock）
 
-**剩余文件清单** (37 文件，按优先级排序):
+**新增完成的文件** (commit b16a7c1):
+13. ✅ `Infrastructure/Services/ConnectionHealthCheckService.cs` - CheckedAt 字段改用 ISystemClock（类：ConnectionHealthCheckService）
+14. ✅ `Infrastructure/Services/RealtimeAxisDataService.cs` - 时间戳改用 ISystemClock（类：RealtimeAxisDataService）
+15. ✅ `Infrastructure/Services/SystemHealthMonitorService.cs` - 健康快照时间改用 ISystemClock（类：SystemHealthMonitorService）
+16. ✅ `Infrastructure/Workers/SpeedFrameWorker.cs` - RTT 计算改用 ISystemClock（类：SpeedFrameWorker）
+17. ✅ `Transport/Tcp/TcpClientByteTransport/TouchClientByteTransport.cs` - 事件时间戳改用 ISystemClock（类：TouchClientByteTransport）
+18. ✅ `Transport/Tcp/TcpServerByteTransport/TouchServerByteTransport.cs` - 事件时间戳改用 ISystemClock（类：TouchServerByteTransport）
+19. ✅ `Core/Contracts/Events/BytesReceivedEventArgs.cs` - 移除默认时间，调用方提供（类型：BytesReceivedEventArgs）
+20. ✅ `Core/Contracts/Events/Cabinet/CabinetStateChangedEventArgs.cs` - 移除默认时间，调用方提供（类型：CabinetStateChangedEventArgs）
+21. ✅ `Core/Contracts/Events/Cabinet/CabinetTriggerEventArgs.cs` - 移除默认时间，调用方提供（类型：CabinetTriggerEventArgs）
+22. ✅ `Core/Contracts/Events/Cabinet/RemoteLocalModeChangedEventArgs.cs` - 移除默认时间，调用方提供（类型：RemoteLocalModeChangedEventArgs）
+23. ✅ `Core/Contracts/Events/LogEvent.cs` - 移除默认时间，调用方提供（类型：LogEvent）
+24. ✅ `Core/Contracts/Events/TransportErrorEventArgs.cs` - 移除默认时间，调用方提供（类型：TransportErrorEventArgs）
+25. ✅ `Core/Contracts/Dto/SystemRuntimeStatus.cs` - 启动时间由调用方设置（类型：SystemRuntimeStatus）
+26. ✅ `Core/Configs/FaultDiagnosisEntities.cs` - 诊断/知识库时间由调用方或服务设置（类型：FaultDiagnosisEntry/FaultKnowledgeEntry）
 
-**【高优先级 - Infrastructure 层】** (4 文件)
-1. `Infrastructure/Services/ConnectionHealthCheckService.cs` - 1处
-2. `Infrastructure/Services/RealtimeAxisDataService.cs` - 1处
-3. `Infrastructure/Services/SystemHealthMonitorService.cs` - 1处
-4. `Infrastructure/Workers/SpeedFrameWorker.cs` - 1处
+**新增完成的文件** (commit ee24c42):
+27. ✅ `Host/SignalR/RealtimeDispatchService.cs` - 信封时间戳与断路器状态统一使用 ISystemClock（类：RealtimeDispatchService）
+28. ✅ `Host/SignalR/SpeedLinkageHealthCheck.cs` - 健康检查时间窗计算改用 ISystemClock（类：SpeedLinkageHealthCheck）
+29. ✅ `Tests/AxisControllerTests.cs` - 使用固定时间值替代 DateTime.UtcNow，保持测试稳定
+30. ✅ `Tests/SignalRTests.cs` - 注入 ISystemClock 以匹配 RealtimeDispatchService 构造签名
+31. ✅ `Tests/SpeedLinkageHealthCheckTests.cs` - 注入 ISystemClock 并使用固定时间值覆盖时间窗口判断
 
-**【高优先级 - Transport 层】** (2 文件) - 事件创建者
-5. `Transport/Tcp/TcpClientByteTransport/TouchClientByteTransport.cs` - 2处
-6. `Transport/Tcp/TcpServerByteTransport/TouchServerByteTransport.cs` - 2处
-
-**【中优先级 - Core 层】** (7 文件) - DTOs 和 Events
-7. `Core/Contracts/Events/BytesReceivedEventArgs.cs` - 1处 (默认值)
-8. `Core/Contracts/Events/Cabinet/CabinetStateChangedEventArgs.cs` - 1处
-9. `Core/Contracts/Events/Cabinet/CabinetTriggerEventArgs.cs` - 1处
-10. `Core/Contracts/Events/Cabinet/RemoteLocalModeChangedEventArgs.cs` - 1处
-11. `Core/Contracts/Events/LogEvent.cs` - 1处
-12. `Core/Contracts/Events/TransportErrorEventArgs.cs` - 1处
-13. `Core/Contracts/Dto/SystemRuntimeStatus.cs` - 1处
-14. `Core/Configs/FaultDiagnosisEntities.cs` - 3处
+**剩余文件清单** (23 文件，按优先级排序):
 
 **【中优先级 - Drivers 层】** (4 文件)
-15. `Drivers/Leadshine/EmcResetCoordinator.cs` - 1处
-16. `Drivers/Leadshine/EmcResetNotification.cs` - 1处
-17. `Drivers/Leadshine/LeadshineLtdmcAxisDrive.cs` - 1处
-18. `Drivers/Leadshine/LeadshineLtdmcBusAdapter.cs` - 2处
+1. `Drivers/Leadshine/EmcResetCoordinator.cs` - 1处
+2. `Drivers/Leadshine/EmcResetNotification.cs` - 1处
+3. `Drivers/Leadshine/LeadshineLtdmcAxisDrive.cs` - 1处
+4. `Drivers/Leadshine/LeadshineLtdmcBusAdapter.cs` - 2处
 
 **【中优先级 - Protocol 层】** (2 文件)
-19. `Protocol/Vendors/Guiwei/GuiweiCodec.cs` - 1处
-20. `Protocol/Vendors/Huarary/HuararyCodec.cs` - 1处
+5. `Protocol/Vendors/Guiwei/GuiweiCodec.cs` - 1处
+6. `Protocol/Vendors/Huarary/HuararyCodec.cs` - 1处
 
 **【中优先级 - Host 层】** (4 文件)
-21. `Host/Controllers/ConfigurationController.cs` - 1处
-22. `Host/Controllers/MonitoringController.cs` - 1处
-23. `Host/Dto/ConnectionHealthDto.cs` - 1处 (默认值)
-24. `Host/SignalR/RealtimeDispatchService.cs` - 4处
-25. `Host/SignalR/SpeedLinkageHealthCheck.cs` - 4处
+7. `Host/Controllers/ConfigurationController.cs` - 1处
+8. `Host/Controllers/MonitoringController.cs` - 1处
+9. `Host/Dto/ConnectionHealthDto.cs` - 1处 (默认值)
+10. `Host/SignalR/RealtimeDispatchService.cs` - 4处
+11. `Host/SignalR/SpeedLinkageHealthCheck.cs` - 4处
 
 **【低优先级 - Tests 层】** (2 文件)
-26. `Tests/AxisControllerTests.cs` - 7处
-27. `Tests/SpeedLinkageHealthCheckTests.cs` - 7处
+12. `Tests/AxisControllerTests.cs` - 7处
+13. `Tests/SpeedLinkageHealthCheckTests.cs` - 7处
 
 **【低优先级 - Others】** (9 文件) - Benchmarks, Demo, MauiApp
-28. `Benchmarks/LongRunningStabilityTest.cs` - 5处
-29. `ConsoleDemo/Regression/RegressionRunner.cs` - 1处
-30. `MauiApp/Helpers/ModuleCacheManager.cs` - 2处
-31. `MauiApp/Helpers/SafeExecutor.cs` - 2处
-32. `MauiApp/Helpers/ServiceCacheHelper.cs` - 2处
-33. `MauiApp/Services/NotificationService.cs` - 1处
-34. `MauiApp/Services/SignalRClientFactory.cs` - 5处
-35. `MauiApp/Services/UdpDiscoveryClient.cs` - 2处
-36. `MauiApp/ViewModels/MainViewModel.cs` - 1处
-37. ⚠️ `Infrastructure/Services/OperationStateTracker.cs` - 需移除 Obsolete 属性
+14. `Benchmarks/LongRunningStabilityTest.cs` - 5处
+15. `ConsoleDemo/Regression/RegressionRunner.cs` - 1处
+16. `MauiApp/Helpers/ModuleCacheManager.cs` - 2处
+17. `MauiApp/Helpers/SafeExecutor.cs` - 2处
+18. `MauiApp/Helpers/ServiceCacheHelper.cs` - 2处
+19. `MauiApp/Services/NotificationService.cs` - 1处
+20. `MauiApp/Services/SignalRClientFactory.cs` - 5处
+21. `MauiApp/Services/UdpDiscoveryClient.cs` - 2处
+22. `MauiApp/ViewModels/MainViewModel.cs` - 1处
+23. ⚠️ `Infrastructure/Services/OperationStateTracker.cs` - 需移除 Obsolete 属性
 
 **修复指南（下一个 PR）**:
 

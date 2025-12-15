@@ -1,5 +1,26 @@
 # ZakYip.Singulation 项目总览
 
+## 🎯 最新更新（2026-02-10）
+
+### ✅ 2026-02-10 时间抽象合规与接口封装
+
+- **本次更新的内容**：
+  - `MonitoringController` 和 `ConfigurationController` 统一通过 `ISystemClock` 获取时间，避免直接调用 `DateTime.Now`。
+  - `ConnectionHealthDto` 明确要求调用方提供检查时间，消除默认时间初始化的隐式行为。
+  - README 同步记录改动、涉及文件以及后续可完善的方向。
+
+- **文件树与实现说明**：
+  - `ZakYip.Singulation.Host/Controllers/MonitoringController.cs`：系统健康查询接口，现在通过注入的时钟为响应填充时间戳。
+  - `ZakYip.Singulation.Host/Controllers/ConfigurationController.cs`：配置导出下载接口，文件名时间戳使用 `ISystemClock`。
+  - `ZakYip.Singulation.Host/Dto/ConnectionHealthDto.cs`：连接健康响应 DTO，时间戳改为必填属性，由业务层显式传入。
+  - `README.md`：记录本次更新摘要、文件说明和可继续完善的内容。
+
+- **可继续完善的内容**：
+  - 为其余直接使用 `DateTime.Now/UtcNow` 的模块补充统一时钟注入。
+  - 根据运行时需求为健康度初始数据添加可配置的默认值策略。
+
+---
+
 ## 🎯 最新更新（2026-02-09）
 
 ### ✅ 2026-02-09 时钟抽象对齐与文档同步
@@ -641,6 +662,26 @@ GET /api/configurations/template/download?type=SpeedLinkage
 ---
 
 > 📝 **历史更新**：更多历史更新记录请查看 [CHANGELOG.md](CHANGELOG.md)
+
+
+### 本次更新（技术债务清理补充）
+- 完成文件：
+  - `ZakYip.Singulation.Host/SignalR/RealtimeDispatchService.cs`：为实时分发服务注入统一时钟，确保消息时间戳与断路器逻辑使用同一时间来源。
+  - `ZakYip.Singulation.Host/SignalR/SpeedLinkageHealthCheck.cs`：健康检查时间计算改用统一时钟，避免直接读取系统时间。
+  - `ZakYip.Singulation.Tests/SignalRTests.cs`：为测试用例提供统一时钟实例以匹配新的构造函数签名。
+  - `ZakYip.Singulation.Tests/AxisControllerTests.cs`、`ZakYip.Singulation.Tests/SpeedLinkageHealthCheckTests.cs`：将动态时间改为固定时间点，保持测试稳定性。
+- 文件树（仅列出本次修改部分）：
+  - ZakYip.Singulation.Host/
+    - SignalR/
+      - RealtimeDispatchService.cs（实时事件分发，使用统一时钟生成信封时间与断路器状态）
+      - SpeedLinkageHealthCheck.cs（速度联动健康检查的时间窗计算使用统一时钟）
+  - ZakYip.Singulation.Tests/
+    - SignalRTests.cs（构造实时分发服务时提供时钟依赖）
+    - AxisControllerTests.cs（固定时间输入保持断言一致）
+    - SpeedLinkageHealthCheckTests.cs（固定时间输入覆盖异常窗口判断）
+- 可继续完善的内容：
+  - 其余仍使用直接时间访问的模块需要逐步改造为使用 `ISystemClock`。
+  - 补充端到端测试，验证在时钟注入后 SignalR 分发与健康检查的行为保持不变。
 
 
 ## 项目当前状态

@@ -15,6 +15,6 @@ namespace ZakYip.Singulation.Core.Contracts.Events.Cabinet {
 
         public string? ReasonText { get; init; }
 
-        public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
+        public DateTime TimestampUtc { get; init; }
     }
 }

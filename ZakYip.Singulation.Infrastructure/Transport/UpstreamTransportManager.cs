@@ -7,6 +7,7 @@ using ZakYip.Singulation.Core.Contracts;
 using ZakYip.Singulation.Transport.Abstractions;
 using ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport;
 using ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport;
+using ZakYip.Singulation.Core.Abstractions;
 
 namespace ZakYip.Singulation.Infrastructure.Transport {
 
@@ -17,6 +18,7 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
     public sealed class UpstreamTransportManager : IDisposable {
         private readonly ILogger<UpstreamTransportManager> _logger;
         private readonly IUpstreamOptionsStore _store;
+        private readonly ISystemClock _clock;
         private readonly object _gate = new();
         
         private IByteTransport? _speedTransport;
@@ -28,9 +30,11 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
 
         public UpstreamTransportManager(
             ILogger<UpstreamTransportManager> logger,
-            IUpstreamOptionsStore store) {
+            IUpstreamOptionsStore store,
+            ISystemClock clock) {
             _logger = logger;
             _store = store;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
         /// <summary>获取 Speed 传输实例（用于依赖注入）</summary>
@@ -192,11 +196,11 @@ namespace ZakYip.Singulation.Infrastructure.Transport {
                 ? new TouchServerByteTransport(new TcpServerOptions {
                     Address = IPAddress.Any,
                     Port = port,
-                })
+                }, _clock)
                 : new TouchClientByteTransport(new TcpClientOptions {
                     Host = options.Host,
                     Port = port
-                });
+                }, _clock);
         }
 
         private async Task StartTransportAsync(IByteTransport? transport, string name, CancellationToken ct) {

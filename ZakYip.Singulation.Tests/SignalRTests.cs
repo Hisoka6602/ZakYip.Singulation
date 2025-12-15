@@ -3,8 +3,10 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Host.SignalR;
 using ZakYip.Singulation.Host.SignalR.Hubs;
+using ZakYip.Singulation.Infrastructure.Runtime;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -86,7 +88,7 @@ namespace ZakYip.Singulation.Tests {
             var hub = CreateMockHubContext();
             var logger = CreateMockLogger();
 
-            var service = new RealtimeDispatchService(channel, hub, logger);
+            var service = new RealtimeDispatchService(channel, hub, logger, CreateClock());
             var stats = service.GetStatistics();
 
             MiniAssert.Equal(0L, stats.Processed, "Initial processed count should be 0");
@@ -99,7 +101,7 @@ namespace ZakYip.Singulation.Tests {
             var channel = Channel.CreateBounded<SignalRQueueItem>(50000);
             var hub = CreateMockHubContext();
             var logger = CreateMockLogger();
-            var service = new RealtimeDispatchService(channel, hub, logger);
+            var service = new RealtimeDispatchService(channel, hub, logger, CreateClock());
             var healthCheck = new SignalRHealthCheck(hub, channel, service);
 
             var result = await healthCheck.CheckHealthAsync(new Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext());
@@ -118,7 +120,7 @@ namespace ZakYip.Singulation.Tests {
 
             var hub = CreateMockHubContext();
             var logger = CreateMockLogger();
-            var service = new RealtimeDispatchService(channel, hub, logger);
+            var service = new RealtimeDispatchService(channel, hub, logger, CreateClock());
             var healthCheck = new SignalRHealthCheck(hub, channel, service);
 
             var result = await healthCheck.CheckHealthAsync(new Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckContext());
@@ -175,5 +177,7 @@ namespace ZakYip.Singulation.Tests {
             public bool IsEnabled(LogLevel logLevel) => true;
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
         }
+
+        private static ISystemClock CreateClock() => new SystemClock();
     }
 }

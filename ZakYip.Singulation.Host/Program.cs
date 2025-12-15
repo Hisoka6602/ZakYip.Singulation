@@ -239,12 +239,14 @@ var host = Host.CreateDefaultBuilder(args)
             sp.GetRequiredService<ILogger<SystemHealthMonitorService>>(),
             sp.GetRequiredService<IAxisController>(),
             sp.GetRequiredService<IHubContext<MonitoringHub>>(),
+            sp.GetRequiredService<ISystemClock>(),
             sp.GetRequiredService<ExceptionAggregationService>()));
         services.AddHostedService(sp => sp.GetRequiredService<SystemHealthMonitorService>());
         services.AddSingleton<RealtimeAxisDataService>(sp => new RealtimeAxisDataService(
             sp.GetRequiredService<ILogger<RealtimeAxisDataService>>(),
             sp.GetRequiredService<IAxisController>(),
             sp.GetRequiredService<IHubContext<MonitoringHub>>(),
+            sp.GetRequiredService<ISystemClock>(),
             sp.GetRequiredService<ExceptionAggregationService>()));
         services.AddHostedService(sp => sp.GetRequiredService<RealtimeAxisDataService>());
         services.AddSingleton<FaultDiagnosisService>();
@@ -253,7 +255,8 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<ConnectionHealthCheckService>(sp => new ConnectionHealthCheckService(
             sp.GetRequiredService<ILogger<ConnectionHealthCheckService>>(),
             sp.GetService<IAxisController>(),
-            sp.GetService<IByteTransport>()));
+            sp.GetService<IByteTransport>(),
+            sp.GetRequiredService<ISystemClock>()));
         
         // 注册操作状态跟踪服务（防止重复调用）
         services.AddSingleton<OperationStateTracker>();

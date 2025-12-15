@@ -1,5 +1,7 @@
+using System;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Host.Dto;
 using ZakYip.Singulation.Infrastructure.Services;
@@ -16,18 +18,22 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly FaultDiagnosisService _diagnosisService;
         private readonly ExceptionAggregationService _exceptionAggregation;
         private readonly ConnectionHealthCheckService? _connectionHealthCheck;
+        private readonly ISystemClock _clock;
 
         public MonitoringController(
             ILogger<MonitoringController> logger,
             SystemHealthMonitorService healthMonitor,
             FaultDiagnosisService diagnosisService,
             ExceptionAggregationService exceptionAggregation,
-            ConnectionHealthCheckService? connectionHealthCheck = null) {
+            ConnectionHealthCheckService? connectionHealthCheck = null,
+            ISystemClock clock) {
             _logger = logger;
             _healthMonitor = healthMonitor;
             _diagnosisService = diagnosisService;
             _exceptionAggregation = exceptionAggregation;
             _connectionHealthCheck = connectionHealthCheck;
+            ArgumentNullException.ThrowIfNull(clock);
+            _clock = clock;
         }
 
         /// <summary>
@@ -59,7 +65,7 @@ namespace ZakYip.Singulation.Host.Controllers {
                     AverageResponseTimeMs = 0,
                     ErrorRate = 0,
                     Description = "请订阅 SignalR MonitoringHub 获取实时健康数据",
-                    Timestamp = DateTime.Now
+                    Timestamp = _clock.Now
                 };
 
                 return Ok(ApiResponse<SystemHealthDto>.Success(health, 
