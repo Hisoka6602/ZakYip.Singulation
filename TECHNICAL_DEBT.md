@@ -344,14 +344,6 @@ dotnet test
 5. `Infrastructure/Persistence/LiteDbSpeedLinkageOptionsStore.cs:19`
 6. `Infrastructure/Persistence/LiteDbIoStatusMonitorOptionsStore.cs:20`
 
-**修复方案**（推荐方案 A）:
-创建共享常量类：
-
-```csharp
-// 新建: Infrastructure/Persistence/LiteDbConstants.cs
-namespace ZakYip.Singulation.Infrastructure.Persistence;
-
-/// <summary>
 **位置**（已修复）:
 1. ✅ `Infrastructure/Transport/LiteDbUpstreamCodecOptionsStore.cs:23`
 2. ✅ `Infrastructure/Persistence/Vendors/Leadshine/LiteDbLeadshineCabinetIoOptionsStore.cs:20`
