@@ -11,13 +11,14 @@ using ZakYip.Singulation.Core.Abstractions.Cabinet;
 using ZakYip.Singulation.Infrastructure.Configs.Vendors.Leadshine.Entities;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
 using ZakYip.Singulation.Infrastructure.Configuration;
+using ZakYip.Singulation.Infrastructure.Persistence;
 
 namespace ZakYip.Singulation.Infrastructure.Persistence.Vendors.Leadshine {
 
     /// <summary>基于 LiteDB 的 LeadshineCabinetIoOptions 单文档存储实现，使用内存缓存减少数据库访问。</summary>
     public sealed class LiteDbLeadshineCabinetIoOptionsStore : ILeadshineCabinetIoOptionsStore {
         private const string CollName = "leadshine_cabinet_io_options";
-        private const string Key = "default";
+        private const string Key = LiteDbConstants.DefaultKey;
         private const string CacheKey = "leadshine_cabinet_io_options_cache";
         private const string ErrorMessage = "读取DB配置异常：LeadshineCabinetIoOptions";
 
