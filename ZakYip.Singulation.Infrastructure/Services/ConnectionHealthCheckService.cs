@@ -32,8 +32,9 @@ public sealed class ConnectionHealthCheckService
         IAxisController? axisController = null,
         IByteTransport? upstreamTransport = null)
     {
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(clock);
+        _logger = logger;
         _clock = clock;
         _axisController = axisController;
         _upstreamTransport = upstreamTransport;
