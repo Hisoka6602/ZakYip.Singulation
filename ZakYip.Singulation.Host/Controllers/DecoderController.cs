@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using ZakYip.Singulation.Host.Dto;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Protocol.Abstractions;
 using ZakYip.Singulation.Infrastructure.Configs.Entities;
 using Swashbuckle.AspNetCore.Annotations;
@@ -23,13 +24,16 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly ILogger<DecoderController> _log;
         private readonly IUpstreamCodec _codec;
         private readonly IUpstreamCodecOptionsStore? _store;
+        private readonly ISystemClock _clock;
 
         public DecoderController(
             ILogger<DecoderController> log,
             IUpstreamCodec codec,
+            ISystemClock clock,
             IUpstreamCodecOptionsStore? store = null) {
             _log = log;
             _codec = codec;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _store = store;
         }
 
@@ -169,7 +173,7 @@ namespace ZakYip.Singulation.Host.Controllers {
                 return ApiResponse<DecodeResult>.Fail(err!);
 
             try {
-                if (_codec.TryDecodeSpeed(bytes, out var speed)) {
+                if (_codec.TryDecodeSpeed(bytes, _clock.UtcNow, out var speed)) {
                     _log.LogInformation("Decoded SpeedSet: main={Main}, eject={Eject}, seq={Seq}",
                         speed.MainMmps?.Count ?? 0, speed.EjectMmps?.Count ?? 0, speed.Sequence);
 

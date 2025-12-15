@@ -30,7 +30,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
         }
 
         /// <inheritdoc />
-        public bool TryDecodeSpeed(ReadOnlySpan<byte> frame, out SpeedSet set) {
+        public bool TryDecodeSpeed(ReadOnlySpan<byte> frame, DateTime timestamp, out SpeedSet set) {
             set = default;
             if (frame.Length < 2) return false;
             if (frame[0] != GuiweiControl.Start || frame[^1] != GuiweiControl.End) return false;
@@ -52,7 +52,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Guiwei {
                 Array.Copy(all, 0, main, 0, main.Length);
                 if (eject.Length > 0) Array.Copy(all, _mainCount, eject, 0, eject.Length);
 
-                set = new SpeedSet(DateTime.Now, 0, main, eject);
+                set = new SpeedSet(timestamp, 0, main, eject);
                 return true;
             }
             finally {

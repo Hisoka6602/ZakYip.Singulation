@@ -19,9 +19,10 @@ namespace ZakYip.Singulation.Protocol.Abstractions {
         /// 从一帧报文解码出速度集合（mm/s）。
         /// </summary>
         /// <param name="frame">完整帧（通常含起止符，是否含控制码/长度由厂商决定）。</param>
+        /// <param name="timestamp">速度帧的时间戳（UTC），由调用方提供。</param>
         /// <param name="set">成功时输出统一语义的 <see cref="SpeedSet"/>。</param>
         /// <returns>成功解码返回 <c>true</c>。</returns>
-        bool TryDecodeSpeed(ReadOnlySpan<byte> frame, out SpeedSet set);
+        bool TryDecodeSpeed(ReadOnlySpan<byte> frame, DateTime timestamp, out SpeedSet set);
 
         /// <summary>
         /// 从一帧报文解码出位姿列表（位置端）。

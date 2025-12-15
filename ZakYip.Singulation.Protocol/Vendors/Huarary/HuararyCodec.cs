@@ -33,7 +33,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
         }
 
         /// <inheritdoc />
-        public bool TryDecodeSpeed(ReadOnlySpan<byte> frame, out SpeedSet set) {
+        public bool TryDecodeSpeed(ReadOnlySpan<byte> frame, DateTime timestamp, out SpeedSet set) {
             set = default;
             if (frame.Length < 1 + 1 + 2 + 1 + 1) return false;
             if (frame[0] != HuararyControl.Start || frame[^1] != HuararyControl.End) return false;
@@ -66,7 +66,7 @@ namespace ZakYip.Singulation.Protocol.Vendors.Huarary {
                 Array.Copy(all, 0, main, 0, main.Length);
                 if (eject.Length > 0) Array.Copy(all, _mainCount, eject, 0, eject.Length);
 
-                set = new SpeedSet(DateTime.Now, 0, main, eject);
+                set = new SpeedSet(timestamp, 0, main, eject);
                 return true;
             }
             finally {

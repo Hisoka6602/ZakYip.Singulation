@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
+using ZakYip.Singulation.Core.Abstractions;
 
 namespace ZakYip.Singulation.Drivers.Leadshine
 {
@@ -18,6 +19,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
     public sealed class EmcResetCoordinator : IDisposable
     {
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
+        private readonly ISystemClock _clock;
         private readonly ushort _cardNo;
         private readonly string _mmfName;
         private readonly Timer? _pollingTimer;
@@ -34,10 +36,12 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// 初始化一个新的 EMC 复位协调器。
         /// </summary>
         /// <param name="cardNo">控制器卡号。</param>
+        /// <param name="clock">系统时钟。</param>
         /// <param name="enablePolling">是否启用轮询接收通知（默认启用）。</param>
         /// <param name="pollingInterval">轮询间隔（默认 500ms）。</param>
-        public EmcResetCoordinator(ushort cardNo, bool enablePolling = true, TimeSpan? pollingInterval = null)
+        public EmcResetCoordinator(ushort cardNo, ISystemClock clock, bool enablePolling = true, TimeSpan? pollingInterval = null)
         {
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _cardNo = cardNo;
             _mmfName = $"Global\\ZakYip_EMC_Reset_Card{cardNo}";
 
@@ -92,7 +96,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     _cardNo,
                     resetType,
                     currentProcess.Id,
-                    currentProcess.ProcessName
+                    currentProcess.ProcessName,
+                    _clock.UtcNow
                 );
 
                 var serialized = notification.Serialize();
@@ -164,7 +169,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     return;
 
                 // 检查通知是否过期（超过 30 秒视为过期）
-                var age = DateTime.UtcNow - notification.Timestamp;
+                var age = _clock.UtcNow - notification.Timestamp;
                 if (age.TotalSeconds > 30)
                 {
                     _logger.Debug($"[EMC Coordinator] 忽略过期通知: 年龄={age.TotalSeconds:F1}秒");

@@ -166,8 +166,9 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddLiteDbAxisSettings().AddLiteDbAxisLayout().AddUpstreamFromLiteDb().AddLiteDbLeadshineCabinetIo().AddLiteDbIoStatusMonitor().AddLiteDbIoLinkage().AddLiteDbSpeedLinkage();
         // ---------- 设备相关注入 ----------
         services.AddSingleton<IDriveRegistry>(sp => {
+            var clock = sp.GetRequiredService<ISystemClock>();
             var r = new DefaultDriveRegistry();
-            r.Register("leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts));
+            r.Register("leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts, clock));
             // 未来在这里再注册其它品牌：
             // r.Register("Inovance", (axisId, port, opts) => new InovanceAxisDrive(opts));
             return r;
@@ -179,6 +180,7 @@ var host = Host.CreateDefaultBuilder(args)
         services.AddSingleton<IBusAdapter>(sp => {
             var store = sp.GetRequiredService<IControllerOptionsStore>();
             var logger = sp.GetRequiredService<ILogger<IBusAdapter>>();
+            var clock = sp.GetRequiredService<ISystemClock>();
 
             // 1) 同步获取配置（LiteDB 本身是本地存取，同步拿即可）
             var dto = store.GetAsync().GetAwaiter().GetResult();
@@ -191,7 +193,8 @@ var host = Host.CreateDefaultBuilder(args)
                     var leadshineAdapter = new LeadshineLtdmcBusAdapter(
                         cardNo: (ushort)dto.Template.Card,
                         portNo: (ushort)dto.Template.Port,  // ← 修正强转
-                        controllerIp: dto.ControllerIp
+                        controllerIp: dto.ControllerIp,
+                        clock: clock
                     );
                     
                     // 订阅总线适配器错误事件以记录日志

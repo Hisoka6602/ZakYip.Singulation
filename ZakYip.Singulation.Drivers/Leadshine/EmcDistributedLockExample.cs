@@ -1,10 +1,18 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Leadshine;
 
 namespace ZakYip.Singulation.Examples
 {
+    // Simple inline SystemClock implementation for examples
+    internal sealed class SimpleSystemClock : ISystemClock
+    {
+        public DateTime UtcNow => DateTime.UtcNow;
+        public DateTime Now => DateTime.Now;
+    }
+
     /// <summary>
     /// 演示 EMC 分布式锁和复位通知功能的示例。
     /// </summary>
@@ -60,7 +68,8 @@ namespace ZakYip.Singulation.Examples
             var adapter = new LeadshineLtdmcBusAdapter(
                 cardNo: 0,
                 portNo: 2,
-                controllerIp: "192.168.1.100"
+                controllerIp: "192.168.1.100",
+                clock: new SimpleSystemClock()
             );
 
             // 订阅复位通知事件
@@ -119,7 +128,7 @@ namespace ZakYip.Singulation.Examples
         {
             Console.WriteLine("=== 示例 3：实现应对复位通知的策略（使用自动重新连接）===\n");
 
-            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100");
+            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", new SimpleSystemClock());
 
             // 状态管理
             var isOperating = false;
@@ -183,6 +192,7 @@ namespace ZakYip.Singulation.Examples
 
             using var coordinator = new EmcResetCoordinator(
                 cardNo: 0,
+                clock: new SimpleSystemClock(),
                 enablePolling: true,
                 pollingInterval: TimeSpan.FromMilliseconds(500)
             );

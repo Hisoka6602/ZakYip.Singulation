@@ -12,6 +12,7 @@ using ZakYip.Singulation.Core.Utils;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Core.Enums;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Common;
 using ZakYip.Singulation.Drivers.Health;
 using ZakYip.Singulation.Drivers.Resilience;
@@ -39,6 +40,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
     /// </summary>
     public sealed class LeadshineLtdmcAxisDrive : IAxisDrive
     {
+        private readonly ISystemClock _clock;
         private readonly DriverOptions _opts;
         private volatile DriverStatus _status = DriverStatus.Disconnected;
         
@@ -84,9 +86,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         // 内存池优化：使用 ArrayPool 减少 GC 压力
         private static readonly ArrayPool<byte> BufferPool = ArrayPool<byte>.Shared;
 
-        public LeadshineLtdmcAxisDrive(DriverOptions opts)
+        public LeadshineLtdmcAxisDrive(DriverOptions opts, ISystemClock clock)
         {
             _opts = opts;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             Axis = new AxisId(_opts.NodeId);
 
             // 健康监测：降级后轮询 PingAsync
@@ -992,7 +995,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     Rpm = rpmVal,
                     SpeedMps = speedMmps,     // 注：该字段含义为 mm/s
                     PulsesPerSec = pps,
-                    TimestampUtc = DateTime.UtcNow
+                    TimestampUtc = _clock.UtcNow
                 });
         }
 

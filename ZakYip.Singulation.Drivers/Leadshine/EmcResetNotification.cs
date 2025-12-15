@@ -33,13 +33,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// <param name="resetType">复位类型。</param>
         /// <param name="processId">发起复位的进程 ID。</param>
         /// <param name="processName">发起复位的进程名称。</param>
-        public EmcResetNotification(ushort cardNo, EmcResetType resetType, int processId, string processName)
+        /// <param name="timestamp">通知时间戳（UTC），由调用方提供。</param>
+        public EmcResetNotification(ushort cardNo, EmcResetType resetType, int processId, string processName, DateTime timestamp)
         {
             CardNo = cardNo;
             ResetType = resetType;
             ProcessId = processId;
             ProcessName = processName ?? "Unknown";
-            Timestamp = DateTime.UtcNow;
+            Timestamp = timestamp;
         }
 
         /// <summary>
@@ -105,9 +106,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 var processName = parts[3];
                 var timestamp = DateTime.Parse(parts[4]);
 
-                var notification = new EmcResetNotification(cardNo, resetType, processId, processName);
-                // Note: We can't set Timestamp directly as it's init-only, but it's set in constructor
-                return notification;
+                return new EmcResetNotification(cardNo, resetType, processId, processName, timestamp);
             }
             catch
             {

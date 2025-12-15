@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Runtime.CompilerServices;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using static System.Runtime.CompilerServices.RuntimeHelpers;
 using NLog;
@@ -24,6 +25,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
     public sealed class LeadshineLtdmcBusAdapter : IBusAdapter
     {
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
+        private readonly ISystemClock _clock;
         private readonly ushort _cardNo;
         private readonly ushort _portNo;
         private readonly string? _controllerIp;
@@ -94,8 +96,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// <param name="cardNo">控制器卡号（通常为 0）。</param>
         /// <param name="portNo">端口号（CAN/EtherCAT 端口编号）。</param>
         /// <param name="controllerIp">控制器 IP 地址（仅以太网模式需要）；若为空或 null，则使用本地 PCI 模式。</param>
-        public LeadshineLtdmcBusAdapter(ushort cardNo, ushort portNo, string? controllerIp)
+        /// <param name="clock">系统时钟（用于时间戳和时间计算）。</param>
+        public LeadshineLtdmcBusAdapter(ushort cardNo, ushort portNo, string? controllerIp, ISystemClock clock)
         {
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _cardNo = cardNo;
             _portNo = portNo;
             _controllerIp = string.IsNullOrWhiteSpace(controllerIp) ? null : controllerIp;
@@ -104,7 +108,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             _resourceLock = new EmcNamedMutexLock($"CardNo_{cardNo}");
             
             // 初始化复位协调器
-            _resetCoordinator = new EmcResetCoordinator(cardNo, enablePolling: true);
+            _resetCoordinator = new EmcResetCoordinator(cardNo, clock, enablePolling: true);
             _resetCoordinator.ResetNotificationReceived += OnResetNotificationReceived;
             
             _logger.Info($"[LeadshineBusAdapter] 已初始化分布式锁和复位协调器，卡号: {cardNo}");
