@@ -11,9 +11,9 @@ using ZakYip.Singulation.Core.Enums;
 using System.Runtime.CompilerServices;
 using ZakYip.Singulation.Core.Configs;
 using ZakYip.Singulation.Core.Contracts;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Common;
 using Swashbuckle.AspNetCore.Annotations;
-using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Core.Contracts.ValueObjects;
 using ZakYip.Singulation.Infrastructure.Configs.Mappings;
@@ -33,6 +33,7 @@ namespace ZakYip.Singulation.Host.Controllers {
         private readonly IControllerOptionsStore _ctrlOptsStore;
         private readonly ILogger<AxesController> _logger;
         private readonly OperationStateTracker _operationTracker;
+        private readonly ISystemClock _clock;
 
         /// <summary>
         /// 通过依赖注入构造控制器。
@@ -43,7 +44,8 @@ namespace ZakYip.Singulation.Host.Controllers {
             IAxisController axisController,
             IControllerOptionsStore ctrlOptsStore,
             ILogger<AxesController> logger,
-            OperationStateTracker operationTracker) {
+            OperationStateTracker operationTracker,
+            ISystemClock clock) {
             _registry = registry;
 
             _layoutStore = layoutStore;
@@ -51,6 +53,7 @@ namespace ZakYip.Singulation.Host.Controllers {
             _ctrlOptsStore = ctrlOptsStore;
             _logger = logger;
             _operationTracker = operationTracker;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
 
             _axisController.ControllerFaulted += (sender, s) => {
                 _logger.LogError(s);
@@ -259,7 +262,7 @@ namespace ZakYip.Singulation.Host.Controllers {
                         InProgress = true,
                         OperationName = state?.Name,
                         StartTime = state?.StartTime,
-                        Duration = state?.Duration
+                        Duration = state?.GetDuration(_clock)
                     }));
             }
             

@@ -74,7 +74,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                         }
                         
                         var sw = Stopwatch.StartNew();
-                        if (!_codec.TryDecodeSpeed(mem.Span, out var speedSet))
+                        if (!_codec.TryDecodeSpeed(mem.Span, _clock.UtcNow, out var speedSet))
                             continue;
 
                         var decision = _frameGuard.Evaluate(speedSet);
