@@ -374,6 +374,17 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 })
             });
 
+            var now = _clock.Now;
+            foreach (var entry in kb) {
+                if (entry.CreatedAt == default) {
+                    entry.CreatedAt = now;
+                }
+
+                if (entry.UpdatedAt == default) {
+                    entry.UpdatedAt = entry.CreatedAt;
+                }
+            }
+
             _logger.LogInformation("故障知识库初始化完成，共 {Count} 条记录", kb.Count);
             return kb;
         }

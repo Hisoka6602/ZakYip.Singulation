@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Infrastructure.Services;
 
 namespace ZakYip.Singulation.Host.SignalR {
@@ -19,12 +20,14 @@ namespace ZakYip.Singulation.Host.SignalR {
         private static readonly TimeSpan RecentErrorTimeWindow = TimeSpan.FromMinutes(5);
 
         private readonly ISpeedLinkageService _speedLinkageService;
+        private readonly ISystemClock _clock;
 
         /// <summary>
         /// 初始化 <see cref="SpeedLinkageHealthCheck"/> 类的新实例。
         /// </summary>
-        public SpeedLinkageHealthCheck(ISpeedLinkageService speedLinkageService) {
+        public SpeedLinkageHealthCheck(ISpeedLinkageService speedLinkageService, ISystemClock clock) {
             _speedLinkageService = speedLinkageService;
+            _clock = clock;
         }
 
         /// <summary>
@@ -54,7 +57,7 @@ namespace ZakYip.Singulation.Host.SignalR {
                 data["healthScore"] = healthScore;
 
                 // 检查服务是否长时间未运行
-                var timeSinceLastCheck = DateTime.UtcNow - stats.LastCheckTime;
+                var timeSinceLastCheck = _clock.UtcNow - stats.LastCheckTime;
                 if (stats.LastCheckTime != DateTime.MinValue && timeSinceLastCheck > MaxAllowedTimeSinceLastCheck) {
                     return Task.FromResult(
                         HealthCheckResult.Unhealthy(
@@ -92,7 +95,7 @@ namespace ZakYip.Singulation.Host.SignalR {
 
                 // 检查最近是否有错误
                 if (stats.LastErrorTime != DateTime.MinValue) {
-                    var timeSinceLastError = DateTime.UtcNow - stats.LastErrorTime;
+                    var timeSinceLastError = _clock.UtcNow - stats.LastErrorTime;
                     if (timeSinceLastError < RecentErrorTimeWindow) {
                         data["recentError"] = stats.LastError ?? "未知错误";
                         return Task.FromResult(
@@ -135,7 +138,7 @@ namespace ZakYip.Singulation.Host.SignalR {
 
             // 扣分因素3：最近错误（最多扣20分）
             if (stats.LastErrorTime != DateTime.MinValue) {
-                var timeSinceLastError = DateTime.UtcNow - stats.LastErrorTime;
+                var timeSinceLastError = _clock.UtcNow - stats.LastErrorTime;
                 if (timeSinceLastError < TimeSpan.FromHours(1)) {
                     var recentErrorPenalty = 20 * (1 - timeSinceLastError.TotalMinutes / 60);
                     score -= recentErrorPenalty;
@@ -144,7 +147,7 @@ namespace ZakYip.Singulation.Host.SignalR {
 
             // 扣分因素4：长时间未检查（最多扣10分）
             if (stats.LastCheckTime != DateTime.MinValue) {
-                var timeSinceLastCheck = DateTime.UtcNow - stats.LastCheckTime;
+                var timeSinceLastCheck = _clock.UtcNow - stats.LastCheckTime;
                 if (timeSinceLastCheck > TimeSpan.FromSeconds(10)) {
                     score -= Math.Min(10, timeSinceLastCheck.TotalSeconds / 6);
                 }

@@ -8,7 +8,7 @@ namespace ZakYip.Singulation.Core.Contracts.Dto {
     /// </summary>
     public sealed record class SystemRuntimeStatus {
         /// <summary>系统启动的 UTC 时间。</summary>
-        public DateTime UptimeUtc { get; init; } = DateTime.UtcNow;
+        public DateTime UptimeUtc { get; init; }
 
         /// <summary>传输组件的状态列表。</summary>
         public List<TransportStatusItem> Transports { get; init; } = new();

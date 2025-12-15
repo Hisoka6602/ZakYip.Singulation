@@ -12,6 +12,7 @@ using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Exceptions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
+using ZakYip.Singulation.Core.Abstractions;
 
 namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
 
@@ -28,6 +29,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
         private readonly object _gate = new();       // 保护状态与字段
         private volatile bool _stopping;             // Stop 标志，避免“关停时重连”
         private TransportConnectionState _connState; // IByteTransport 的连接状态
+        private readonly ISystemClock _clock;
 
         /// <summary>运行层状态（保持兼容）。</summary>
         public TransportStatus Status { get; private set; } = TransportStatus.Stopped;
@@ -51,11 +53,12 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
         /// <summary>错误/告警事件：不外抛异常。</summary>
         public event EventHandler<TransportErrorEventArgs>? Error;
 
-        public TouchClientByteTransport(TcpClientOptions opt) {
+        public TouchClientByteTransport(TcpClientOptions opt, ISystemClock clock) {
             _opt = opt;
             RemoteIp = opt.Host;
             RemotePort = opt.Port;
             IsServer = false;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
         public Task StartAsync(CancellationToken ct = default) {
@@ -323,7 +326,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
             var args = new BytesReceivedEventArgs {
                 Buffer = payload,
                 Port = port,
-                TimestampUtc = DateTime.UtcNow
+                TimestampUtc = _clock.UtcNow
             };
 
             foreach (var @delegate in handler.GetInvocationList()) {
@@ -344,7 +347,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpClientByteTransport {
                 IsTransient = transient,
                 Endpoint = endpoint,
                 Port = port,
-                TimestampUtc = DateTime.UtcNow
+                TimestampUtc = _clock.UtcNow
             };
 
             foreach (var @delegate in handler.GetInvocationList()) {

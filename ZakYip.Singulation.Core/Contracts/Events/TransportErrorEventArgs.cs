@@ -25,6 +25,6 @@ namespace ZakYip.Singulation.Core.Contracts.Events {
         public int? Port { get; init; }
 
         /// <summary>事件时间（UTC）。</summary>
-        public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
+        public DateTime TimestampUtc { get; init; }
     }
 }

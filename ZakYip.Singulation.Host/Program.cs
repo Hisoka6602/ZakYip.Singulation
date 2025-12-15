@@ -239,12 +239,14 @@ var host = Host.CreateDefaultBuilder(args)
             sp.GetRequiredService<ILogger<SystemHealthMonitorService>>(),
             sp.GetRequiredService<IAxisController>(),
             sp.GetRequiredService<IHubContext<MonitoringHub>>(),
+            sp.GetRequiredService<ISystemClock>(),
             sp.GetRequiredService<ExceptionAggregationService>()));
         services.AddHostedService(sp => sp.GetRequiredService<SystemHealthMonitorService>());
         services.AddSingleton<RealtimeAxisDataService>(sp => new RealtimeAxisDataService(
             sp.GetRequiredService<ILogger<RealtimeAxisDataService>>(),
             sp.GetRequiredService<IAxisController>(),
             sp.GetRequiredService<IHubContext<MonitoringHub>>(),
+            sp.GetRequiredService<ISystemClock>(),
             sp.GetRequiredService<ExceptionAggregationService>()));
         services.AddHostedService(sp => sp.GetRequiredService<RealtimeAxisDataService>());
         services.AddSingleton<FaultDiagnosisService>();
@@ -252,6 +254,7 @@ var host = Host.CreateDefaultBuilder(args)
         // 注册连接健康检查服务
         services.AddSingleton<ConnectionHealthCheckService>(sp => new ConnectionHealthCheckService(
             sp.GetRequiredService<ILogger<ConnectionHealthCheckService>>(),
+            sp.GetRequiredService<ISystemClock>(),
             sp.GetService<IAxisController>(),
             sp.GetService<IByteTransport>()));
         

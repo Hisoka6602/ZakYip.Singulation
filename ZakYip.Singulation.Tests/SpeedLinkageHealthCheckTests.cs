@@ -2,8 +2,10 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Host.SignalR;
 using ZakYip.Singulation.Infrastructure.Services;
+using ZakYip.Singulation.Infrastructure.Runtime;
 
 namespace ZakYip.Singulation.Tests {
 
@@ -18,7 +20,7 @@ namespace ZakYip.Singulation.Tests {
             var mockService = new MockSpeedLinkageService();
             
             // 创建健康检查
-            var healthCheck = new SpeedLinkageHealthCheck(mockService);
+            var healthCheck = new SpeedLinkageHealthCheck(mockService, CreateClock());
             
             // 执行健康检查
             var context = new HealthCheckContext();
@@ -39,14 +41,14 @@ namespace ZakYip.Singulation.Tests {
                     TotalIoWrites = 20,
                     FailedIoWrites = 0,
                     TotalErrors = 0,
-                    LastCheckTime = DateTime.UtcNow,
+                    LastCheckTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     IsRunning = true,
                     ActiveGroupsCount = 2
                 }
             };
             
             // 创建健康检查
-            var healthCheck = new SpeedLinkageHealthCheck(mockService);
+            var healthCheck = new SpeedLinkageHealthCheck(mockService, CreateClock());
             
             // 执行健康检查
             var context = new HealthCheckContext();
@@ -66,15 +68,15 @@ namespace ZakYip.Singulation.Tests {
                 Stats = new SpeedLinkageStatistics {
                     TotalChecks = 100,
                     TotalErrors = 5,
-                    LastCheckTime = DateTime.UtcNow,
-                    LastErrorTime = DateTime.UtcNow.AddMinutes(-2),
+                    LastCheckTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    LastErrorTime = new DateTime(2023, 12, 31, 23, 58, 0, DateTimeKind.Utc),
                     LastError = "测试错误",
                     IsRunning = true
                 }
             };
             
             // 创建健康检查
-            var healthCheck = new SpeedLinkageHealthCheck(mockService);
+            var healthCheck = new SpeedLinkageHealthCheck(mockService, CreateClock());
             
             // 执行健康检查
             var context = new HealthCheckContext();
@@ -90,13 +92,13 @@ namespace ZakYip.Singulation.Tests {
             var mockService = new MockSpeedLinkageService {
                 Stats = new SpeedLinkageStatistics {
                     TotalChecks = 100,
-                    LastCheckTime = DateTime.UtcNow.AddMinutes(-5), // 5分钟没有检查
+                    LastCheckTime = new DateTime(2023, 12, 31, 23, 55, 0, DateTimeKind.Utc), // 5分钟没有检查
                     IsRunning = false
                 }
             };
             
             // 创建健康检查
-            var healthCheck = new SpeedLinkageHealthCheck(mockService);
+            var healthCheck = new SpeedLinkageHealthCheck(mockService, CreateClock());
             
             // 执行健康检查
             var context = new HealthCheckContext();
@@ -113,13 +115,13 @@ namespace ZakYip.Singulation.Tests {
                 Stats = new SpeedLinkageStatistics {
                     TotalChecks = 100,
                     TotalErrors = 15,
-                    LastCheckTime = DateTime.UtcNow,
+                    LastCheckTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     IsRunning = true
                 }
             };
             
             // 创建健康检查
-            var healthCheck = new SpeedLinkageHealthCheck(mockService);
+            var healthCheck = new SpeedLinkageHealthCheck(mockService, CreateClock());
             
             // 执行健康检查
             var context = new HealthCheckContext();
@@ -137,13 +139,13 @@ namespace ZakYip.Singulation.Tests {
                     TotalChecks = 100,
                     TotalIoWrites = 100,
                     FailedIoWrites = 25,
-                    LastCheckTime = DateTime.UtcNow,
+                    LastCheckTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     IsRunning = true
                 }
             };
             
             // 创建健康检查
-            var healthCheck = new SpeedLinkageHealthCheck(mockService);
+            var healthCheck = new SpeedLinkageHealthCheck(mockService, CreateClock());
             
             // 执行健康检查
             var context = new HealthCheckContext();
@@ -173,6 +175,8 @@ namespace ZakYip.Singulation.Tests {
             MiniAssert.Equal(1L, stats.TotalErrors, "总错误次数应该正确");
             MiniAssert.Equal(3, stats.ActiveGroupsCount, "活跃组数量应该正确");
         }
+
+        private static ISystemClock CreateClock() => new SystemClock();
     }
 
     /// <summary>
@@ -185,7 +189,7 @@ namespace ZakYip.Singulation.Tests {
             TotalIoWrites = 0,
             FailedIoWrites = 0,
             TotalErrors = 0,
-            LastCheckTime = DateTime.UtcNow,
+            LastCheckTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             LastErrorTime = DateTime.MinValue,
             LastError = null,
             IsRunning = true,

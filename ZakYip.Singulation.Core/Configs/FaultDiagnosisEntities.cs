@@ -41,7 +41,7 @@ namespace ZakYip.Singulation.Core.Configs {
         /// <summary>
         /// 诊断时间
         /// </summary>
-        public DateTime DiagnosedAt { get; set; } = DateTime.Now;
+        public DateTime DiagnosedAt { get; set; }
 
         /// <summary>
         /// 是否已解决
@@ -106,11 +106,11 @@ namespace ZakYip.Singulation.Core.Configs {
         /// <summary>
         /// 创建时间
         /// </summary>
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; }
 
         /// <summary>
         /// 更新时间
         /// </summary>
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public DateTime UpdatedAt { get; set; }
     }
 }

@@ -10,6 +10,7 @@ using System.Threading.Channels;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Host.SignalR;
 using ZakYip.Singulation.Host.SignalR.Hubs;
 
@@ -24,6 +25,7 @@ namespace ZakYip.Singulation.Host.SignalR {
         private readonly ILogger<RealtimeDispatchService> _logger;
         private readonly ConcurrentDictionary<string, long> _seq = new();
         private readonly ObjectPool<MessageEnvelope> _envelopePool;
+        private readonly ISystemClock _clock;
 
         // 监控指标
         private long _messagesProcessed = 0;
@@ -42,10 +44,12 @@ namespace ZakYip.Singulation.Host.SignalR {
         public RealtimeDispatchService(
             Channel<SignalRQueueItem> chan,
             IHubContext<EventsHub> hub,
-            ILogger<RealtimeDispatchService> logger) {
+            ILogger<RealtimeDispatchService> logger,
+            ISystemClock clock) {
             _chan = chan;
             _hub = hub;
             _logger = logger;
+            _clock = clock;
             _envelopePool = new DefaultObjectPool<MessageEnvelope>(new MessageEnvelopePoolPolicy());
         }
 
@@ -67,7 +71,7 @@ namespace ZakYip.Singulation.Host.SignalR {
             await foreach (var item in _chan.Reader.ReadAllAsync(stoppingToken)) {
                 try {
                     // 检查断路器状态
-                    var breaker = _circuitBreakers.GetOrAdd(item.Channel, _ => new CircuitBreakerState());
+                    var breaker = _circuitBreakers.GetOrAdd(item.Channel, _ => new CircuitBreakerState(_clock));
                     if (breaker.IsOpen) {
                         if (breaker.ShouldAttemptReset()) {
                             _logger.LogInformation("Circuit breaker half-open for channel {Channel}, attempting reset", item.Channel);
@@ -85,7 +89,7 @@ namespace ZakYip.Singulation.Host.SignalR {
                     try {
                         envelope.Version = 1;
                         envelope.Type = item.Payload.GetType().Name;
-                        envelope.Timestamp = DateTimeOffset.Now;
+                        envelope.Timestamp = new DateTimeOffset(_clock.Now);
                         envelope.Channel = item.Channel;
                         envelope.Data = item.Payload;
                         envelope.TraceId = Activity.Current?.Id;
@@ -173,11 +177,16 @@ namespace ZakYip.Singulation.Host.SignalR {
             private const int FailureThreshold = 5;
             private const int TimeoutSeconds = 30;
             private int _failureCount = 0;
+            private readonly ISystemClock _clock;
             private DateTime _lastFailureTime = DateTime.MinValue;
             private DateTime _openedTime = DateTime.MinValue;
 
-            public bool IsOpen => _failureCount >= FailureThreshold && 
-                                  (DateTime.UtcNow - _openedTime).TotalSeconds < TimeoutSeconds;
+            public CircuitBreakerState(ISystemClock clock) {
+                _clock = clock;
+            }
+
+            public bool IsOpen => _failureCount >= FailureThreshold &&
+                                  (_clock.UtcNow - _openedTime).TotalSeconds < TimeoutSeconds;
 
             public void RecordSuccess() {
                 _failureCount = 0;
@@ -187,14 +196,14 @@ namespace ZakYip.Singulation.Host.SignalR {
 
             public void RecordFailure() {
                 _failureCount++;
-                _lastFailureTime = DateTime.UtcNow;
+                _lastFailureTime = _clock.UtcNow;
                 if (_failureCount >= FailureThreshold) {
-                    _openedTime = DateTime.UtcNow;
+                    _openedTime = _clock.UtcNow;
                 }
             }
 
             public bool ShouldAttemptReset() {
-                return IsOpen && (DateTime.UtcNow - _openedTime).TotalSeconds >= TimeoutSeconds;
+                return IsOpen && (_clock.UtcNow - _openedTime).TotalSeconds >= TimeoutSeconds;
             }
         }
     }

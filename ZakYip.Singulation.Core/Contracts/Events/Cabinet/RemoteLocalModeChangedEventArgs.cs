@@ -24,6 +24,6 @@ namespace ZakYip.Singulation.Core.Contracts.Events.Cabinet {
         /// <summary>
         /// 获取事件时间戳（UTC）。
         /// </summary>
-        public DateTime TimestampUtc { get; init; } = DateTime.UtcNow;
+        public DateTime TimestampUtc { get; init; }
     }
 }

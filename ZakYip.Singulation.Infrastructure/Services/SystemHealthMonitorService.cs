@@ -23,6 +23,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly ExceptionAggregationService? _exceptionAggregation;
         private readonly LogSampler _logSampler;
         private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(5);
+        private readonly ISystemClock _clock;
 
         // 性能指标滑动窗口
         private readonly Queue<double> _responseTimeWindow = new(20);
@@ -40,6 +41,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             _hubContext = hubContext;
             _exceptionAggregation = exceptionAggregation;
             _logSampler = new LogSampler(clock);
+            _clock = clock;
         }
 
         /// <summary>
@@ -175,7 +177,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 AverageResponseTimeMs = Math.Round(avgResponseTime, 2),
                 ErrorRate = Math.Round(errorRate, 4),
                 Description = description,
-                Timestamp = DateTime.Now
+                Timestamp = _clock.Now
             };
         }
     }

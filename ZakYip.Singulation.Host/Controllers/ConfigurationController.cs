@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Swashbuckle.AspNetCore.Annotations;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Host.Dto;
 using ZakYip.Singulation.Infrastructure.Services;
 
@@ -24,12 +25,15 @@ namespace ZakYip.Singulation.Host.Controllers {
     public sealed class ConfigurationController : ControllerBase {
         private readonly ILogger<ConfigurationController> _logger;
         private readonly ConfigurationImportExportService _configService;
+        private readonly ISystemClock _clock;
 
         public ConfigurationController(
             ILogger<ConfigurationController> logger,
-            ConfigurationImportExportService configService) {
+            ConfigurationImportExportService configService,
+            ISystemClock clock) {
             _logger = logger;
             _configService = configService;
+            _clock = clock;
         }
 
         /// <summary>
@@ -108,7 +112,7 @@ namespace ZakYip.Singulation.Host.Controllers {
             try {
                 var json = await _configService.ExportAllConfigurationsAsync(description, ct);
                 var bytes = Encoding.UTF8.GetBytes(json);
-                var fileName = $"config-export-{DateTime.Now:yyyyMMdd-HHmmss}.json";
+                var fileName = $"config-export-{_clock.Now:yyyyMMdd-HHmmss}.json";
                 
                 return File(bytes, "application/json", fileName);
             }

@@ -15,7 +15,7 @@ namespace ZakYip.Singulation.Core.Contracts.Events {
         public required string Message { get; init; }
 
         /// <summary>生成时间（UTC）。</summary>
-        public DateTime Utc { get; init; } = DateTime.UtcNow;
+        public DateTime Utc { get; init; }
 
         /// <summary>结构化字段，如 axisId/port/channel/codec/frameLen 等。</summary>
         public IReadOnlyDictionary<string, object>? Props { get; init; }

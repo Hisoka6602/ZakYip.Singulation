@@ -9,6 +9,7 @@ using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Exceptions;
 using ZakYip.Singulation.Core.Contracts.Events;
 using ZakYip.Singulation.Transport.Abstractions;
+using ZakYip.Singulation.Core.Abstractions;
 
 namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
@@ -23,6 +24,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
         private volatile bool _stopping;                 // Stop 标志
         private int _connCount;                          // 当前连接数
         private TransportConnectionState _connState;     // 连接状态（IByteTransport）
+        private readonly ISystemClock _clock;
 
         public TransportStatus Status { get; private set; } = TransportStatus.Stopped;
         public string? RemoteIp { get; private set; }
@@ -40,9 +42,10 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
 
         public event EventHandler<TransportErrorEventArgs>? Error;
 
-        public TouchServerByteTransport(TcpServerOptions opt) {
+        public TouchServerByteTransport(TcpServerOptions opt, ISystemClock clock) {
             _opt = opt;
             IsServer = true;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         }
 
         public async Task StartAsync(CancellationToken ct = default) {
@@ -249,7 +252,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
             var args = new BytesReceivedEventArgs {
                 Buffer = payload,
                 Port = port,
-                TimestampUtc = DateTime.UtcNow
+                TimestampUtc = _clock.UtcNow
             };
 
             foreach (var @delegate in handler.GetInvocationList()) {
@@ -270,7 +273,7 @@ namespace ZakYip.Singulation.Transport.Tcp.TcpServerByteTransport {
                 IsTransient = transient,
                 Endpoint = endpoint,
                 Port = port,
-                TimestampUtc = DateTime.UtcNow
+                TimestampUtc = _clock.UtcNow
             };
 
             foreach (var @delegate in handler.GetInvocationList()) {

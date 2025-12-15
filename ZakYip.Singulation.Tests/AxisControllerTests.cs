@@ -56,7 +56,7 @@ namespace ZakYip.Singulation.Tests {
 
             // Act 1: First call - all speeds are 300, all axes should be written
             var speedSet1 = new SpeedSet(
-                DateTime.UtcNow,
+                new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 1,
                 new[] { 300, 300, 300, 300 },
                 Array.Empty<int>()
@@ -71,7 +71,7 @@ namespace ZakYip.Singulation.Tests {
 
             // Act 2: Second call - only axis 2 changes to 1500, only it should be written
             var speedSet2 = new SpeedSet(
-                DateTime.UtcNow,
+                new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 2,
                 new[] { 300, 300, 1500, 300 },
                 Array.Empty<int>()
@@ -86,7 +86,7 @@ namespace ZakYip.Singulation.Tests {
 
             // Act 3: Third call - all axes change to 500
             var speedSet3 = new SpeedSet(
-                DateTime.UtcNow,
+                new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 3,
                 new[] { 500, 500, 500, 500 },
                 Array.Empty<int>()
@@ -218,7 +218,7 @@ namespace ZakYip.Singulation.Tests {
 
             // Act 1: Write initial speed of 300 to all axes
             var speedSet1 = new SpeedSet(
-                DateTime.UtcNow,
+                new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 1,
                 new[] { 300, 300, 300, 300 },
                 Array.Empty<int>()
@@ -233,7 +233,7 @@ namespace ZakYip.Singulation.Tests {
 
             // Act 2: Try to write the same speed again - should skip
             var speedSet2 = new SpeedSet(
-                DateTime.UtcNow,
+                new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 2,
                 new[] { 300, 300, 300, 300 },
                 Array.Empty<int>()
@@ -251,7 +251,7 @@ namespace ZakYip.Singulation.Tests {
 
             // Act 4: Write the same speed again - should NOT skip after reset
             var speedSet3 = new SpeedSet(
-                DateTime.UtcNow,
+                new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 3,
                 new[] { 300, 300, 300, 300 },
                 Array.Empty<int>()
@@ -294,7 +294,7 @@ namespace ZakYip.Singulation.Tests {
 
             // Act: Apply speed set with 3 main speeds and 3 eject speeds
             var speedSet = new SpeedSet(
-                DateTime.UtcNow,
+                new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 1,
                 new[] { 100, 200, 300 },  // Main speeds
                 new[] { 400, 500, 600 }   // Eject speeds

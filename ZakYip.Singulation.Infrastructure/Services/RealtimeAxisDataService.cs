@@ -21,6 +21,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly ExceptionAggregationService? _exceptionAggregation;
         private readonly LogSampler _logSampler;
         private readonly TimeSpan _broadcastInterval = TimeSpan.FromMilliseconds(200); // 5Hz 更新率
+        private readonly ISystemClock _clock;
 
         public RealtimeAxisDataService(
             ILogger<RealtimeAxisDataService> logger,
@@ -33,6 +34,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             _hubContext = hubContext;
             _exceptionAggregation = exceptionAggregation;
             _logSampler = new LogSampler(clock);
+            _clock = clock;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -55,7 +57,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private async Task BroadcastAxisDataAsync(CancellationToken ct) {
             try {
                 var drives = _axisController.Drives.ToList();
-                var timestamp = DateTime.Now;
+                var timestamp = _clock.Now;
 
                 foreach (var drive in drives) {
                     try {
