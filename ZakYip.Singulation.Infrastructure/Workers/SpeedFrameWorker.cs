@@ -55,8 +55,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             _axisLayoutStore = axisLayoutStore;
             _frameGuard = frameGuard;
             _cabinetPipeline = cabinetPipeline;
-            ArgumentNullException.ThrowIfNull(clock);
-            _clock = clock;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _indicatorLightService = indicatorLightService;
         }
 

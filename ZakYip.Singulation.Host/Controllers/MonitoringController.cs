@@ -31,8 +31,7 @@ namespace ZakYip.Singulation.Host.Controllers {
             _healthMonitor = healthMonitor;
             _diagnosisService = diagnosisService;
             _exceptionAggregation = exceptionAggregation;
-            ArgumentNullException.ThrowIfNull(clock);
-            _clock = clock;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _connectionHealthCheck = connectionHealthCheck;
         }
 
