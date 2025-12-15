@@ -25,15 +25,14 @@ namespace ZakYip.Singulation.Host.Controllers {
             SystemHealthMonitorService healthMonitor,
             FaultDiagnosisService diagnosisService,
             ExceptionAggregationService exceptionAggregation,
-            ConnectionHealthCheckService? connectionHealthCheck = null,
-            ISystemClock clock) {
+            ISystemClock clock,
+            ConnectionHealthCheckService? connectionHealthCheck = null) {
             _logger = logger;
             _healthMonitor = healthMonitor;
             _diagnosisService = diagnosisService;
             _exceptionAggregation = exceptionAggregation;
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _connectionHealthCheck = connectionHealthCheck;
-            ArgumentNullException.ThrowIfNull(clock);
-            _clock = clock;
         }
 
         /// <summary>

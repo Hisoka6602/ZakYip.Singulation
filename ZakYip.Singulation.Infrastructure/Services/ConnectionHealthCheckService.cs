@@ -28,14 +28,14 @@ public sealed class ConnectionHealthCheckService
 
     public ConnectionHealthCheckService(
         ILogger<ConnectionHealthCheckService> logger,
+        ISystemClock clock,
         IAxisController? axisController = null,
-        IByteTransport? upstreamTransport = null,
-        ISystemClock? clock = null)
+        IByteTransport? upstreamTransport = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _axisController = axisController;
         _upstreamTransport = upstreamTransport;
-        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         
         // 尝试从传输层获取上游IP和端口
         if (_upstreamTransport != null)
