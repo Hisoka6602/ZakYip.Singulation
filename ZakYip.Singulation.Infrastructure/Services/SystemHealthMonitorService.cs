@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Enums;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
@@ -20,7 +21,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly IAxisController _axisController;
         private readonly IHubContext<Hub> _hubContext;
         private readonly ExceptionAggregationService? _exceptionAggregation;
-        private readonly LogSampler _logSampler = new();
+        private readonly LogSampler _logSampler;
         private readonly TimeSpan _checkInterval = TimeSpan.FromSeconds(5);
 
         // 性能指标滑动窗口
@@ -32,11 +33,13 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             ILogger<SystemHealthMonitorService> logger,
             IAxisController axisController,
             IHubContext<Hub> hubContext,
+            ISystemClock clock,
             ExceptionAggregationService? exceptionAggregation = null) {
             _logger = logger;
             _axisController = axisController;
             _hubContext = hubContext;
             _exceptionAggregation = exceptionAggregation;
+            _logSampler = new LogSampler(clock);
         }
 
         /// <summary>

@@ -293,7 +293,7 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             return new ConfigurationPackage {
                 Version = "1.0.0",
                 Description = "配置模板",
-                ExportedAt = _clock.UtcNow,
+                ExportedAt = DateTime.UtcNow,
                 ControllerOptions = CreateControllerTemplate(),
                 SpeedLinkageOptions = CreateSpeedLinkageTemplate(),
                 IoLinkageOptions = CreateIoLinkageTemplate()

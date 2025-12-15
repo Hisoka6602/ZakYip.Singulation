@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZakYip.Singulation.Core.Abstractions;
 using ZakYip.Singulation.Core.Contracts.Dto;
 using ZakYip.Singulation.Drivers.Abstractions;
 using ZakYip.Singulation.Infrastructure.Logging;
@@ -18,18 +19,20 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         private readonly IAxisController _axisController;
         private readonly IHubContext<Hub> _hubContext;
         private readonly ExceptionAggregationService? _exceptionAggregation;
-        private readonly LogSampler _logSampler = new();
+        private readonly LogSampler _logSampler;
         private readonly TimeSpan _broadcastInterval = TimeSpan.FromMilliseconds(200); // 5Hz 更新率
 
         public RealtimeAxisDataService(
             ILogger<RealtimeAxisDataService> logger,
             IAxisController axisController,
             IHubContext<Hub> hubContext,
+            ISystemClock clock,
             ExceptionAggregationService? exceptionAggregation = null) {
             _logger = logger;
             _axisController = axisController;
             _hubContext = hubContext;
             _exceptionAggregation = exceptionAggregation;
+            _logSampler = new LogSampler(clock);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken) {

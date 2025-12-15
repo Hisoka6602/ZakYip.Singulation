@@ -74,8 +74,6 @@ public sealed class OperationStateTracker
     /// </summary>
     public class OperationState
     {
-        private readonly ISystemClock? _clock;
-
         /// <summary>
         /// 操作名称
         /// </summary>
@@ -92,12 +90,6 @@ public sealed class OperationStateTracker
         /// <param name="clock">系统时钟（用于获取当前时间）</param>
         /// <returns>运行时长</returns>
         public TimeSpan GetDuration(ISystemClock clock) => clock.UtcNow - StartTime;
-
-        /// <summary>
-        /// 运行时长（仅用于兼容性，建议使用 GetDuration）
-        /// </summary>
-        [Obsolete("Use GetDuration(ISystemClock) instead for better testability")]
-        public TimeSpan Duration => DateTime.UtcNow - StartTime;
     }
 }
 
