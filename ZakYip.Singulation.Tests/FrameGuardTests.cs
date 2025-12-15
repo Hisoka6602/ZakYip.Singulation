@@ -1,3 +1,4 @@
+using ZakYip.Singulation.Tests.TestHelpers;
 using System;
 using System.Threading;
 using System.Threading.Channels;
@@ -27,7 +28,8 @@ namespace ZakYip.Singulation.Tests {
                 safety,
                 frameGuardOptions,
                 hub,
-                optionsStore);
+                optionsStore,
+                new FakeSystemClock());
 
             var result = await guard.InitializeAsync(CancellationToken.None).ConfigureAwait(false);
 
@@ -47,7 +49,8 @@ namespace ZakYip.Singulation.Tests {
                 safety,
                 frameGuardOptions,
                 hub,
-                optionsStore);
+                optionsStore,
+                new FakeSystemClock());
 
             var result = await guard.InitializeAsync(CancellationToken.None).ConfigureAwait(false);
 
