@@ -157,7 +157,7 @@ namespace ZakYip.Singulation.Tests {
 
         [MiniFact]
         public async Task BatchAdapter_MultipleAxesWrite_ReturnsCorrectStructure() {
-            var adapter = new LeadshineLtdmcBusAdapter(0, 0, null, new FakeSystemClock());
+            var adapter = new LeadshineLtdmcBusAdapter(0, 0, null, FakeSystemClock.CreateDefault());
 
             var nodeIds = new ushort[] { 1, 2, 3 };
             var requests = new[] {
@@ -177,7 +177,7 @@ namespace ZakYip.Singulation.Tests {
 
         [MiniFact]
         public async Task BatchAdapter_MultipleAxesRead_ReturnsCorrectStructure() {
-            var adapter = new LeadshineLtdmcBusAdapter(0, 0, null, new FakeSystemClock());
+            var adapter = new LeadshineLtdmcBusAdapter(0, 0, null, FakeSystemClock.CreateDefault());
 
             var nodeIds = new ushort[] { 1, 2 };
             var requests = new[] {

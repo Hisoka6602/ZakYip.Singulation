@@ -138,7 +138,7 @@ namespace ZakYip.Singulation.Tests
             var notificationReceived = false;
             EmcResetEventArgs? receivedArgs = null;
             
-            using var coordinator = new EmcResetCoordinator(cardNo, new FakeSystemClock(), enablePolling: true, TimeSpan.FromMilliseconds(200));
+            using var coordinator = new EmcResetCoordinator(cardNo, FakeSystemClock.CreateDefault(), enablePolling: true, TimeSpan.FromMilliseconds(200));
             
             // 订阅事件
             coordinator.ResetNotificationReceived += (sender, args) =>

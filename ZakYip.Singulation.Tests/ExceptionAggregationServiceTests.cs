@@ -19,7 +19,7 @@ public class ExceptionAggregationServiceTests
     {
         // Arrange
         var logger = NullLogger<ExceptionAggregationService>.Instance;
-        var service = new ExceptionAggregationService(logger, new FakeSystemClock());
+        var service = new ExceptionAggregationService(logger, FakeSystemClock.CreateDefault());
         var exception = new InvalidOperationException("Test exception");
 
         // Act
@@ -34,7 +34,7 @@ public class ExceptionAggregationServiceTests
     {
         // Arrange
         var logger = NullLogger<ExceptionAggregationService>.Instance;
-        var service = new ExceptionAggregationService(logger, new FakeSystemClock());
+        var service = new ExceptionAggregationService(logger, FakeSystemClock.CreateDefault());
 
         // Act - record same exception type multiple times
         for (int i = 0; i < 5; i++)
@@ -53,7 +53,7 @@ public class ExceptionAggregationServiceTests
     {
         // Arrange
         var logger = NullLogger<ExceptionAggregationService>.Instance;
-        var service = new ExceptionAggregationService(logger, new FakeSystemClock());
+        var service = new ExceptionAggregationService(logger, FakeSystemClock.CreateDefault());
 
         // Act & Assert - should not throw
         service.RecordException(null!, "TestContext");
@@ -65,7 +65,7 @@ public class ExceptionAggregationServiceTests
     {
         // Arrange
         var logger = NullLogger<ExceptionAggregationService>.Instance;
-        var service = new ExceptionAggregationService(logger, new FakeSystemClock());
+        var service = new ExceptionAggregationService(logger, FakeSystemClock.CreateDefault());
         var retryableException = new TransportException("Connection failed");
         var nonRetryableException = new ValidationException("Invalid input");
 
@@ -81,7 +81,7 @@ public class ExceptionAggregationServiceTests
     {
         // Arrange
         var logger = NullLogger<ExceptionAggregationService>.Instance;
-        var service = new ExceptionAggregationService(logger, new FakeSystemClock());
+        var service = new ExceptionAggregationService(logger, FakeSystemClock.CreateDefault());
 
         // Act
         var stats = service.GetStatistics();
@@ -96,7 +96,7 @@ public class ExceptionAggregationServiceTests
     {
         // Arrange
         var logger = NullLogger<ExceptionAggregationService>.Instance;
-        var service = new ExceptionAggregationService(logger, new FakeSystemClock());
+        var service = new ExceptionAggregationService(logger, FakeSystemClock.CreateDefault());
         using var cts = new CancellationTokenSource();
 
         // Act

@@ -14,7 +14,7 @@ public class LogSamplerTests
     public void ShouldLog_WithSamplingRate1_AlwaysReturnsTrue()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
 
         // Act & Assert
         for (int i = 0; i < 10; i++)
@@ -27,7 +27,7 @@ public class LogSamplerTests
     public void ShouldLog_WithSamplingRate100_ReturnsEvery100th()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
         int trueCount = 0;
 
         // Act
@@ -47,7 +47,7 @@ public class LogSamplerTests
     public void ShouldLog_WithDifferentKeys_MaintainsSeparateCounters()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
 
         // Act
         var result1 = sampler.ShouldLog("key1", 2);
@@ -66,7 +66,7 @@ public class LogSamplerTests
     public void ShouldLogByTime_WithMinInterval_RespectsTimeConstraint()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
         var interval = TimeSpan.FromMilliseconds(100);
 
         // Act - first call should return true
@@ -82,7 +82,7 @@ public class LogSamplerTests
     public async Task ShouldLogByTime_AfterInterval_ReturnsTrue()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
         var interval = TimeSpan.FromMilliseconds(50);
 
         // Act
@@ -102,7 +102,7 @@ public class LogSamplerTests
     public void GetCount_ReturnsAccurateCount()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
 
         // Act
         for (int i = 0; i < 5; i++)
@@ -118,7 +118,7 @@ public class LogSamplerTests
     public void GetCount_ForNonExistentKey_ReturnsZero()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
 
         // Act
         var count = sampler.GetCount("nonexistent");
@@ -131,7 +131,7 @@ public class LogSamplerTests
     public void Reset_ClearsCounterAndTime()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
         sampler.ShouldLog("test", 100);
         sampler.ShouldLog("test", 100);
 
@@ -149,7 +149,7 @@ public class LogSamplerTests
     public void ShouldLog_WithNegativeSamplingRate_ThrowsException()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
 
         // Act & Assert
         MiniAssert.Throws<ArgumentException>(() => sampler.ShouldLog("test", -1), 
@@ -160,7 +160,7 @@ public class LogSamplerTests
     public void ShouldLog_WithZeroSamplingRate_ThrowsException()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
 
         // Act & Assert
         MiniAssert.Throws<ArgumentException>(() => sampler.ShouldLog("test", 0),
@@ -171,7 +171,7 @@ public class LogSamplerTests
     public void ShouldLog_ConcurrentAccess_MaintainsAccuracy()
     {
         // Arrange
-        var sampler = new LogSampler(new FakeSystemClock());
+        var sampler = new LogSampler(FakeSystemClock.CreateDefault());
         var tasks = new Task[10];
         
         // Act - simulate concurrent access

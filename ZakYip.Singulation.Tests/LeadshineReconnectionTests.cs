@@ -22,7 +22,7 @@ namespace ZakYip.Singulation.Tests
             // 注意：这个测试需要实际的硬件或模拟环境
             // 在没有硬件的情况下，我们只能测试基本的API存在性
             
-            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", new FakeSystemClock());
+            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", FakeSystemClock.CreateDefault());
             
             // 验证初始状态
             Assert(!adapter.IsReconnecting, "初始状态 IsReconnecting 应该为 false");
@@ -39,7 +39,7 @@ namespace ZakYip.Singulation.Tests
         {
             Console.WriteLine("[Test] 测试重新连接事件...");
 
-            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", new FakeSystemClock());
+            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", FakeSystemClock.CreateDefault());
             
             var reconnectionStartingCalled = false;
             var reconnectionCompletedCalled = false;
@@ -75,7 +75,7 @@ namespace ZakYip.Singulation.Tests
             // 注意：这是一个概念性测试，展示预期的行为
             // 实际的集成测试需要模拟复位通知
             
-            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", new FakeSystemClock());
+            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", FakeSystemClock.CreateDefault());
             
             // 在正常状态下，IsReconnecting 应该为 false
             Assert(!adapter.IsReconnecting, "正常状态下 IsReconnecting 应该为 false");
@@ -112,7 +112,7 @@ namespace ZakYip.Singulation.Tests
         {
             Console.WriteLine("[Test] 测试重新连接场景（概念性）...");
 
-            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", new FakeSystemClock());
+            var adapter = new LeadshineLtdmcBusAdapter(0, 2, "192.168.1.100", FakeSystemClock.CreateDefault());
             
             var eventLog = new System.Collections.Generic.List<string>();
             

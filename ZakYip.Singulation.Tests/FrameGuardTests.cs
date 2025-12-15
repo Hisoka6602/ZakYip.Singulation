@@ -29,7 +29,7 @@ namespace ZakYip.Singulation.Tests {
                 frameGuardOptions,
                 hub,
                 optionsStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             var result = await guard.InitializeAsync(CancellationToken.None).ConfigureAwait(false);
 
@@ -50,7 +50,7 @@ namespace ZakYip.Singulation.Tests {
                 frameGuardOptions,
                 hub,
                 optionsStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             var result = await guard.InitializeAsync(CancellationToken.None).ConfigureAwait(false);
 

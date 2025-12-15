@@ -11,7 +11,7 @@ namespace ZakYip.Singulation.Tests {
 
         [MiniFact]
         public async Task SafeGenericCapturesErrorAndReturnsFallbackAsync() {
-            var adapter = new LeadshineLtdmcBusAdapter(0, 0, null, new FakeSystemClock());
+            var adapter = new LeadshineLtdmcBusAdapter(0, 0, null, FakeSystemClock.CreateDefault());
             var errorTcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
             adapter.ErrorOccurred += (_, message) => errorTcs.TrySetResult(message);
 
@@ -32,7 +32,7 @@ namespace ZakYip.Singulation.Tests {
 
         [MiniFact]
         public async Task SafeActionClearsPreviousErrorOnSuccessAsync() {
-            var adapter = new LeadshineLtdmcBusAdapter(0, 0, null, new FakeSystemClock());
+            var adapter = new LeadshineLtdmcBusAdapter(0, 0, null, FakeSystemClock.CreateDefault());
 
             var genericSafe = typeof(LeadshineLtdmcBusAdapter)
                 .GetMethods(BindingFlags.NonPublic | BindingFlags.Instance)

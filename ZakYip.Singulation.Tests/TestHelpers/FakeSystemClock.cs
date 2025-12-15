@@ -13,21 +13,23 @@ internal sealed class FakeSystemClock : ISystemClock
     private DateTime _now;
 
     /// <summary>
-    /// Creates a FakeSystemClock with the current time.
-    /// </summary>
-    public FakeSystemClock()
-    {
-        _utcNow = DateTime.UtcNow;
-        _now = DateTime.Now;
-    }
-
-    /// <summary>
     /// Creates a FakeSystemClock with a specific UTC time.
     /// </summary>
+    /// <param name="utcNow">The initial UTC time for the fake clock.</param>
     public FakeSystemClock(DateTime utcNow)
     {
         _utcNow = utcNow;
         _now = utcNow.ToLocalTime();
+    }
+
+    /// <summary>
+    /// Creates a FakeSystemClock with a fixed, deterministic time (2025-01-01 00:00:00 UTC).
+    /// Use this factory method in tests to avoid dependency on the actual system clock.
+    /// </summary>
+    /// <returns>A FakeSystemClock instance with a fixed time.</returns>
+    public static FakeSystemClock CreateDefault()
+    {
+        return new FakeSystemClock(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     }
 
     /// <inheritdoc/>

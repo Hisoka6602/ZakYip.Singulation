@@ -27,7 +27,7 @@ namespace ZakYip.Singulation.Tests {
                 controllerStore,
                 speedLinkageStore,
                 ioLinkageStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             // Act
             var json = await service.ExportAllConfigurationsAsync("测试导出");
@@ -60,7 +60,7 @@ namespace ZakYip.Singulation.Tests {
                 controllerStore,
                 speedLinkageStore,
                 ioLinkageStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             // 设置初始配置
             var originalSpeedLinkage = new SpeedLinkageOptions {
@@ -111,7 +111,7 @@ namespace ZakYip.Singulation.Tests {
                 controllerStore,
                 speedLinkageStore,
                 ioLinkageStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             var json = await service.ExportAllConfigurationsAsync();
             
@@ -142,7 +142,7 @@ namespace ZakYip.Singulation.Tests {
                 controllerStore,
                 speedLinkageStore,
                 ioLinkageStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             // 创建无效的配置（轴ID为0）
             var invalidConfig = new ConfigurationImportExportService.ConfigurationPackage {
@@ -189,7 +189,7 @@ namespace ZakYip.Singulation.Tests {
                 controllerStore,
                 speedLinkageStore,
                 ioLinkageStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             // Act
             var controllerTemplate = service.CreateConfigurationTemplate(
@@ -224,7 +224,7 @@ namespace ZakYip.Singulation.Tests {
                 controllerStore,
                 speedLinkageStore,
                 ioLinkageStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             // Act - 获取模板并导入
             var template = service.CreateConfigurationTemplate(
@@ -249,7 +249,7 @@ namespace ZakYip.Singulation.Tests {
                 controllerStore,
                 speedLinkageStore,
                 ioLinkageStore,
-                new FakeSystemClock());
+                FakeSystemClock.CreateDefault());
 
             var malformedJson = "{ this is not valid json }";
 
