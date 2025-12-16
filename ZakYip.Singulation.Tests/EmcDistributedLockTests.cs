@@ -12,6 +12,8 @@ namespace ZakYip.Singulation.Tests
     /// </summary>
     public class EmcDistributedLockTests
     {
+        private static readonly DateTime FixedTestTime = new(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
         /// <summary>
         /// 测试：基本的锁获取和释放。
         /// </summary>
@@ -102,7 +104,7 @@ namespace ZakYip.Singulation.Tests
                 resetType: EmcResetType.Cold,
                 processId: Process.GetCurrentProcess().Id,
                 processName: "TestProcess",
-                timestamp: DateTime.UtcNow
+                timestamp: FixedTestTime
             );
             
             // 序列化

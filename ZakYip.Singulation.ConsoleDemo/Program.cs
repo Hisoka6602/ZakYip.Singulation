@@ -42,21 +42,28 @@ internal static class Program {
         // ===== 组装 DI 容器 =====
         var services = new ServiceCollection();
 
+        // 系统时钟
+        services.AddSingleton<ZakYip.Singulation.Core.Abstractions.ISystemClock, ZakYip.Singulation.Infrastructure.Runtime.SystemClock>();
+
         // 事件聚合器（把多轴事件统一转发）
         services.AddSingleton<IAxisEventAggregator, AxisEventAggregator>();
 
         // Registry：把厂商名映射到对应的 IAxisDrive 工厂
 
         services.AddSingleton<IDriveRegistry>(sp => {
+            var clock = sp.GetRequiredService<ZakYip.Singulation.Core.Abstractions.ISystemClock>();
             var r = new DefaultDriveRegistry();
-            r.Register("leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts));
+            r.Register("leadshine", (axisId, port, opts) => new LeadshineLtdmcAxisDrive(opts, clock));
             // 未来在这里再注册其它品牌：
             // r.Register("Inovance", (axisId, port, opts) => new InovanceAxisDrive(opts));
             return r;
         });
 
         // BusAdapter：控制器/总线级操作（初始化、读轴数、冷复位等）
-        services.AddSingleton<IBusAdapter>(sp => new LeadshineLtdmcBusAdapter(cardNo, portNo, controllerIp));
+        services.AddSingleton<IBusAdapter>(sp => {
+            var clock = sp.GetRequiredService<ZakYip.Singulation.Core.Abstractions.ISystemClock>();
+            return new LeadshineLtdmcBusAdapter(cardNo, portNo, controllerIp, clock);
+        });
 
         // 轴群编排器：用 Bus + Registry 批量创建/管理多根轴
         services.AddSingleton<IAxisController, AxisController>();
