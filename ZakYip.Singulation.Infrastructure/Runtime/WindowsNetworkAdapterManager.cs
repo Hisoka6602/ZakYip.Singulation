@@ -22,6 +22,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 配置所有网卡：启用巨帧和最大化传输缓存
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：跨进程 PowerShell 调用可能产生各种运行时异常（Win32Exception, SEHException, UnauthorizedAccessException 等）。
+        /// This method intentionally catches all exception types due to cross-process PowerShell invocation.
+        /// </remarks>
         public void ConfigureAllNetworkAdapters()
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -51,7 +56,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
 
                 _logger.LogInformation("网络适配器配置完成");
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Cross-process PowerShell calls can throw various runtime exceptions
             {
                 _logger.LogError(ex, "配置网络适配器时发生错误");
             }
@@ -60,6 +65,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 获取所有网络适配器名称
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：Process.Start 和 PowerShell 执行可能产生多种异常（Win32Exception, InvalidOperationException 等）。
+        /// This method intentionally catches all exception types due to Process.Start and PowerShell execution.
+        /// </remarks>
         private string[] GetNetworkAdapters()
         {
             try
@@ -95,7 +105,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
                     .Select(name => name.Trim())
                     .ToArray();
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Process.Start can throw Win32Exception, InvalidOperationException, etc.
             {
                 _logger.LogError(ex, "获取网络适配器列表时发生错误");
                 return Array.Empty<string>();
@@ -105,6 +115,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 配置单个网卡
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：配置网卡需要多个 PowerShell 调用，任何一步失败不应影响其他网卡的配置。
+        /// This method intentionally catches all exception types to isolate failures per adapter.
+        /// </remarks>
         private void ConfigureAdapter(string adapterName)
         {
             try
@@ -122,7 +137,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
 
                 _logger.LogInformation($"网络适配器 '{adapterName}' 配置完成");
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Isolate configuration failures per adapter
             {
                 _logger.LogError(ex, $"配置网络适配器 '{adapterName}' 时发生错误");
             }
@@ -131,6 +146,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 启用巨帧 (Jumbo Frames)
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：PowerShell 网卡属性设置可能产生各种异常，配置失败不应影响其他功能。
+        /// This method intentionally catches all exception types due to PowerShell adapter property setting.
+        /// </remarks>
         private void EnableJumboFrames(string adapterName)
         {
             try
@@ -158,7 +178,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
 
                 _logger.LogWarning($"网络适配器 '{adapterName}' 不支持巨帧或未找到相应属性");
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: PowerShell adapter property setting can fail in various ways
             {
                 _logger.LogError(ex, $"启用网络适配器 '{adapterName}' 的巨帧时发生错误");
             }
