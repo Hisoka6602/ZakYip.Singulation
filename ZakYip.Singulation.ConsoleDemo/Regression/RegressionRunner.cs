@@ -21,6 +21,8 @@ using ZakYip.Singulation.Infrastructure.Telemetry;
 namespace ZakYip.Singulation.ConsoleDemo.Regression {
 
     internal static class RegressionRunner {
+        private static readonly DateTime FixedTestTime = new(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
         public static async Task RunAsync() {
             using var host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
                 .ConfigureLogging(builder => builder.SetMinimumLevel(LogLevel.Information))
@@ -123,8 +125,7 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
         }
 
         private static async Task ApplyFrameAsync(IFrameGuard guard, FakeAxisController controller, int sequence, int speed) {
-            var testTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-            var set = new SpeedSet(testTime, sequence, new[] { speed }, Array.Empty<int>());
+            var set = new SpeedSet(FixedTestTime, sequence, new[] { speed }, Array.Empty<int>());
             var decision = guard.Evaluate(set);
             if (!decision.ShouldApply) {
                 Console.WriteLine($"[FrameGuard] Drop seq={sequence} reason={decision.Reason}");

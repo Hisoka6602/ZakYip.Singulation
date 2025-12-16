@@ -11,6 +11,8 @@ namespace ZakYip.Singulation.Tests;
 /// </summary>
 internal sealed class CodecOptimizationTests
 {
+    private static readonly DateTime FixedTestTime = new(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
     [MiniFact]
     public void HuararyCodec_TryDecodeSpeed_WithArrayPool_DecodesCorrectly()
     {
@@ -32,8 +34,7 @@ internal sealed class CodecOptimizationTests
         frame[13] = 0x3B; // End
         
         // Act
-        var testTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        var success = codec.TryDecodeSpeed(frame, testTime, out var speedSet);
+        var success = codec.TryDecodeSpeed(frame, FixedTestTime, out var speedSet);
         
         // Assert
         MiniAssert.True(success, "解码应该成功");
@@ -60,8 +61,7 @@ internal sealed class CodecOptimizationTests
         frame[13] = 0x3B; // End
         
         // Act
-        var testTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        var success = codec.TryDecodeSpeed(frame, testTime, out var speedSet);
+        var success = codec.TryDecodeSpeed(frame, FixedTestTime, out var speedSet);
         
         // Assert
         MiniAssert.True(success, "解码应该成功");
@@ -126,8 +126,7 @@ internal sealed class CodecOptimizationTests
             frame[12] = ComputeXor(frame, 12);
             frame[13] = 0x3B; // End
             
-            var testTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-            var success = codec.TryDecodeSpeed(frame, testTime, out var speedSet);
+            var success = codec.TryDecodeSpeed(frame, FixedTestTime, out var speedSet);
             MiniAssert.True(success, $"第 {i} 次解码应该成功");
             MiniAssert.Equal(i * 10, speedSet.MainMmps[0], $"第 {i} 次第一个速度应正确");
             MiniAssert.Equal(i * 20, speedSet.MainMmps[1], $"第 {i} 次第二个速度应正确");

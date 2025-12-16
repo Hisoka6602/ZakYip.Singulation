@@ -12,6 +12,8 @@ namespace ZakYip.Singulation.Tests
     /// </summary>
     public class EmcDistributedLockTests
     {
+        private static readonly DateTime FixedTestTime = new(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
         /// <summary>
         /// 测试：基本的锁获取和释放。
         /// </summary>
@@ -97,13 +99,12 @@ namespace ZakYip.Singulation.Tests
         {
             Console.WriteLine("[Test] 测试复位通知的序列化和反序列化...");
             
-            var testTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
             var notification = new EmcResetNotification(
                 cardNo: 0,
                 resetType: EmcResetType.Cold,
                 processId: Process.GetCurrentProcess().Id,
                 processName: "TestProcess",
-                timestamp: testTime
+                timestamp: FixedTestTime
             );
             
             // 序列化
