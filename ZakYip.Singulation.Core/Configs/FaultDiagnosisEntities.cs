@@ -106,11 +106,21 @@ namespace ZakYip.Singulation.Core.Configs {
         /// <summary>
         /// 创建时间
         /// </summary>
+        /// <remarks>
+        /// 使用 { get; set; } 而非 { get; init; } 是有意为之。
+        /// 原因：InitializeKnowledgeBase() 方法在对象创建后批量设置时间戳。
+        /// Intentionally mutable for post-initialization timestamp setting in InitializeKnowledgeBase().
+        /// </remarks>
         public DateTime CreatedAt { get; set; }
 
         /// <summary>
         /// 更新时间
         /// </summary>
+        /// <remarks>
+        /// 使用 { get; set; } 而非 { get; init; } 是有意为之。
+        /// 原因：InitializeKnowledgeBase() 方法在对象创建后批量设置时间戳。
+        /// Intentionally mutable for post-initialization timestamp setting in InitializeKnowledgeBase().
+        /// </remarks>
         public DateTime UpdatedAt { get; set; }
     }
 }
