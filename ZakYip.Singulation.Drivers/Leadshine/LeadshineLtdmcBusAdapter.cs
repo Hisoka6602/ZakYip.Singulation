@@ -354,7 +354,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 if (IsInitialized)
                     return new(true, "Already initialized."); // 幂等
 
-                var ok = await EnsureBootGapAsync(TimeSpan.FromSeconds(15), ct);
+                var ok = await EnsureBootGapAsync(TimeSpan.FromSeconds(15), _clock, ct);
                 if (!ok.Key)
                 {
                     SetError(ok.Value);
@@ -887,6 +887,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// </summary>
         private static async Task<KeyValuePair<bool, string>> EnsureBootGapAsync(
             TimeSpan threshold,
+            ISystemClock clock,
             CancellationToken ct = default)
         {
             var log = NLog.LogManager.GetCurrentClassLogger();
@@ -899,8 +900,8 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             try
             {
                 var ps = System.Diagnostics.Process.GetCurrentProcess();
-                // 注意：StartTime 与 DateTime.Now 同为本地时间
-                processUptime = DateTime.Now - ps.StartTime;
+                // 注意：StartTime 与 clock.Now 同为本地时间
+                processUptime = clock.Now - ps.StartTime;
             }
             catch (Exception ex)
             {
