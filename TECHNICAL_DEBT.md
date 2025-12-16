@@ -457,14 +457,27 @@ public sealed record class UserDto
 - 不符合现代 C# 最佳实践
 
 **验证标准**:
-- [ ] 识别并分类所有 261 处使用
-- [ ] 阶段 1 完成：新建类已修复
-- [ ] 阶段 2 完成：Host 层 DTO 已修复
-- [ ] 代码编译通过
-- [ ] 所有测试通过
+- [x] 识别并分类所有使用 (已完成初步分类)
+- [x] 阶段 1 部分完成：Core层DTO已修复 (VisionParams, FaultDiagnosisEntities)
+- [ ] 阶段 2 待进行：Host 层 DTO 已修复
+- [x] 代码编译通过
+- [x] 所有测试通过
+
+**剩余工作** (2025-12-16):
+1. **继续DTO转换** (~214个属性待改进):
+   - Infrastructure层服务DTOs
+   - Protocol层实体
+   - 其他配置类
+   - 预计: 继续改进20-30个属性/周
+
+2. **优先级文件**:
+   - Core/Configs 其他配置类
+   - Infrastructure/Services 中的DTO
+   - Protocol层实体类
 
 **责任人**: 待分配  
 **目标完成日期**: 2026-01-31（分阶段完成）
+**下次PR目标**: 再转换20-30个属性 (目标: 50%完成)
 
 ---
 
@@ -595,8 +608,28 @@ SafeExecute模式在3个不同的类中有重复实现：
 - [x] 添加了必要的注释说明
 - [ ] 代码审查通过
 
+**剩余工作** (2025-12-16):
+1. **继续文档化剩余catch块** (~205个待文档化/审查):
+   - LeadshineLtdmcBusAdapter: 9个剩余catch块
+   - WindowsNetworkAdapterManager: 8个剩余catch块
+   - WindowsFirewallManager: 6个catch块
+   - TransportEventPump: 6个catch块
+   - IoStatusService: 4个catch块
+   - 其他文件: ~172个catch块
+
+2. **优先级文件**:
+   - Drivers层: LeadshineLtdmcBusAdapter, LeadshineCabinetIoModule
+   - Infrastructure层: WindowsFirewallManager, TransportEventPump, IoStatusService
+   - Transport层: TouchClientByteTransport
+
+3. **下一步策略**:
+   - 每个PR文档化10-15个catch块
+   - 重点关注高频调用路径
+   - 识别真正需要改为具体异常类型的地方
+
 **责任人**: 待分配  
 **目标完成日期**: 2025-12-27
+**下次PR目标**: 再文档化15个catch块 (目标: 40%完成)
 
 ---
 
