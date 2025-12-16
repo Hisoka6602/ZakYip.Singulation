@@ -95,7 +95,8 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                     LogStateChange(ev);
                     StateChanged?.Invoke(this, ev);
                 }
-                catch (Exception ex) {
+                catch (Exception ex) // Intentional: Prevent event subscriber exceptions from affecting state transition
+                {
                     _log.LogError(ex, "Safety isolator state change notification failed.");
                 }
             }
@@ -140,6 +141,11 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         /// <summary>
         /// 安全执行操作（无返回值）
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）以提供安全包装器功能。
+        /// 目的是防止任何未预料的异常导致系统崩溃，所有异常都会被记录并通过返回值表示失败。
+        /// This method intentionally catches all exception types to provide a safety wrapper.
+        /// </remarks>
         public bool SafeExecute(Action action, string operationName, Action<Exception>? onError = null) {
             if (action == null) {
                 throw new ArgumentNullException(nameof(action));
@@ -151,13 +157,15 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 _log.LogDebug("操作执行成功: {OperationName}", operationName);
                 return true;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Safety wrapper must catch all exceptions
+            {
                 _log.LogWarning(ex, "操作执行失败: {OperationName}", operationName);
                 
                 try {
                     onError?.Invoke(ex);
                 }
-                catch (Exception callbackEx) {
+                catch (Exception callbackEx) // Intentional: Prevent callback failures from affecting main flow
+                {
                     _log.LogError(callbackEx, "错误处理回调执行失败: {OperationName}", operationName);
                 }
                 
@@ -168,6 +176,10 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         /// <summary>
         /// 安全执行操作（有返回值）
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）以提供安全包装器功能。
+        /// This method intentionally catches all exception types to provide a safety wrapper.
+        /// </remarks>
         public T SafeExecute<T>(Func<T> func, string operationName, T defaultValue, Action<Exception>? onError = null) {
             if (func == null) {
                 throw new ArgumentNullException(nameof(func));
@@ -179,13 +191,15 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 _log.LogDebug("操作执行成功: {OperationName}", operationName);
                 return result;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Safety wrapper must catch all exceptions
+            {
                 _log.LogWarning(ex, "操作执行失败: {OperationName}，返回默认值", operationName);
                 
                 try {
                     onError?.Invoke(ex);
                 }
-                catch (Exception callbackEx) {
+                catch (Exception callbackEx) // Intentional: Prevent callback failures from affecting main flow
+                {
                     _log.LogError(callbackEx, "错误处理回调执行失败: {OperationName}", operationName);
                 }
                 
@@ -196,6 +210,10 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
         /// <summary>
         /// 安全执行操作（可选返回值）
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）以提供安全包装器功能。
+        /// This method intentionally catches all exception types to provide a safety wrapper.
+        /// </remarks>
         public T? SafeExecuteNullable<T>(Func<T> func, string operationName, Action<Exception>? onError = null) where T : class {
             if (func == null) {
                 throw new ArgumentNullException(nameof(func));
@@ -207,13 +225,15 @@ namespace ZakYip.Singulation.Infrastructure.Cabinet {
                 _log.LogDebug("操作执行成功: {OperationName}", operationName);
                 return result;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Safety wrapper must catch all exceptions
+            {
                 _log.LogWarning(ex, "操作执行失败: {OperationName}，返回 null", operationName);
                 
                 try {
                     onError?.Invoke(ex);
                 }
-                catch (Exception callbackEx) {
+                catch (Exception callbackEx) // Intentional: Prevent callback failures from affecting main flow
+                {
                     _log.LogError(callbackEx, "错误处理回调执行失败: {OperationName}", operationName);
                 }
                 

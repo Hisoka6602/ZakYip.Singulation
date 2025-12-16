@@ -117,6 +117,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// <summary>
         /// 处理来自其他进程的复位通知。
         /// </summary>
+        /// <remarks>
+        /// 异步任务内故意捕获所有异常类型（catch Exception）。
+        /// 原因：防止后台重连失败导致应用崩溃，Task.Run 内的异常必须全部捕获。
+        /// This fire-and-forget task intentionally catches all exception types.
+        /// </remarks>
         private void OnResetNotificationReceived(object? sender, EmcResetEventArgs e)
         {
             _logger.Warn($"[LeadshineBusAdapter] 收到 EMC 复位通知 - 卡号: {e.Notification.CardNo}, " +
@@ -133,7 +138,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 {
                     await HandleReconnectionAsync(e.Notification, CancellationToken.None).ConfigureAwait(false);
                 }
-                catch (Exception ex)
+                catch (Exception ex) // Intentional: Fire-and-forget task must catch all exceptions to prevent app crash
                 {
                     _logger.Error(ex, "[LeadshineBusAdapter] 处理重新连接失败");
                 }
@@ -216,6 +221,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// </summary>
         /// <param name="ct">取消令牌。</param>
         /// <returns>连接是否成功。</returns>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：Native SDK 互操作可能产生 SEHException、DllNotFoundException、AccessViolationException 等。
+        /// This method intentionally catches all exception types due to native SDK interop.
+        /// </remarks>
         private async Task<bool> ReconnectDirectAsync(CancellationToken ct)
         {
             try
@@ -241,7 +251,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 IsInitialized = true;
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Native SDK interop can throw SEHException, DllNotFoundException, etc.
             {
                 _logger.Error(ex, $"[LeadshineBusAdapter] 直接重新连接异常，卡号: {_cardNo}");
                 SetError($"直接重新连接异常: {ex.Message}");
