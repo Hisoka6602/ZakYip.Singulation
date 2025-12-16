@@ -97,12 +97,13 @@ namespace ZakYip.Singulation.Tests
         {
             Console.WriteLine("[Test] 测试复位通知的序列化和反序列化...");
             
+            var testTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
             var notification = new EmcResetNotification(
                 cardNo: 0,
                 resetType: EmcResetType.Cold,
                 processId: Process.GetCurrentProcess().Id,
                 processName: "TestProcess",
-                timestamp: DateTime.UtcNow
+                timestamp: testTime
             );
             
             // 序列化

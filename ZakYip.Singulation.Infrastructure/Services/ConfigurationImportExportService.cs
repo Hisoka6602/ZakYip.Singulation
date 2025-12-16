@@ -289,11 +289,11 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             };
         }
 
-        private static ConfigurationPackage CreateFullTemplate() {
+        private ConfigurationPackage CreateFullTemplate() {
             return new ConfigurationPackage {
                 Version = "1.0.0",
                 Description = "配置模板",
-                ExportedAt = DateTime.UtcNow,
+                ExportedAt = _clock.UtcNow,
                 ControllerOptions = CreateControllerTemplate(),
                 SpeedLinkageOptions = CreateSpeedLinkageTemplate(),
                 IoLinkageOptions = CreateIoLinkageTemplate()
