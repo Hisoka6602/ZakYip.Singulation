@@ -123,7 +123,8 @@ namespace ZakYip.Singulation.ConsoleDemo.Regression {
         }
 
         private static async Task ApplyFrameAsync(IFrameGuard guard, FakeAxisController controller, int sequence, int speed) {
-            var set = new SpeedSet(DateTime.UtcNow, sequence, new[] { speed }, Array.Empty<int>());
+            var testTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+            var set = new SpeedSet(testTime, sequence, new[] { speed }, Array.Empty<int>());
             var decision = guard.Evaluate(set);
             if (!decision.ShouldApply) {
                 Console.WriteLine($"[FrameGuard] Drop seq={sequence} reason={decision.Reason}");
