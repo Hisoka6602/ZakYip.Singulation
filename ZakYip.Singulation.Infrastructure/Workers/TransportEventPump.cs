@@ -92,7 +92,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 await _transportManager.InitializeAsync(stoppingToken).ConfigureAwait(false);
                 _log.TransportManagerInitialized();
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Manager initialization failure should not prevent service startup
+            {
                 _log.TransportManagerInitializationFailed(ex);
                 // 继续执行，因为传输可能稍后会被初始化
             }
@@ -136,7 +137,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     await t.StartAsync(stoppingToken).ConfigureAwait(false);
                     _log.TransportStartedWithStatus(name, t.Status.ToString());
                 }
-                catch (Exception ex) {
+                catch (Exception ex) // Intentional: Single transport failure should not prevent other transports from starting
+                {
                     _log.TransportStartFailed(ex, name);
                 }
             }
@@ -160,7 +162,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                         await Task.Delay(InfrastructureConstants.EventPumpIdleDelayMs, stoppingToken).ConfigureAwait(false);
                     }
                 }
-                catch (Exception ex) {
+                catch (Exception ex) // Intentional: Event processing loop must continue despite individual event failures
+                {
                     // 任意一侧处理异常都要兜底，避免吞事件
                     _log.EventPumpPipelineError(ex);
                 }
@@ -172,7 +175,7 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
             foreach (var (name, t) in _transports) {
                 try { await t.StopAsync(ct).ConfigureAwait(false); }
                 catch (OperationCanceledException ex) { _log.TransportStopIgnored(ex, name); }
-                catch (Exception ex)
+                catch (Exception ex) // Intentional: Single transport stop failure should be logged but allow graceful shutdown
                 {
                     _log.TransportStopIgnored(ex, name);
                     throw;
@@ -384,7 +387,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                                 // 服务正在停止，忽略取消异常
                                 _log.LogDebug("【TCP断开连接】设置轴速度操作已取消（服务正在停止）");
                             }
-                            catch (Exception ex) {
+                            catch (Exception ex) // Intentional: Fire-and-forget task must catch all exceptions to prevent app crash
+                            {
                                 _log.LogError(ex, "【TCP断开连接】设置轴速度为0失败");
                             }
                         });
@@ -455,7 +459,8 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                     await _indicatorLightService.UpdateRemoteConnectionStateAsync(isAnyConnected, CancellationToken.None)
                         .ConfigureAwait(false);
                 }
-                catch (Exception ex) {
+                catch (Exception ex) // Intentional: Fire-and-forget task must catch all exceptions to prevent app crash
+                {
                     _log.LogWarning(ex, "更新远程连接指示灯状态失败");
                 }
             }, CancellationToken.None);
