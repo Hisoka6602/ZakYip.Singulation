@@ -187,7 +187,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
                         _logger.Debug($"[LeadshineBusAdapter] 轴 {nodeId} 已停止并失能");
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) // Intentional: Isolate single-axis failures, continue with other axes
                     {
                         _logger.Error(ex, $"[LeadshineBusAdapter] 处理轴 {nodeId} 时发生异常");
                     }
@@ -195,7 +195,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
                 _logger.Info($"[LeadshineBusAdapter] 所有轴已停止并失能，状态：[停止]");
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Native SDK calls can throw SEHException, DllNotFoundException, etc.
             {
                 _logger.Error(ex, "[LeadshineBusAdapter] StopAndDisableAllAxesAsync 执行失败");
             }
@@ -310,7 +310,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 // 触发重新连接完成事件
                 ReconnectionCompleted?.Invoke(this, EventArgs.Empty);
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Reconnection is critical, must catch all exceptions to prevent app crash
             {
                 _logger.Error(ex, $"[LeadshineBusAdapter] 重新连接过程异常，卡号: {_cardNo}");
                 SetError($"重新连接过程异常: {ex.Message}");
@@ -455,7 +455,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                         SetError(msg);
                         return new(false, msg);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) // Intentional: Native SDK init can throw SEHException, DllNotFoundException, AccessViolationException, etc.
                     {
                         var msg = $"LTDMC init 异常: {ex.Message}";
                         SetError(msg);
@@ -502,7 +502,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                             {
                                 return new(false, "Canceled");
                             }
-                            catch (Exception ex)
+                            catch (Exception ex) // Intentional: Reset operations involve native SDK calls that can throw various exceptions
                             {
                                 var msg = $"复位过程异常: {ex.Message}";
                                 SetError(msg);
@@ -525,7 +525,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     {
                         return new(false, "Canceled");
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) // Intentional: Bus health check involves native SDK calls that can throw various exceptions
                     {
                         var msg = $"总线检查异常: {ex.Message}";
                         SetError(msg);
@@ -913,7 +913,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 // 注意：StartTime 与 clock.Now 同为本地时间
                 processUptime = clock.Now - ps.StartTime;
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Process.GetCurrentProcess().StartTime can throw in restricted environments
             {
                 log.Warn(ex, "[BootGap] 读取进程启动时间失败，跳过等待。");
                 return new(true, "Skipped: cannot read process start time.");
@@ -954,6 +954,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// <param name="act">要执行的异步操作。</param>
         /// <param name="operationName">操作名称，用于错误日志。</param>
         /// <returns>任务，成功返回 true，失败返回 false。</returns>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：这是安全包装器，用于隔离操作失败，返回 false 而非抛出异常。
+        /// This method intentionally catches all exception types as a safety wrapper.
+        /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<bool> Safe(Func<Task> act, string operationName)
         {
@@ -963,7 +968,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 ClearError();
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Safety wrapper, returns false instead of throwing
             {
                 SetError($"{operationName}: {ex.Message}");
                 return false;
@@ -978,6 +983,11 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// <param name="operationName">操作名称，用于错误日志。</param>
         /// <param name="defaultValue">失败时返回的默认值。</param>
         /// <returns>成功返回函数结果，失败返回默认值。</returns>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：这是安全包装器，用于隔离操作失败，返回默认值而非抛出异常。
+        /// This method intentionally catches all exception types as a safety wrapper.
+        /// </remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private async Task<T> Safe<T>(Func<Task<T>> func, string operationName, T defaultValue = default!)
         {
@@ -987,7 +997,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 ClearError();
                 return result;
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Safety wrapper, returns default value instead of throwing
             {
                 SetError($"{operationName}: {ex.Message}");
                 return defaultValue;
