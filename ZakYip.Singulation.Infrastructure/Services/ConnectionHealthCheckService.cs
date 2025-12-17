@@ -127,9 +127,9 @@ public sealed class ConnectionHealthCheckService
                     var drives = _axisController.Drives;
                     health.IsInitialized = drives != null && drives.Any();
                     
-                    if (health.IsInitialized && drives != null)
+                    if (health.IsInitialized)
                     {
-                        diagnostics.Add($"✓ 控制器已初始化 ({drives.Count} 个轴)");
+                        diagnostics.Add($"✓ 控制器已初始化 ({drives!.Count} 个轴)");
                     }
                     else
                     {
