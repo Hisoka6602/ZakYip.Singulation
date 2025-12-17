@@ -178,7 +178,6 @@ namespace ZakYip.Singulation.Infrastructure.Workers {
                 catch (Exception ex) // Intentional: Single transport stop failure should be logged but allow graceful shutdown
                 {
                     _log.TransportStopIgnored(ex, name);
-                    throw;
                 }
             }
             _ctlChannel.Writer.TryComplete();

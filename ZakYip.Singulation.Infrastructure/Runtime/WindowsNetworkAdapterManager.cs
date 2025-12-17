@@ -514,7 +514,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
                                 _logger.LogInformation($"已禁用网络适配器 '{adapterName}' 的节能以太网 (属性: {property})");
                                 return; // 成功设置后退出
                             }
-                            catch // Intentional: Try next value if current one fails
+                            catch (Exception) // Intentional: Try next value if current one fails
                             {
                                 // 尝试下一个值
                                 continue;
