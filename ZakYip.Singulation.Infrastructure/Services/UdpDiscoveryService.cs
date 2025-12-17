@@ -82,14 +82,14 @@ public class UdpDiscoveryService : BackgroundService
                 {
                     // 正常停止（包括 TaskCanceledException），不记录日志
                 }
-                catch (Exception ex)
+                catch (Exception ex) // Intentional: Single broadcast failure should not stop the service
                 {
                     _logger.UdpBroadcastError(ex);
                     await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) // Intentional: Background service - log fatal errors but don't crash host
         {
             _logger.UdpDiscoveryServiceException(ex);
         }

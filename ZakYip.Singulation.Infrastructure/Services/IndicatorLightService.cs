@@ -178,7 +178,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                         name, bitNo, on ? "亮" : "灭", triggerLevel == Core.Enums.TriggerLevel.ActiveLow ? "低电平有效" : "高电平有效");
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Indicator light failure should not affect main operations
+            {
                 _logger.LogError(ex, "设置{Name}（位{BitNo}）时发生异常", name, bitNo);
             }
 

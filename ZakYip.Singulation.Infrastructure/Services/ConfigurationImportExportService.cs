@@ -86,7 +86,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 _logger.LogInformation("配置导出成功，大小: {Size} 字节", json.Length);
                 return json;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Serialization + storage access may fail in various ways
+            {
                 _logger.LogError(ex, "配置导出失败");
                 throw new InvalidOperationException("配置导出失败", ex);
             }
@@ -111,7 +112,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 _logger.LogInformation("配置 {Type} 导出成功", typeof(T).Name);
                 return json;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Serialization + dynamic getter invocation may fail
+            {
                 _logger.LogError(ex, "配置 {Type} 导出失败", typeof(T).Name);
                 throw new InvalidOperationException($"配置 {typeof(T).Name} 导出失败", ex);
             }
@@ -194,7 +196,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 result.AddError("JSON 格式错误: " + ex.Message);
                 return result;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Import should return error result, not throw
+            {
                 _logger.LogError(ex, "配置导入失败");
                 result.AddError("配置导入失败: " + ex.Message);
                 return result;
