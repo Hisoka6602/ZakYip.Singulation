@@ -541,7 +541,7 @@ SafeExecute模式在3个不同的类中有重复实现：
 **优先级**: P2 (从 P1 降级)  
 **影响范围**: 多个层  
 **预计工作量**: 8-12小时
-**当前进度**: 25% (11/45 高优先级块已文档化)
+**当前进度**: 67% (36/53 高优先级块已文档化)
 
 **问题描述**:
 项目中有227处捕获通用 `Exception` 的代码，这可能隐藏具体的错误类型，使调试困难。
@@ -578,10 +578,11 @@ SafeExecute模式在3个不同的类中有重复实现：
    - ✅ 已文档化
 
 **已完成文档化** (2025-12-16):
-- CabinetIsolator: 5个catch块
-- WindowsNetworkAdapterManager: 4个catch块
-- LeadshineLtdmcBusAdapter: 2个catch块
-- **总计**: 11个catch块已添加XML注释和内联说明
+- CabinetIsolator: 5个catch块 (已完成)
+- WindowsNetworkAdapterManager: 12个catch块 (全部完成 ✅)
+- LeadshineLtdmcBusAdapter: 13个catch块 (全部完成 ✅)
+- TransportEventPump: 6个catch块 (全部完成 ✅)
+- **总计**: 36个catch块已添加XML注释和内联说明
 
 **修复优先级调整**:
 - P1 → P2：经审查，大部分使用是合理的
@@ -609,13 +610,10 @@ SafeExecute模式在3个不同的类中有重复实现：
 - [ ] 代码审查通过
 
 **剩余工作** (2025-12-16):
-1. **继续文档化剩余catch块** (~205个待文档化/审查):
-   - LeadshineLtdmcBusAdapter: 9个剩余catch块
-   - WindowsNetworkAdapterManager: 8个剩余catch块
+1. **继续文档化剩余catch块** (~180个待文档化/审查):
    - WindowsFirewallManager: 6个catch块
-   - TransportEventPump: 6个catch块
    - IoStatusService: 4个catch块
-   - 其他文件: ~172个catch块
+   - 其他文件: ~170个catch块
 
 2. **优先级文件**:
    - Drivers层: LeadshineLtdmcBusAdapter, LeadshineCabinetIoModule
@@ -627,9 +625,9 @@ SafeExecute模式在3个不同的类中有重复实现：
    - 重点关注高频调用路径
    - 识别真正需要改为具体异常类型的地方
 
-**责任人**: 待分配  
+**责任人**: GitHub Copilot (进行中)
 **目标完成日期**: 2025-12-27
-**下次PR目标**: 再文档化15个catch块 (目标: 40%完成)
+**下次PR目标**: 再文档化10个catch块 (目标: 80%完成)
 
 ---
 
@@ -1145,6 +1143,45 @@ SafeExecute 模式在 3 个不同的类中有重复实现，初始状态有 44 �
 ---
 
 ## 📝 变更日志
+
+### 2025-12-16 (晚间第3批) - TransportEventPump文档化完成
+- 💪 **TD-002 异常处理文档化：67%完成（从56%提升）**
+  - TransportEventPump: 全部6个catch块完成 ✅
+    - Manager初始化失败容错
+    - 单个传输启动失败隔离
+    - 事件处理循环错误恢复
+    - 传输停止错误处理
+    - Fire-and-forget Tasks（2个）
+  - 累计：4个文件，36个catch块文档化（+6）
+
+- ✅ **构建验证**:
+  - Infrastructure项目：通过 ✅
+  - 零新增错误或警告
+
+- 📊 **进度总结**:
+  - TD-002：56% → 67%（+11%）
+  - 健康度维持：92/100（优秀）
+  - 4个关键文件全部完成
+
+### 2025-12-16 (晚间第2批) - 异常处理文档化重大进展
+- 💪 **TD-002 异常处理文档化：56%完成（从25%提升）**
+  - WindowsNetworkAdapterManager: 全部12个catch块完成 ✅
+    - 8个方法添加XML remarks说明设计意图
+    - 场景：PowerShell调用、跨进程操作、管理员权限
+  - LeadshineLtdmcBusAdapter: 全部13个catch块完成 ✅
+    - 8个方法添加XML remarks说明设计意图
+    - 场景：Native SDK互操作、安全包装器、重连流程
+  - 累计：30个catch块文档化（+19）
+
+- ✅ **构建验证**:
+  - Infrastructure项目：通过 ✅
+  - Drivers项目：通过 ✅
+  - 零新增错误或警告
+
+- 📊 **进度总结**:
+  - TD-002：25% → 56%（+31%）
+  - 健康度维持：92/100（优秀）
+  - 2个文件完成，零功能变更
 
 ### 2025-12-16 (晚间) - 继续推进
 - 🚀 **用户请求：继续处理，尽量解决更多技术债务**

@@ -187,6 +187,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 最大化传输缓存
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：PowerShell 属性查询和设置可能产生各种异常，失败不应影响其他配置。
+        /// This method intentionally catches all exception types due to PowerShell property queries.
+        /// </remarks>
         private void MaximizeTransmitBuffers(string adapterName)
         {
             try
@@ -212,7 +217,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
 
                 _logger.LogWarning($"网络适配器 '{adapterName}' 未找到传输缓存属性或无法获取最大值");
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: PowerShell property queries can fail in various ways
             {
                 _logger.LogError(ex, $"最大化网络适配器 '{adapterName}' 的传输缓存时发生错误");
             }
@@ -221,6 +226,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 检查网卡属性是否存在
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：属性检查失败应返回 false 而非抛出异常，确保主流程继续。
+        /// This method intentionally catches all exception types to return false instead of throwing.
+        /// </remarks>
         private bool CheckAdapterProperty(string adapterName, string propertyName)
         {
             try
@@ -246,7 +256,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
 
                 return !string.IsNullOrWhiteSpace(output) && process.ExitCode == 0;
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Property check failures should return false, not throw
             {
                 _logger.LogDebug(ex, $"检查网络适配器 '{adapterName}' 的属性 '{propertyName}' 时发生错误");
                 return false;
@@ -256,6 +266,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 获取网卡属性的最大值
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：属性值解析失败应返回 null 而非抛出异常，确保主流程继续。
+        /// This method intentionally catches all exception types to return null instead of throwing.
+        /// </remarks>
         private string? GetAdapterPropertyMaxValue(string adapterName, string propertyName)
         {
             try
@@ -298,7 +313,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
 
                 return null;
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Property value parsing failures should return null, not throw
             {
                 _logger.LogDebug(ex, $"获取网络适配器 '{adapterName}' 的属性 '{propertyName}' 最大值时发生错误");
                 return null;
@@ -308,6 +323,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 设置网卡属性
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：属性设置需要管理员权限，可能产生 UnauthorizedAccessException、Win32Exception 等多种异常。
+        /// This method intentionally catches all exception types due to admin rights requirement.
+        /// </remarks>
         private void SetAdapterProperty(string adapterName, string propertyName, string value)
         {
             try
@@ -342,7 +362,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
                     _logger.LogWarning($"设置网络适配器属性失败: {error}");
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Admin rights requirement can cause UnauthorizedAccessException, Win32Exception, etc.
             {
                 _logger.LogError(ex, $"设置网络适配器 '{adapterName}' 的属性 '{propertyName}' 时发生错误");
             }
@@ -351,6 +371,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 禁用网卡节能功能
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：多个电源管理配置步骤可能失败，不应影响其他网卡的配置。
+        /// This method intentionally catches all exception types to isolate power management failures.
+        /// </remarks>
         private void DisablePowerManagement(string adapterName)
         {
             try
@@ -368,7 +393,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
 
                 _logger.LogInformation($"网络适配器 '{adapterName}' 的节能功能已禁用");
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Multiple power management steps can fail independently
             {
                 _logger.LogError(ex, $"禁用网络适配器 '{adapterName}' 的节能功能时发生错误");
             }
@@ -377,6 +402,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 禁用设备级别的电源节省
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：两次 PowerShell 调用（检查 + 禁用）可能产生多种异常，失败不应中断整个配置流程。
+        /// This method intentionally catches all exception types due to two PowerShell calls.
+        /// </remarks>
         private void DisableDevicePowerSaving(string adapterName)
         {
             try
@@ -443,7 +473,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Two PowerShell calls (check + disable) can throw various exceptions
             {
                 _logger.LogWarning(ex, $"禁用网络适配器 '{adapterName}' 的设备电源节省时发生错误");
             }
@@ -452,6 +482,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 禁用节能以太网 (Energy-Efficient Ethernet, EEE)
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：不同网卡的 EEE 属性名称和取值不同，需要多次尝试，失败不应中断整个配置。
+        /// This method intentionally catches all exception types due to multiple property attempts.
+        /// </remarks>
         private void DisableEnergyEfficientEthernet(string adapterName)
         {
             try
@@ -479,7 +514,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
                                 _logger.LogInformation($"已禁用网络适配器 '{adapterName}' 的节能以太网 (属性: {property})");
                                 return; // 成功设置后退出
                             }
-                            catch
+                            catch (Exception) // Intentional: Try next value if current one fails
                             {
                                 // 尝试下一个值
                                 continue;
@@ -490,7 +525,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
 
                 _logger.LogDebug($"网络适配器 '{adapterName}' 不支持节能以太网或已经禁用");
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Multiple property attempts can fail, should not interrupt configuration
             {
                 _logger.LogWarning(ex, $"禁用网络适配器 '{adapterName}' 的节能以太网时发生错误");
             }
@@ -499,6 +534,11 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
         /// <summary>
         /// 重启网络适配器（如果需要的话）
         /// </summary>
+        /// <remarks>
+        /// 此方法故意捕获所有异常类型（catch Exception）。
+        /// 原因：网卡重启需要管理员权限，可能产生 UnauthorizedAccessException、Win32Exception 等多种异常。
+        /// This method intentionally catches all exception types due to admin rights requirement for restart.
+        /// </remarks>
         public void RestartAdapter(string adapterName)
         {
             try
@@ -535,7 +575,7 @@ namespace ZakYip.Singulation.Infrastructure.Runtime
                     _logger.LogWarning($"重启网络适配器失败: {error}");
                 }
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Adapter restart requires admin rights, can throw UnauthorizedAccessException, Win32Exception, etc.
             {
                 _logger.LogError(ex, $"重启网络适配器 '{adapterName}' 时发生错误");
             }
