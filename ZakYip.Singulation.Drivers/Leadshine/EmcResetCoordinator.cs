@@ -54,7 +54,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                     _mmf = MemoryMappedFile.CreateOrOpen(_mmfName, 4096, MemoryMappedFileAccess.ReadWrite);
                     _logger.Info($"[EMC Coordinator] 内存映射文件已创建/打开: {_mmfName}");
                 }
-                catch (Exception ex)
+                catch (Exception ex) // Intentional: MMF creation failure should not crash the component
                 {
                     _logger.Error(ex, $"[EMC Coordinator] 创建内存映射文件失败: {_mmfName}");
                     _mmf = null;
@@ -120,7 +120,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
                 _logger.Info($"[EMC Coordinator] 复位通知已广播: 卡号={_cardNo}, 类型={resetType}, 进程={currentProcess.ProcessName}({currentProcess.Id})");
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Broadcast failure should not crash the coordinator
             {
                 _logger.Error(ex, "[EMC Coordinator] 广播复位通知失败");
             }
@@ -181,7 +181,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                 // 触发事件
                 ResetNotificationReceived?.Invoke(this, new EmcResetEventArgs(notification));
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Polling failure should not crash the timer thread
             {
                 _logger.Error(ex, "[EMC Coordinator] 轮询通知失败");
             }

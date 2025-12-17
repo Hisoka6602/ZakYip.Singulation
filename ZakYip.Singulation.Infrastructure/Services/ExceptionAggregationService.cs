@@ -95,7 +95,7 @@ public sealed class ExceptionAggregationService : BackgroundService
         {
             _logger.ExceptionAggregationServiceCancelled();
         }
-        catch (Exception ex)
+        catch (Exception ex) // Intentional: Background service - log and swallow to prevent host crash
         {
             _logger.LogError(ex, "异常聚合服务发生错误");
         }

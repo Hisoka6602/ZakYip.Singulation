@@ -53,7 +53,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
                 return Task.FromResult<FaultDiagnosisDto?>(DiagnoseAxisDrive(drive));
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Diagnosis failure should return null, not crash
+            {
                 _logger.LogError(ex, "诊断轴 {AxisId} 失败", axisId);
                 return Task.FromResult<FaultDiagnosisDto?>(null);
             }
@@ -75,7 +76,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     }
                 }
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Batch diagnosis should continue on errors, return partial results
+            {
                 _logger.LogError(ex, "诊断所有轴失败");
             }
 

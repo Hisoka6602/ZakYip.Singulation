@@ -102,7 +102,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             catch (OperationCanceledException) {
                 _logger.LogInformation("速度联动服务已取消");
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Background service errors should be logged and rethrown for host to handle
+            {
                 _logger.LogError(ex, "速度联动服务异常");
                 throw;
             }
@@ -165,7 +166,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
             catch (OperationCanceledException) {
                 throw;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Speed linkage check errors should update statistics and rethrow
+            {
                 lock (_stateLock) {
                     _totalErrors++;
                     _lastErrorTime = _clock.UtcNow;
@@ -293,7 +295,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                             message);
                     }
                 }
-                catch (Exception ex) {
+                catch (Exception ex) // Intentional: Single IO write failure should not stop batch processing
+                {
                     failCount++;
                     _logger.LogError(
                         ex,

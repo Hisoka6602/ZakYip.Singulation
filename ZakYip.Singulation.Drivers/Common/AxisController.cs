@@ -210,7 +210,8 @@ namespace ZakYip.Singulation.Drivers.Common {
                     try {
                         await drive.WriteSpeedAsync(defaultSpeed, ct);
                     }
-                    catch (Exception ex) {
+                    catch (Exception ex) // Intentional: Individual axis speed write failure should not prevent enabling other axes
+                    {
                         OnControllerFaulted($"[EnableAllAsync] 轴={drive.Axis} 设置默认速度失败: {ex.Message}");
                     }
                 }

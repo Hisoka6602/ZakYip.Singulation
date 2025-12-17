@@ -101,7 +101,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                             _logger.IoLinkageFailed(ioPoint.BitNumber, message ?? "Unknown");
                         }
                     }
-                    catch (Exception ex) {
+                    catch (Exception ex) // Intentional: Single IO write failure should not stop other IOs
+                    {
                         failCount++;
                         _logger.IoLinkageException(ex, ioPoint.BitNumber);
                         _exceptionAggregation?.RecordException(ex, $"IoLinkage:Bit{ioPoint.BitNumber}");
@@ -114,7 +115,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                 // 取消操作，直接抛出，不记录为错误
                 throw;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Linkage execution errors should be logged but not crash the service
+            {
                 _logger.LogError(ex, "执行 IO 联动时发生异常");
                 _exceptionAggregation?.RecordException(ex, "IoLinkage:Execute");
             }
