@@ -52,7 +52,7 @@ public sealed class ConnectionHealthCheckService
                 var busAdapter = _axisController.Bus as LeadshineLtdmcBusAdapter;
                 _leadshineIp = busAdapter?.ControllerIp;
             }
-            catch (Exception ex)
+            catch (Exception ex) // Intentional: Graceful initialization - bus adapter access may fail
             {
                 _logger.LogWarning(ex, "无法从AxisController获取雷赛IP地址");
             }
@@ -127,7 +127,7 @@ public sealed class ConnectionHealthCheckService
                     var drives = _axisController.Drives;
                     health.IsInitialized = drives != null && drives.Any();
                     
-                    if (health.IsInitialized)
+                    if (health.IsInitialized && drives != null)
                     {
                         diagnostics.Add($"✓ 控制器已初始化 ({drives.Count} 个轴)");
                     }
@@ -157,7 +157,7 @@ public sealed class ConnectionHealthCheckService
                 diagnostics.Add("⚠ AxisController未注入，无法检查初始化状态");
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) // Intentional: Health check should not fail - collect diagnostics instead
         {
             _logger.LogError(ex, "检查雷赛连接时发生异常");
             diagnostics.Add($"✗ 检查失败: {ex.Message}");
@@ -227,7 +227,7 @@ public sealed class ConnectionHealthCheckService
                 diagnostics.Add("⚠ 上游传输层未配置");
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) // Intentional: Health check should not fail - collect diagnostics instead
         {
             _logger.LogError(ex, "检查上游连接时发生异常");
             diagnostics.Add($"✗ 检查失败: {ex.Message}");
@@ -264,7 +264,7 @@ public sealed class ConnectionHealthCheckService
                 ErrorMessage = $"Ping失败: {ex.Message}"
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) // Intentional: Network operation - various exceptions possible (timeout, unreachable, etc)
         {
             return new PingResult
             {

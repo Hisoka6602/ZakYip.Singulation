@@ -33,12 +33,19 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// <summary>
         /// 初始化服务，获取控制器卡号。
         /// </summary>
+        /// <remarks>
+        /// 捕获所有异常是有意为之的设计：
+        /// - 初始化失败时使用默认卡号(0)继续运行
+        /// - 避免初始化异常导致整个服务不可用
+        /// - 配置存储可能产生各种运行时异常（文件IO、反序列化、数据库错误等）
+        /// </remarks>
         private async Task InitializeAsync(CancellationToken ct) {
             try {
                 var options = await _ctrlOptsStore.GetAsync(ct);
                 _cardNo = (ushort)options.Template.Card;
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Graceful degradation on initialization failure
+            {
                 _logger.LogError(ex, "初始化 IoStatusService 失败");
                 _cardNo = 0; // 默认卡号
             }
@@ -117,6 +124,12 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// <summary>
         /// 读取单个输入 IO 状态。
         /// </summary>
+        /// <remarks>
+        /// 捕获所有异常是有意为之的设计：
+        /// - Native SDK调用可能产生多种异常类型（SEHException, AccessViolationException, DllNotFoundException等）
+        /// - 单个IO读取失败不应影响其他IO的读取
+        /// - 返回带错误标记的结果对象而非抛出异常，确保批量查询的稳定性
+        /// </remarks>
         private IoStatusDto ReadInputBit(int bitNo) {
             try {
                 // 调用雷赛 API 读取输入位
@@ -141,7 +154,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     ErrorMessage = null
                 };
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Native SDK interop isolation
+            {
                 _logger.LogError(ex, "读取输入位 {BitNo} 时发生异常", bitNo);
                 return new IoStatusDto {
                     BitNumber = bitNo,
@@ -156,6 +170,12 @@ namespace ZakYip.Singulation.Infrastructure.Services {
         /// <summary>
         /// 读取单个输出 IO 状态。
         /// </summary>
+        /// <remarks>
+        /// 捕获所有异常是有意为之的设计：
+        /// - Native SDK调用可能产生多种异常类型（SEHException, AccessViolationException, DllNotFoundException等）
+        /// - 单个IO读取失败不应影响其他IO的读取
+        /// - 返回带错误标记的结果对象而非抛出异常，确保批量查询的稳定性
+        /// </remarks>
         private IoStatusDto ReadOutputBit(int bitNo) {
             try {
                 // 调用雷赛 API 读取输出位
@@ -180,7 +200,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
                     ErrorMessage = null
                 };
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Native SDK interop isolation
+            {
                 _logger.LogError(ex, "读取输出位 {BitNo} 时发生异常", bitNo);
                 return new IoStatusDto {
                     BitNumber = bitNo,
@@ -252,7 +273,8 @@ namespace ZakYip.Singulation.Infrastructure.Services {
 
                 return (true, "写入成功");
             }
-            catch (Exception ex) {
+            catch (Exception ex) // Intentional: Native SDK interop + graceful error reporting
+            {
                 var errorMsg = $"写入输出 IO 位 {bitNo} 时发生异常：{ex.Message}";
                 _logger.LogError(ex, errorMsg);
                 return (false, errorMsg);
