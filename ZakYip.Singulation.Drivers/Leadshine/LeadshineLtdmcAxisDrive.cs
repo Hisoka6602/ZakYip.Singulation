@@ -450,168 +450,218 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             return true;
         }
 
-        /// <summary>上电/使能：状态机 + 强制读取 PPR（未就绪则禁止写入）。使用 Polly 重试策略，最多重试3次。</summary>
+        /// <summary>
+        /// 上电/使能：状态机 + 强制读取 PPR（未就绪则禁止写入）。使用 Polly 重试策略，最多重试3次。
+        /// </summary>
+        /// <remarks>
+        /// <para>状态行为说明：</para>
+        /// <list type="bullet">
+        /// <item><description>成功：IsEnabled = true, Status = Connected</description></item>
+        /// <item><description>失败（之前未使能）：IsEnabled = false, Status = Faulted</description></item>
+        /// <item><description>失败（之前已使能）：IsEnabled 保持 true, Status = Faulted</description></item>
+        /// </list>
+        /// <para>在重复使能已使能轴失败时，保留 IsEnabled = true 是为了避免覆盖之前的有效状态。
+        /// 此时 Status = Faulted 表明操作失败，但轴可能仍处于使能状态。</para>
+        /// </remarks>
         public async Task EnableAsync(CancellationToken ct = default)
         {
-            await _retryPipe.ExecuteAsync(async (CancellationToken cancellationToken) =>
+            var wasEnabled = IsEnabled; // 记录原始状态
+            try
             {
-                await ThrottleAsync(cancellationToken);
-
-                // 简化封装：写 ControlWord、延时，然后验证
-                async Task<bool> WriteAndVerifyCtrlAsync(ushort expectedValue, int delayMs)
+                await _retryPipe.ExecuteAsync(async (CancellationToken cancellationToken) =>
                 {
-                    var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, expectedValue);
-                    if (ret != 0)
+                    await ThrottleAsync(cancellationToken);
+
+                    // 简化封装：写 ControlWord、延时，然后验证
+                    async Task<bool> WriteAndVerifyCtrlAsync(ushort expectedValue, int delayMs)
                     {
-                        SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
-                        throw new InvalidOperationException(LastErrorMessage!);
-                    }
-                    if (delayMs > 0)
-                        await Task.Delay(delayMs, cancellationToken);
-                    
-                    // 读回验证
-                    var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort actualValue, suppressLog: true);
-                    if (readRet == 0)
-                    {
-                        Debug.WriteLine($"[Enable] 写入 ControlWord: 0x{expectedValue:X4}, 读回: 0x{actualValue:X4}");
-                        // 验证关键位是否设置正确（不要求完全相等，因为某些位可能由驱动器控制）
-                        // 对于 EnableOperation (0x000F)，检查 bit0-3 是否都为1
-                        if (expectedValue == LeadshineProtocolMap.ControlWord.EnableOperation)
+                        var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, expectedValue);
+                        if (ret != 0)
                         {
-                            if ((actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationMask) != LeadshineProtocolMap.ControlWordMask.EnableOperationMask)
+                            SetErrorFromRet("write 0x6040 (ControlWord:<step>)", ret);
+                            throw new InvalidOperationException(LastErrorMessage!);
+                        }
+                        if (delayMs > 0)
+                            await Task.Delay(delayMs, cancellationToken);
+                        
+                        // 读回验证
+                        var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort actualValue, suppressLog: true);
+                        if (readRet == 0)
+                        {
+                            Debug.WriteLine($"[Enable] 写入 ControlWord: 0x{expectedValue:X4}, 读回: 0x{actualValue:X4}");
+                            // 验证关键位是否设置正确（不要求完全相等，因为某些位可能由驱动器控制）
+                            // 对于 EnableOperation (0x000F)，检查 bit0-3 是否都为1
+                            if (expectedValue == LeadshineProtocolMap.ControlWord.EnableOperation &&
+                                (actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationMask) != LeadshineProtocolMap.ControlWordMask.EnableOperationMask)
                             {
                                 throw new InvalidOperationException($"EnableOperation 验证失败: 期望 bit0-3=1, 实际 ControlWord=0x{actualValue:X4}");
                             }
                         }
+                        return true;
                     }
-                    return true;
-                }
 
-                // 1) 清除报警：先读取 StatusWord 检查是否有故障
-                var statusRet = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort statusWord, suppressLog: true);
-                if (statusRet == 0)
-                {
-                    Debug.WriteLine($"[Enable] 初始 StatusWord: 0x{statusWord:X4}");
+                    // 1) 清除报警：先读取 StatusWord 检查是否有故障
+                    var statusRet = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort statusWord, suppressLog: true);
+                    if (statusRet == 0)
+                    {
+                        Debug.WriteLine($"[Enable] 初始 StatusWord: 0x{statusWord:X4}");
+                        
+                        // 如果 Fault 位（bit3）为 1，表示有故障，需要清除
+                        if ((statusWord & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
+                        {
+                            Debug.WriteLine("[Enable] 检测到故障状态，执行 FaultReset");
+                            
+                            // 写入 FaultReset 命令
+                            var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.FaultReset);
+                            if (ret != 0)
+                            {
+                                SetErrorFromRet("write 0x6040 (ControlWord:FaultReset)", ret);
+                                throw new InvalidOperationException(LastErrorMessage!);
+                            }
+                            
+                            // 等待故障清除，并验证 StatusWord
+                            await Task.Delay(LeadshineProtocolMap.DelayMs.AfterFaultReset, cancellationToken);
+                            
+                            // 读取 StatusWord 验证故障是否已清除
+                            var verifyRet = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort verifyStatus, suppressLog: true);
+                            if (verifyRet != 0)
+                            {
+                                // 无法读取 StatusWord，无法验证故障是否清除
+                                SetErrorFromRet("read 0x6041 (StatusWord) after FaultReset", verifyRet);
+                                throw new InvalidOperationException(LastErrorMessage!);
+                            }
+                            
+                            Debug.WriteLine($"[Enable] FaultReset 后 StatusWord: 0x{verifyStatus:X4}");
+                            if ((verifyStatus & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
+                            {
+                                throw new InvalidOperationException($"FaultReset 失败: 故障位仍然为1, StatusWord=0x{verifyStatus:X4}");
+                            }
+                        }
+                    }
                     
-                    // 如果 Fault 位（bit3）为 1，表示有故障，需要清除
-                    if ((statusWord & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
+                    // 2) 清零控制字，准备状态机
+                    await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.Clear, LeadshineProtocolMap.DelayMs.AfterClear);
+
+                    // 3) 设置模式：速度模式 (PV=3)
+                    var m = WriteRxPdo(LeadshineProtocolMap.Index.ModeOfOperation, LeadshineProtocolMap.Mode.ProfileVelocity);
+                    if (m != 0)
+                    { throw new InvalidOperationException("Set Mode=PV failed"); }
+                    await Task.Delay(LeadshineProtocolMap.DelayMs.AfterSetMode, cancellationToken);
+
+                    // 4) 402 状态机三步
+                    await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
+                    await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
+                    await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
+
+                    // 5) 强制读取 PPR（未取到禁止写速度）
+                    if (!Volatile.Read(ref _sPprReady))
                     {
-                        Debug.WriteLine("[Enable] 检测到故障状态，执行 FaultReset");
-                        
-                        // 写入 FaultReset 命令
-                        var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.FaultReset);
-                        if (ret != 0)
+                        var ppr = await ReadAxisPulsesPerRevAsync(cancellationToken);
+                        if (ppr > 0)
                         {
-                            SetErrorFromRet("write 0x6040 (ControlWord:FaultReset)", ret);
-                            throw new InvalidOperationException(LastErrorMessage!);
+                            Volatile.Write(ref _sPpr, ppr);
+                            Volatile.Write(ref _sPprReady, true);
+                            Debug.WriteLine($"[PPR] 使能时初始化成功: {ppr}");
                         }
-                        
-                        // 等待故障清除，并验证 StatusWord
-                        await Task.Delay(LeadshineProtocolMap.DelayMs.AfterFaultReset, cancellationToken);
-                        
-                        // 读取 StatusWord 验证故障是否已清除
-                        var verifyRet = ReadTxPdo(LeadshineProtocolMap.Index.StatusWord, out ushort verifyStatus, suppressLog: true);
-                        if (verifyRet != 0)
+                        else
                         {
-                            // 无法读取 StatusWord，无法验证故障是否清除
-                            SetErrorFromRet("read 0x6041 (StatusWord) after FaultReset", verifyRet);
-                            throw new InvalidOperationException(LastErrorMessage!);
-                        }
-                        
-                        Debug.WriteLine($"[Enable] FaultReset 后 StatusWord: 0x{verifyStatus:X4}");
-                        if ((verifyStatus & LeadshineProtocolMap.StatusWordMask.FaultBit) != 0)
-                        {
-                            throw new InvalidOperationException($"FaultReset 失败: 故障位仍然为1, StatusWord=0x{verifyStatus:X4}");
+                            throw new InvalidOperationException("使能失败：未能读取到有效的 PPR（脉冲/转），禁止写入速度指令");
                         }
                     }
-                }
-                
-                // 2) 清零控制字，准备状态机
-                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.Clear, LeadshineProtocolMap.DelayMs.AfterClear);
+                }, ct).ConfigureAwait(false);
 
-                // 3) 设置模式：速度模式 (PV=3)
-                var m = WriteRxPdo(LeadshineProtocolMap.Index.ModeOfOperation, LeadshineProtocolMap.Mode.ProfileVelocity);
-                if (m != 0)
-                { throw new InvalidOperationException("Set Mode=PV failed"); }
-                await Task.Delay(LeadshineProtocolMap.DelayMs.AfterSetMode, cancellationToken);
-
-                // 4) 402 状态机三步
-                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.Shutdown, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
-                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.SwitchOn, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
-                await WriteAndVerifyCtrlAsync(LeadshineProtocolMap.ControlWord.EnableOperation, LeadshineProtocolMap.DelayMs.BetweenStateCmds);
-
-                // 5) 强制读取 PPR（未取到禁止写速度）
-                if (!Volatile.Read(ref _sPprReady))
+                // 状态更新仅在成功后执行一次
+                UpdateStatus(DriverStatus.Connected, "EnableAsync", "使能成功");
+                IsEnabled = true;
+            }
+            catch (Exception)
+            {
+                // 使能操作失败：
+                // - 如果之前未使能，设置为 false（保守）
+                // - 如果之前已使能，保持原状态（因为可能只是重复使能失败）
+                // 总是设置状态为 Faulted 以表明操作失败
+                if (!wasEnabled)
                 {
-                    var ppr = await ReadAxisPulsesPerRevAsync(cancellationToken);
-                    if (ppr > 0)
-                    {
-                        Volatile.Write(ref _sPpr, ppr);
-                        Volatile.Write(ref _sPprReady, true);
-                        Debug.WriteLine($"[PPR] 使能时初始化成功: {ppr}");
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException("使能失败：未能读取到有效的 PPR（脉冲/转），禁止写入速度指令");
-                    }
+                    IsEnabled = false;
                 }
-            }, ct).ConfigureAwait(false);
-
-            // 状态更新仅在成功后执行一次
-            UpdateStatus(DriverStatus.Connected, "EnableAsync", "使能成功");
-            IsEnabled = true;
+                UpdateStatus(DriverStatus.Faulted, "EnableAsync", "使能失败");
+                throw;
+            }
         }
 
-        /// <summary>禁用（安全停机 + 状态回退 + 本地状态复位）。使用 Polly 重试策略，最多重试3次。</summary>
+        /// <summary>
+        /// 禁用（安全停机 + 状态回退 + 本地状态复位）。使用 Polly 重试策略，最多重试3次。
+        /// </summary>
+        /// <remarks>
+        /// <para>状态行为说明：</para>
+        /// <list type="bullet">
+        /// <item><description>成功：IsEnabled = false, Status = Disconnected</description></item>
+        /// <item><description>失败：IsEnabled = true（保守假设轴仍使能）, Status = Faulted</description></item>
+        /// </list>
+        /// <para>禁用失败时设置 IsEnabled = true 是保守策略，假设硬件可能仍处于使能状态，
+        /// 避免本地状态与实际硬件状态不一致导致的安全问题。</para>
+        /// </remarks>
         public async ValueTask DisableAsync(CancellationToken ct = default)
         {
-            await _retryPipe.ExecuteAsync(async (CancellationToken cancellationToken) =>
+            try
             {
-                await ThrottleAsync(cancellationToken);
-
-                // 1) 停止运动
-                _ = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, 0, suppressLog: true);
-
-                // 2) QuickStop
-                var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.QuickStop);
-                if (ret != 0)
+                await _retryPipe.ExecuteAsync(async (CancellationToken cancellationToken) =>
                 {
-                    SetErrorFromRet("write 0x6040 (ControlWord:QuickStop)", ret);
-                    throw new InvalidOperationException(LastErrorMessage!);
-                }
-                await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
+                    await ThrottleAsync(cancellationToken);
 
-                // 3) Shutdown 进入 Ready to Switch On
-                var cw = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.Shutdown);
-                if (cw != 0)
-                {
-                    SetErrorFromRet("write 0x6040 (ControlWord:Shutdown)", cw);
-                    throw new InvalidOperationException($"Disable: write ControlWord=Shutdown(0x0006) failed, ret={cw}");
-                }
-                await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
+                    // 1) 停止运动
+                    _ = WriteRxPdo(LeadshineProtocolMap.Index.TargetVelocity, 0, suppressLog: true);
 
-                // 4) 读回验证 ControlWord，确保 Shutdown 成功（bit3 应该为0）
-                var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort actualValue, suppressLog: true);
-                if (readRet == 0)
-                {
-                    Debug.WriteLine($"[Disable] Shutdown 后读回 ControlWord: 0x{actualValue:X4}");
-                    // 验证 bit3 (EnableOperation) 是否为0，表示已经禁用
-                    // 注意：驱动器可能会修改某些位，所以不要求完全等于 Shutdown 值
-                    if ((actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationBit) != 0)
+                    // 2) QuickStop
+                    var ret = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.QuickStop);
+                    if (ret != 0)
                     {
-                        throw new InvalidOperationException($"Disable 验证失败: EnableOperation 位仍然为1, 实际 ControlWord=0x{actualValue:X4}");
+                        SetErrorFromRet("write 0x6040 (ControlWord:QuickStop)", ret);
+                        throw new InvalidOperationException(LastErrorMessage!);
                     }
-                }
-            }, ct).ConfigureAwait(false);
+                    await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
 
-            // 状态清理仅在成功后执行一次
-            _health.Stop();
-            _fails.Reset();
+                    // 3) Shutdown 进入 Ready to Switch On
+                    var cw = WriteRxPdo(LeadshineProtocolMap.Index.ControlWord, LeadshineProtocolMap.ControlWord.Shutdown);
+                    if (cw != 0)
+                    {
+                        SetErrorFromRet("write 0x6040 (ControlWord:Shutdown)", cw);
+                        throw new InvalidOperationException($"Disable: write ControlWord=Shutdown(0x0006) failed, ret={cw}");
+                    }
+                    await Task.Delay(LeadshineProtocolMap.DelayMs.BetweenStateCmds, cancellationToken);
 
-            UpdateStatus(DriverStatus.Disconnected, "DisableAsync", "禁用成功");
-            Volatile.Write(ref _lastFbStamp, 0);
-            _lastFbMmps = 0;
-            IsEnabled = false;
+                    // 4) 读回验证 ControlWord，确保 Shutdown 成功（bit3 应该为0）
+                    var readRet = ReadTxPdo(LeadshineProtocolMap.Index.ControlWord, out ushort actualValue, suppressLog: true);
+                    if (readRet == 0)
+                    {
+                        Debug.WriteLine($"[Disable] Shutdown 后读回 ControlWord: 0x{actualValue:X4}");
+                        // 验证 bit3 (EnableOperation) 是否为0，表示已经禁用
+                        // 注意：驱动器可能会修改某些位，所以不要求完全等于 Shutdown 值
+                        if ((actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationBit) != 0)
+                        {
+                            throw new InvalidOperationException($"Disable 验证失败: EnableOperation 位仍然为1, 实际 ControlWord=0x{actualValue:X4}");
+                        }
+                    }
+                }, ct).ConfigureAwait(false);
+
+                // 状态清理仅在成功后执行一次
+                _health.Stop();
+                _fails.Reset();
+
+                UpdateStatus(DriverStatus.Disconnected, "DisableAsync", "禁用成功");
+                Volatile.Write(ref _lastFbStamp, 0);
+                _lastFbMmps = 0;
+                IsEnabled = false;
+            }
+            catch (Exception)
+            {
+                // 禁用失败时，保守起见假设轴可能仍处于使能状态
+                // 为保持本地状态与该假设一致，将 IsEnabled 设为 true
+                // 但更新状态为 Faulted
+                IsEnabled = true;
+                UpdateStatus(DriverStatus.Faulted, "DisableAsync", "禁用失败");
+                throw;
+            }
         }
 
         /// <summary>

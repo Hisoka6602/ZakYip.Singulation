@@ -147,36 +147,59 @@ namespace ZakYip.Singulation.Drivers.Common {
                 throw new InvalidOperationException(msg);
             }
 
-            // 使用 Parallel.ForEachAsync 并行执行所有轴的操作，每个操作启动前间隔1ms
-            // 这样可以避免并发调用过快导致部分轴执行失败
-            var index = 0;
-            await Parallel.ForEachAsync(_drives, ct, async (d, token) => {
-                // 为每个轴添加1ms的启动间隔，避免并发调用过快
-                var currentIndex = Interlocked.Increment(ref index) - 1;
-                if (currentIndex > 0) {
-                    await Task.Delay(1, token);
+            // 顺序执行所有轴的操作，每个操作之间间隔1ms
+            // 这样可以确保轴操作不会并发执行，避免竞态条件和硬件通信冲突
+            // 预分配异常列表容量以避免多次扩容
+            var exceptions = new List<Exception>(_drives.Count);
+            
+            for (int i = 0; i < _drives.Count; i++) {
+                if (ct.IsCancellationRequested) {
+                    throw new OperationCanceledException("轴操作被取消", ct);
                 }
                 
-                token.ThrowIfCancellationRequested();
+                var drive = _drives[i];
+                
                 try {
+                    // 添加延迟避免连续操作过快（除了第一个轴）
+                    if (i > 0) {
+                        await Task.Delay(1, ct);
+                    }
+                    
                     // 记录操作开始和轴状态
-                    OnControllerFaulted($"[轴操作开始] 轴={d.Axis}, 当前状态={d.Status}, 使能状态={d.IsEnabled}");
-                    await action(d);
-                    OnControllerFaulted($"[轴操作完成] 轴={d.Axis}, 当前状态={d.Status}, 使能状态={d.IsEnabled}");
+                    OnControllerFaulted($"[轴操作开始] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
+                    await action(drive);
+                    OnControllerFaulted($"[轴操作完成] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
                 }
                 catch (OperationCanceledException) {
                     throw; // Let cancellation propagate
                 }
                 catch (AxisOperationException ex) {
-                    OnControllerFaulted($"Drive {d.Axis}: {ex.Message}");
+                    var errorMsg = $"Drive {drive.Axis}: {ex.Message}";
+                    OnControllerFaulted(errorMsg);
+                    exceptions.Add(new InvalidOperationException(errorMsg, ex));
                 }
                 catch (HardwareCommunicationException ex) {
-                    OnControllerFaulted($"Drive {d.Axis}: Hardware communication error - {ex.Message}");
+                    var errorMsg = $"Drive {drive.Axis}: Hardware communication error - {ex.Message}";
+                    OnControllerFaulted(errorMsg);
+                    exceptions.Add(new InvalidOperationException(errorMsg, ex));
                 }
                 catch (InvalidOperationException ex) {
-                    OnControllerFaulted($"Drive {d.Axis}: Invalid operation - {ex.Message}");
+                    // Preserve the original InvalidOperationException and enrich with axis context
+                    OnControllerFaulted($"Drive {drive.Axis}: Invalid operation - {ex.Message}");
+                    try {
+                        ex.Data["Axis"] = drive.Axis;
+                    }
+                    catch {
+                        // Ignore any issues updating Data to avoid masking the original failure
+                    }
+                    exceptions.Add(ex);
                 }
-            });
+            }
+            
+            // 如果有任何轴操作失败，抛出聚合异常
+            if (exceptions.Count > 0) {
+                throw new AggregateException($"{exceptions.Count} 个轴操作失败", exceptions);
+            }
         }
 
         /// <summary>
@@ -185,8 +208,8 @@ namespace ZakYip.Singulation.Drivers.Common {
         /// <param name="ct">取消令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
         /// <remarks>
-        /// 此方法并行使能所有轴，每个轴之间有 1ms 的启动间隔。
-        /// 如果单个轴使能失败，会记录错误但不会中断其他轴的操作。
+        /// 此方法顺序使能所有轴，每个轴之间有 1ms 的间隔。
+        /// 如果任何轴使能失败，将抛出 AggregateException 包含所有失败信息。
         /// 使能后，如果轴没有设置默认速度或默认速度为0，将自动设置为1000mm/s。
         /// </remarks>
         public async Task EnableAllAsync(CancellationToken ct = default) {
@@ -195,10 +218,28 @@ namespace ZakYip.Singulation.Drivers.Common {
                 OnControllerFaulted($"[EnableAllAsync] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
             }
             
-            // 使能所有轴
-            await ForEachDriveAsync(d => d.EnableAsync(ct), ct);
+            // 使能所有轴（如果有失败会抛出 AggregateException）
+            try {
+                await ForEachDriveAsync(d => d.EnableAsync(ct), ct);
+            }
+            catch (AggregateException ex) {
+                // 记录所有失败的轴
+                OnControllerFaulted($"[EnableAllAsync] {ex.InnerExceptions.Count} 个轴使能失败");
+                throw;
+            }
             
-            // 检查并设置默认速度：如果轴没有默认速度或默认速度等于0，则设置为1000mm/s
+            // 验证所有轴是否真的已使能
+            var notEnabledAxes = _drives.Where(d => !d.IsEnabled).ToList();
+            if (notEnabledAxes.Count > 0) {
+                var axisIds = string.Join(", ", notEnabledAxes.Select(d => d.Axis.ToString()));
+                var msg = $"[EnableAllAsync] {notEnabledAxes.Count} 个轴使能后状态仍为未使能: {axisIds}";
+                OnControllerFaulted(msg);
+                throw new InvalidOperationException(msg);
+            }
+            
+            OnControllerFaulted($"[EnableAllAsync] 所有轴已成功使能");
+            
+            // 检查并设置默认速度：如果轴没有默认速度或速度等于0，则设置为1000mm/s
             for (int i = 0; i < _drives.Count; i++) {
                 var drive = _drives[i];
                 var currentSpeed = drive.LastTargetMmps;
@@ -224,15 +265,35 @@ namespace ZakYip.Singulation.Drivers.Common {
         /// <param name="ct">取消令牌。</param>
         /// <returns>表示异步操作的任务。</returns>
         /// <remarks>
-        /// 此方法并行禁用所有轴，每个轴之间有 1ms 的启动间隔。
-        /// 如果单个轴禁用失败，会记录错误但不会中断其他轴的操作。
+        /// 此方法顺序禁用所有轴，每个轴之间有 1ms 的间隔。
+        /// 如果任何轴禁用失败，将抛出 AggregateException 包含所有失败信息。
         /// </remarks>
-        public Task DisableAllAsync(CancellationToken ct = default) {
+        public async Task DisableAllAsync(CancellationToken ct = default) {
             OnControllerFaulted($"[DisableAllAsync] 开始禁用所有轴，轴数={_drives.Count}");
             foreach (var drive in _drives) {
                 OnControllerFaulted($"[DisableAllAsync] 轴={drive.Axis}, 当前状态={drive.Status}, 使能状态={drive.IsEnabled}");
             }
-            return ForEachDriveAsync(d => d.DisableAsync(ct).AsTask(), ct);
+            
+            // 禁用所有轴（如果有失败会抛出 AggregateException）
+            try {
+                await ForEachDriveAsync(d => d.DisableAsync(ct).AsTask(), ct);
+            }
+            catch (AggregateException ex) {
+                // 记录所有失败的轴
+                OnControllerFaulted($"[DisableAllAsync] {ex.InnerExceptions.Count} 个轴禁用失败");
+                throw;
+            }
+            
+            // 验证所有轴是否真的已禁用
+            var stillEnabledAxes = _drives.Where(d => d.IsEnabled).ToList();
+            if (stillEnabledAxes.Count > 0) {
+                var axisIds = string.Join(", ", stillEnabledAxes.Select(d => d.Axis.ToString()));
+                var msg = $"[DisableAllAsync] {stillEnabledAxes.Count} 个轴禁用后状态仍为已使能: {axisIds}";
+                OnControllerFaulted(msg);
+                throw new InvalidOperationException(msg);
+            }
+            
+            OnControllerFaulted($"[DisableAllAsync] 所有轴已成功禁用");
         }
 
         /// <summary>

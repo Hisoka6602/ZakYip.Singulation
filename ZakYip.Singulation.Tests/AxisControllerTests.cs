@@ -446,6 +446,7 @@ namespace ZakYip.Singulation.Tests {
         public int StopCalls { get; private set; }
         public int WriteSpeedCalls { get; private set; }
         private decimal? _lastFeedbackMmps;
+        private bool _isEnabled;
 
         public event EventHandler<AxisErrorEventArgs>? AxisFaulted;
 
@@ -461,7 +462,7 @@ namespace ZakYip.Singulation.Tests {
         public DriverStatus Status => DriverStatus.Connected;
         public decimal? LastTargetMmps { get; private set; }
         public decimal? LastFeedbackMmps => _lastFeedbackMmps;
-        public bool IsEnabled => true;
+        public bool IsEnabled => _isEnabled;
         public int LastErrorCode => 0;
         public string? LastErrorMessage => null;
         public decimal? MaxLinearMmps => 1000m;
@@ -492,9 +493,15 @@ namespace ZakYip.Singulation.Tests {
             return ValueTask.CompletedTask;
         }
 
-        public Task EnableAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task EnableAsync(CancellationToken ct = default) {
+            _isEnabled = true;
+            return Task.CompletedTask;
+        }
 
-        public ValueTask DisableAsync(CancellationToken ct = default) => ValueTask.CompletedTask;
+        public ValueTask DisableAsync(CancellationToken ct = default) {
+            _isEnabled = false;
+            return ValueTask.CompletedTask;
+        }
 
         public Task UpdateLinearLimitsAsync(decimal maxLinearMmps, decimal maxAccelMmps2, decimal maxDecelMmps2, CancellationToken ct = default) => Task.CompletedTask;
 
