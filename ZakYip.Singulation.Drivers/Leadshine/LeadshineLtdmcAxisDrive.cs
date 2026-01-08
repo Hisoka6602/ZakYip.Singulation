@@ -450,7 +450,19 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             return true;
         }
 
-        /// <summary>上电/使能：状态机 + 强制读取 PPR（未就绪则禁止写入）。使用 Polly 重试策略，最多重试3次。</summary>
+        /// <summary>
+        /// 上电/使能：状态机 + 强制读取 PPR（未就绪则禁止写入）。使用 Polly 重试策略，最多重试3次。
+        /// </summary>
+        /// <remarks>
+        /// <para>状态行为说明：</para>
+        /// <list type="bullet">
+        /// <item><description>成功：IsEnabled = true, Status = Connected</description></item>
+        /// <item><description>失败（之前未使能）：IsEnabled = false, Status = Faulted</description></item>
+        /// <item><description>失败（之前已使能）：IsEnabled 保持 true, Status = Faulted</description></item>
+        /// </list>
+        /// <para>在重复使能已使能轴失败时，保留 IsEnabled = true 是为了避免覆盖之前的有效状态。
+        /// 此时 Status = Faulted 表明操作失败，但轴可能仍处于使能状态。</para>
+        /// </remarks>
         public async Task EnableAsync(CancellationToken ct = default)
         {
             var wasEnabled = IsEnabled; // 记录原始状态
@@ -479,12 +491,10 @@ namespace ZakYip.Singulation.Drivers.Leadshine
                             Debug.WriteLine($"[Enable] 写入 ControlWord: 0x{expectedValue:X4}, 读回: 0x{actualValue:X4}");
                             // 验证关键位是否设置正确（不要求完全相等，因为某些位可能由驱动器控制）
                             // 对于 EnableOperation (0x000F)，检查 bit0-3 是否都为1
-                            if (expectedValue == LeadshineProtocolMap.ControlWord.EnableOperation)
+                            if (expectedValue == LeadshineProtocolMap.ControlWord.EnableOperation &&
+                                (actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationMask) != LeadshineProtocolMap.ControlWordMask.EnableOperationMask)
                             {
-                                if ((actualValue & LeadshineProtocolMap.ControlWordMask.EnableOperationMask) != LeadshineProtocolMap.ControlWordMask.EnableOperationMask)
-                                {
-                                    throw new InvalidOperationException($"EnableOperation 验证失败: 期望 bit0-3=1, 实际 ControlWord=0x{actualValue:X4}");
-                                }
+                                throw new InvalidOperationException($"EnableOperation 验证失败: 期望 bit0-3=1, 实际 ControlWord=0x{actualValue:X4}");
                             }
                         }
                         return true;
@@ -579,7 +589,18 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             }
         }
 
-        /// <summary>禁用（安全停机 + 状态回退 + 本地状态复位）。使用 Polly 重试策略，最多重试3次。</summary>
+        /// <summary>
+        /// 禁用（安全停机 + 状态回退 + 本地状态复位）。使用 Polly 重试策略，最多重试3次。
+        /// </summary>
+        /// <remarks>
+        /// <para>状态行为说明：</para>
+        /// <list type="bullet">
+        /// <item><description>成功：IsEnabled = false, Status = Disconnected</description></item>
+        /// <item><description>失败：IsEnabled = true（保守假设轴仍使能）, Status = Faulted</description></item>
+        /// </list>
+        /// <para>禁用失败时设置 IsEnabled = true 是保守策略，假设硬件可能仍处于使能状态，
+        /// 避免本地状态与实际硬件状态不一致导致的安全问题。</para>
+        /// </remarks>
         public async ValueTask DisableAsync(CancellationToken ct = default)
         {
             try
@@ -635,7 +656,9 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             catch (Exception)
             {
                 // 禁用失败时，保守起见假设轴可能仍处于使能状态
+                // 为保持本地状态与该假设一致，将 IsEnabled 设为 true
                 // 但更新状态为 Faulted
+                IsEnabled = true;
                 UpdateStatus(DriverStatus.Faulted, "DisableAsync", "禁用失败");
                 throw;
             }

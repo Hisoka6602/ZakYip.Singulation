@@ -184,9 +184,15 @@ namespace ZakYip.Singulation.Drivers.Common {
                     exceptions.Add(new InvalidOperationException(errorMsg, ex));
                 }
                 catch (InvalidOperationException ex) {
-                    var errorMsg = $"Drive {drive.Axis}: Invalid operation - {ex.Message}";
-                    OnControllerFaulted(errorMsg);
-                    exceptions.Add(new InvalidOperationException(errorMsg, ex));
+                    // Preserve the original InvalidOperationException and enrich with axis context
+                    OnControllerFaulted($"Drive {drive.Axis}: Invalid operation - {ex.Message}");
+                    try {
+                        ex.Data["Axis"] = drive.Axis;
+                    }
+                    catch {
+                        // Ignore any issues updating Data to avoid masking the original failure
+                    }
+                    exceptions.Add(ex);
                 }
             }
             
