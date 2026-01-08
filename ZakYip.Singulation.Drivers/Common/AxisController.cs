@@ -149,7 +149,8 @@ namespace ZakYip.Singulation.Drivers.Common {
 
             // 顺序执行所有轴的操作，每个操作之间间隔1ms
             // 这样可以确保轴操作不会并发执行，避免竞态条件和硬件通信冲突
-            var exceptions = new List<Exception>();
+            // 预分配异常列表容量以避免多次扩容
+            var exceptions = new List<Exception>(_drives.Count);
             
             for (int i = 0; i < _drives.Count; i++) {
                 if (ct.IsCancellationRequested) {

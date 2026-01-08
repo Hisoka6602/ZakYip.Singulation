@@ -453,6 +453,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
         /// <summary>上电/使能：状态机 + 强制读取 PPR（未就绪则禁止写入）。使用 Polly 重试策略，最多重试3次。</summary>
         public async Task EnableAsync(CancellationToken ct = default)
         {
+            var wasEnabled = IsEnabled; // 记录原始状态
             try
             {
                 await _retryPipe.ExecuteAsync(async (CancellationToken cancellationToken) =>
@@ -565,8 +566,14 @@ namespace ZakYip.Singulation.Drivers.Leadshine
             }
             catch (Exception)
             {
-                // 确保失败时 IsEnabled 保持为 false
-                IsEnabled = false;
+                // 使能操作失败：
+                // - 如果之前未使能，设置为 false（保守）
+                // - 如果之前已使能，保持原状态（因为可能只是重复使能失败）
+                // 总是设置状态为 Faulted 以表明操作失败
+                if (!wasEnabled)
+                {
+                    IsEnabled = false;
+                }
                 UpdateStatus(DriverStatus.Faulted, "EnableAsync", "使能失败");
                 throw;
             }
