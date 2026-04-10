@@ -134,13 +134,13 @@ public class UdpDiscoveryOptions
 /// <summary>
 /// 服务发现信息（通过 UDP 广播的数据结构）
 /// </summary>
-public class ServiceDiscoveryInfo
+public sealed record ServiceDiscoveryInfo
 {
-    public string ServiceName { get; set; } = string.Empty;
-    public string ServiceType { get; set; } = string.Empty;
-    public string Version { get; set; } = string.Empty;
-    public int HttpPort { get; set; }
-    public int HttpsPort { get; set; }
-    public string SignalRPath { get; set; } = string.Empty;
-    public long Timestamp { get; set; }
+    public string ServiceName { get; init; } = string.Empty;
+    public string ServiceType { get; init; } = string.Empty;
+    public string Version { get; init; } = string.Empty;
+    public int HttpPort { get; init; }
+    public int HttpsPort { get; init; }
+    public string SignalRPath { get; init; } = string.Empty;
+    public long Timestamp { get; init; }
 }

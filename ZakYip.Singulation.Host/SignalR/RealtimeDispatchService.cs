@@ -41,6 +41,7 @@ namespace ZakYip.Singulation.Host.SignalR {
         /// <param name="chan">事件队列通道。</param>
         /// <param name="hub">SignalR 事件中心上下文。</param>
         /// <param name="logger">日志记录器。</param>
+        /// <param name="clock">系统时钟。</param>
         public RealtimeDispatchService(
             Channel<SignalRQueueItem> chan,
             IHubContext<EventsHub> hub,

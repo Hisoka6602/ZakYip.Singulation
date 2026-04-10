@@ -125,10 +125,7 @@ public sealed class ExceptionAggregationService : BackgroundService
                 },
                 (_, existing) =>
                 {
-                    existing.Count++;
-                    existing.LastOccurrence = record.Timestamp;
-                    existing.LastMessage = record.Message;
-                    return existing;
+                    return existing with { Count = existing.Count + 1, LastOccurrence = record.Timestamp, LastMessage = record.Message };
                 });
         }
 
@@ -199,14 +196,14 @@ public sealed class ExceptionAggregationService : BackgroundService
     /// 异常统计信息
     /// Exception statistics
     /// </summary>
-    public sealed class ExceptionStatistics
+    public sealed record ExceptionStatistics
     {
         public required string ExceptionType { get; init; }
         public required string Context { get; init; }
-        public long Count { get; set; }
-        public DateTime FirstOccurrence { get; set; }
-        public DateTime LastOccurrence { get; set; }
-        public string? LastMessage { get; set; }
-        public bool IsRetryable { get; set; }
+        public long Count { get; init; }
+        public DateTime FirstOccurrence { get; init; }
+        public DateTime LastOccurrence { get; init; }
+        public string? LastMessage { get; init; }
+        public bool IsRetryable { get; init; }
     }
 }
