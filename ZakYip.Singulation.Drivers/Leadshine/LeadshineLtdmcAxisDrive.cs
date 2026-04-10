@@ -41,7 +41,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
     public sealed class LeadshineLtdmcAxisDrive : IAxisDrive
     {
         private readonly ISystemClock _clock;
-        private DriverOptions _opts;
+        private volatile DriverOptions _opts;
         private volatile DriverStatus _status = DriverStatus.Disconnected;
         
         // 用于状态转换日志记录（通过事件发布）
