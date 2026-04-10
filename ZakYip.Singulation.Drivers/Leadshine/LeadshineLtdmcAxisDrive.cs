@@ -41,7 +41,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
     public sealed class LeadshineLtdmcAxisDrive : IAxisDrive
     {
         private readonly ISystemClock _clock;
-        private readonly DriverOptions _opts;
+        private DriverOptions _opts;
         private volatile DriverStatus _status = DriverStatus.Disconnected;
         
         // 用于状态转换日志记录（通过事件发布）
@@ -768,9 +768,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
             try
             {
-                _opts.MaxRpm = maxRpm;
-                _opts.MaxAccelRpmPerSec = maxAccelRpmPerSec;
-                _opts.MaxDecelRpmPerSec = maxDecelRpmPerSec;
+                _opts = _opts with { MaxRpm = maxRpm, MaxAccelRpmPerSec = maxAccelRpmPerSec, MaxDecelRpmPerSec = maxDecelRpmPerSec };
                 return Task.FromResult(true);
             }
             catch { return Task.FromResult(false); }
@@ -787,8 +785,7 @@ namespace ZakYip.Singulation.Drivers.Leadshine
 
             try
             {
-                _opts.PulleyPitchDiameterMm = rollerDiameterMm;
-                _opts.GearRatio = gearRatio;
+                _opts = _opts with { PulleyPitchDiameterMm = rollerDiameterMm, GearRatio = gearRatio };
 
                 // ★ 同步更新 PPR 缓存，让新换算立即生效
                 Volatile.Write(ref _sPpr, ppr);

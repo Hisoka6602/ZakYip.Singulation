@@ -277,11 +277,11 @@ public sealed class ConnectionHealthCheckService
     /// <summary>
     /// Ping结果内部类
     /// </summary>
-    private class PingResult
+    private sealed record PingResult
     {
-        public bool Success { get; set; }
-        public long? RoundtripTime { get; set; }
-        public string? ErrorMessage { get; set; }
+        public bool Success { get; init; }
+        public long? RoundtripTime { get; init; }
+        public string? ErrorMessage { get; init; }
     }
 }
 

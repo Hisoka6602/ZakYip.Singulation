@@ -72,17 +72,17 @@ public sealed class OperationStateTracker
     /// <summary>
     /// 操作状态
     /// </summary>
-    public class OperationState
+    public sealed record OperationState
     {
         /// <summary>
         /// 操作名称
         /// </summary>
-        public string Name { get; set; } = string.Empty;
+        public required string Name { get; init; }
 
         /// <summary>
         /// 开始时间
         /// </summary>
-        public DateTime StartTime { get; set; }
+        public required DateTime StartTime { get; init; }
 
         /// <summary>
         /// 获取运行时长

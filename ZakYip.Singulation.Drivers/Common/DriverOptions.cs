@@ -21,7 +21,7 @@ namespace ZakYip.Singulation.Drivers.Common {
         public required ushort NodeId { get; init; }
 
         /// <summary>齿轮比（电机轴:负载轴），例如 2.5 表示电机转 2.5 圈，负载 1 圈。</summary>
-        public required decimal GearRatio { get; set; } = 1m;
+        public required decimal GearRatio { get; init; } = 1m;
         /// <summary>是否反转</summary>
         public bool IsReverse { get; init; }
         /// <summary>丝杠螺距 (mm/转)</summary>
@@ -30,16 +30,16 @@ namespace ZakYip.Singulation.Drivers.Common {
         /// <summary>皮带轮直径 (mm)</summary>
         public decimal PulleyDiameterMm { get; init; }
         /// <summary>辊筒直径 (mm)</summary>
-        public required decimal PulleyPitchDiameterMm { get; set; }
+        public required decimal PulleyPitchDiameterMm { get; init; }
 
         /// <summary>最大转速 (rpm)。写速前限幅。</summary>
-        public decimal MaxRpm { get; set; } = 1813m;
+        public decimal MaxRpm { get; init; } = 1813m;
 
         /// <summary>最大加速度 (rpm/s)。写 0x6083 前限幅。</summary>
-        public decimal MaxAccelRpmPerSec { get; set; } = 1511m;
+        public decimal MaxAccelRpmPerSec { get; init; } = 1511m;
 
         /// <summary>最大减速度 (rpm/s)。写 0x6084 前限幅。</summary>
-        public decimal MaxDecelRpmPerSec { get; set; } = 1511m;
+        public decimal MaxDecelRpmPerSec { get; init; } = 1511m;
 
         /// <summary>写速度命令最小间隔（节流防抖）。</summary>
         public TimeSpan MinWriteInterval { get; init; } = TimeSpan.FromMilliseconds(5);
