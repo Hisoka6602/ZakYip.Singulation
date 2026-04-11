@@ -182,7 +182,7 @@ public sealed class ExceptionAggregationService : BackgroundService
     /// 异常记录
     /// Exception record
     /// </summary>
-    private sealed class ExceptionRecord
+    private sealed record ExceptionRecord
     {
         public required Exception Exception { get; init; }
         public required string Context { get; init; }
