@@ -170,7 +170,7 @@ public sealed class ConnectionHealthCheckService
             PingTimeMs = pingTimeMs,
             IsInitialized = isInitialized,
             ErrorMessage = errorMessage,
-            DiagnosticMessages = diagnostics
+            DiagnosticMessages = diagnostics.ToArray()
         };
     }
     
@@ -248,7 +248,7 @@ public sealed class ConnectionHealthCheckService
             IsTransportConnected = isTransportConnected,
             TransportState = transportState,
             ErrorMessage = errorMessage,
-            DiagnosticMessages = diagnostics
+            DiagnosticMessages = diagnostics.ToArray()
         };
     }
     
@@ -322,7 +322,7 @@ public sealed record LeadshineConnectionHealth
     public bool IsInitialized { get; init; }
     public bool IsConnected => IsPingable && IsInitialized;
     public string? ErrorMessage { get; init; }
-    public List<string> DiagnosticMessages { get; init; } = new();
+    public IReadOnlyList<string> DiagnosticMessages { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>
@@ -338,5 +338,5 @@ public sealed record UpstreamConnectionHealth
     public string TransportState { get; init; } = "Unknown";
     public bool IsConnected => IsPingable && IsTransportConnected;
     public string? ErrorMessage { get; init; }
-    public List<string> DiagnosticMessages { get; init; } = new();
+    public IReadOnlyList<string> DiagnosticMessages { get; init; } = Array.Empty<string>();
 }
