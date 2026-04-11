@@ -87,22 +87,21 @@ public sealed class ConnectionHealthCheckService
     /// </summary>
     private async Task<LeadshineConnectionHealth> CheckLeadshineConnectionAsync(CancellationToken ct)
     {
-        var health = new LeadshineConnectionHealth
-        {
-            IpAddress = _leadshineIp
-        };
-        
         var diagnostics = new List<string>();
-        
+        var isPingable = false;
+        long? pingTimeMs = null;
+        var isInitialized = false;
+        string? errorMessage = null;
+
         try
         {
             // 1. 检查IP是否可达（Ping）
             if (!string.IsNullOrEmpty(_leadshineIp))
             {
                 var pingResult = await PingHostAsync(_leadshineIp, 1000, ct);
-                health.IsPingable = pingResult.Success;
-                health.PingTimeMs = pingResult.RoundtripTime;
-                
+                isPingable = pingResult.Success;
+                pingTimeMs = pingResult.RoundtripTime;
+
                 if (pingResult.Success)
                 {
                     diagnostics.Add($"✓ IP {_leadshineIp} 可达 (Ping: {pingResult.RoundtripTime}ms)");
@@ -110,24 +109,24 @@ public sealed class ConnectionHealthCheckService
                 else
                 {
                     diagnostics.Add($"✗ IP {_leadshineIp} 不可达: {pingResult.ErrorMessage}");
-                    health.ErrorMessage = $"无法Ping通雷赛控制器IP: {pingResult.ErrorMessage}";
+                    errorMessage = $"无法Ping通雷赛控制器IP: {pingResult.ErrorMessage}";
                 }
             }
             else
             {
                 diagnostics.Add("⚠ 未配置雷赛控制器IP地址（可能使用本地PCI模式）");
-                health.IsPingable = true; // 本地模式假设可用
+                isPingable = true; // 本地模式假设可用
             }
-            
+
             // 2. 检查控制器是否初始化
             if (_axisController != null)
             {
                 try
                 {
                     var drives = _axisController.Drives;
-                    health.IsInitialized = drives != null && drives.Any();
-                    
-                    if (health.IsInitialized)
+                    isInitialized = drives != null && drives.Any();
+
+                    if (isInitialized)
                     {
                         diagnostics.Add($"✓ 控制器已初始化 ({drives!.Count} 个轴)");
                     }
@@ -139,7 +138,7 @@ public sealed class ConnectionHealthCheckService
                             diagnostics.Add("  提示: 未配置控制器IP地址");
                             diagnostics.Add("  建议: 如果使用以太网模式，请配置IP地址；如果使用本地PCI模式，请检查硬件连接");
                         }
-                        else if (health.IsPingable)
+                        else if (isPingable)
                         {
                             diagnostics.Add($"  提示: IP {_leadshineIp} 可达，但控制器初始化失败");
                             diagnostics.Add("  建议: 检查控制器配置和硬件连接");
@@ -149,7 +148,7 @@ public sealed class ConnectionHealthCheckService
                 catch (Exception ex)
                 {
                     diagnostics.Add($"✗ 检查控制器初始化状态时出错: {ex.Message}");
-                    health.ErrorMessage = $"检查控制器状态失败: {ex.Message}";
+                    errorMessage = $"检查控制器状态失败: {ex.Message}";
                 }
             }
             else
@@ -161,11 +160,18 @@ public sealed class ConnectionHealthCheckService
         {
             _logger.LogError(ex, "检查雷赛连接时发生异常");
             diagnostics.Add($"✗ 检查失败: {ex.Message}");
-            health.ErrorMessage = $"检查雷赛连接时发生异常: {ex.Message}";
+            errorMessage = $"检查雷赛连接时发生异常: {ex.Message}";
         }
-        
-        health.DiagnosticMessages = diagnostics;
-        return health;
+
+        return new LeadshineConnectionHealth
+        {
+            IpAddress = _leadshineIp,
+            IsPingable = isPingable,
+            PingTimeMs = pingTimeMs,
+            IsInitialized = isInitialized,
+            ErrorMessage = errorMessage,
+            DiagnosticMessages = diagnostics.ToArray()
+        };
     }
     
     /// <summary>
@@ -173,23 +179,22 @@ public sealed class ConnectionHealthCheckService
     /// </summary>
     private async Task<UpstreamConnectionHealth> CheckUpstreamConnectionAsync(CancellationToken ct)
     {
-        var health = new UpstreamConnectionHealth
-        {
-            IpAddress = _upstreamIp,
-            Port = _upstreamPort
-        };
-        
         var diagnostics = new List<string>();
-        
+        var isPingable = false;
+        long? pingTimeMs = null;
+        var isTransportConnected = false;
+        var transportState = "Unknown";
+        string? errorMessage = null;
+
         try
         {
             // 1. 检查IP是否可达（Ping）
             if (!string.IsNullOrEmpty(_upstreamIp))
             {
                 var pingResult = await PingHostAsync(_upstreamIp, 1000, ct);
-                health.IsPingable = pingResult.Success;
-                health.PingTimeMs = pingResult.RoundtripTime;
-                
+                isPingable = pingResult.Success;
+                pingTimeMs = pingResult.RoundtripTime;
+
                 if (pingResult.Success)
                 {
                     diagnostics.Add($"✓ 上游IP {_upstreamIp} 可达 (Ping: {pingResult.RoundtripTime}ms)");
@@ -197,25 +202,25 @@ public sealed class ConnectionHealthCheckService
                 else
                 {
                     diagnostics.Add($"✗ 上游IP {_upstreamIp} 不可达: {pingResult.ErrorMessage}");
-                    health.ErrorMessage = $"无法Ping通上游IP: {pingResult.ErrorMessage}";
+                    errorMessage = $"无法Ping通上游IP: {pingResult.ErrorMessage}";
                 }
             }
-            
+
             // 2. 检查传输层连接状态
             if (_upstreamTransport != null)
             {
                 var transportStatus = _upstreamTransport.Status;
-                health.IsTransportConnected = transportStatus == Core.Enums.TransportConnectionState.Connected;
-                health.TransportState = transportStatus.ToString();
-                
-                if (health.IsTransportConnected)
+                isTransportConnected = transportStatus == Core.Enums.TransportConnectionState.Connected;
+                transportState = transportStatus.ToString();
+
+                if (isTransportConnected)
                 {
                     diagnostics.Add($"✓ 上游传输层已连接 (状态: {transportStatus})");
                 }
                 else
                 {
                     diagnostics.Add($"✗ 上游传输层未连接 (状态: {transportStatus})");
-                    if (health.IsPingable)
+                    if (isPingable)
                     {
                         diagnostics.Add($"  提示: IP {_upstreamIp} 可达，但TCP连接未建立");
                         diagnostics.Add($"  建议: 检查上游服务是否在端口 {_upstreamPort} 监听");
@@ -231,11 +236,20 @@ public sealed class ConnectionHealthCheckService
         {
             _logger.LogError(ex, "检查上游连接时发生异常");
             diagnostics.Add($"✗ 检查失败: {ex.Message}");
-            health.ErrorMessage = $"检查上游连接时发生异常: {ex.Message}";
+            errorMessage = $"检查上游连接时发生异常: {ex.Message}";
         }
-        
-        health.DiagnosticMessages = diagnostics;
-        return health;
+
+        return new UpstreamConnectionHealth
+        {
+            IpAddress = _upstreamIp,
+            Port = _upstreamPort,
+            IsPingable = isPingable,
+            PingTimeMs = pingTimeMs,
+            IsTransportConnected = isTransportConnected,
+            TransportState = transportState,
+            ErrorMessage = errorMessage,
+            DiagnosticMessages = diagnostics.ToArray()
+        };
     }
     
     /// <summary>
@@ -288,41 +302,41 @@ public sealed class ConnectionHealthCheckService
 /// <summary>
 /// 连接健康检查结果
 /// </summary>
-public class ConnectionHealthCheckResult
+public sealed record ConnectionHealthCheckResult
 {
-    public LeadshineConnectionHealth LeadshineConnection { get; set; } = new();
-    public UpstreamConnectionHealth? UpstreamConnection { get; set; }
-    public bool IsHealthy => LeadshineConnection.IsConnected && 
+    public LeadshineConnectionHealth LeadshineConnection { get; init; } = new();
+    public UpstreamConnectionHealth? UpstreamConnection { get; init; }
+    public bool IsHealthy => LeadshineConnection.IsConnected &&
                             (UpstreamConnection == null || UpstreamConnection.IsConnected);
-    public DateTime CheckedAt { get; set; }
+    public DateTime CheckedAt { get; init; }
 }
 
 /// <summary>
 /// 雷赛连接健康状态
 /// </summary>
-public class LeadshineConnectionHealth
+public sealed record LeadshineConnectionHealth
 {
-    public string? IpAddress { get; set; }
-    public bool IsPingable { get; set; }
-    public long? PingTimeMs { get; set; }
-    public bool IsInitialized { get; set; }
+    public string? IpAddress { get; init; }
+    public bool IsPingable { get; init; }
+    public long? PingTimeMs { get; init; }
+    public bool IsInitialized { get; init; }
     public bool IsConnected => IsPingable && IsInitialized;
-    public string? ErrorMessage { get; set; }
-    public List<string> DiagnosticMessages { get; set; } = new();
+    public string? ErrorMessage { get; init; }
+    public IReadOnlyList<string> DiagnosticMessages { get; init; } = Array.Empty<string>();
 }
 
 /// <summary>
 /// 上游连接健康状态
 /// </summary>
-public class UpstreamConnectionHealth
+public sealed record UpstreamConnectionHealth
 {
-    public string? IpAddress { get; set; }
-    public int Port { get; set; }
-    public bool IsPingable { get; set; }
-    public long? PingTimeMs { get; set; }
-    public bool IsTransportConnected { get; set; }
-    public string TransportState { get; set; } = "Unknown";
+    public string? IpAddress { get; init; }
+    public int Port { get; init; }
+    public bool IsPingable { get; init; }
+    public long? PingTimeMs { get; init; }
+    public bool IsTransportConnected { get; init; }
+    public string TransportState { get; init; } = "Unknown";
     public bool IsConnected => IsPingable && IsTransportConnected;
-    public string? ErrorMessage { get; set; }
-    public List<string> DiagnosticMessages { get; set; } = new();
+    public string? ErrorMessage { get; init; }
+    public IReadOnlyList<string> DiagnosticMessages { get; init; } = Array.Empty<string>();
 }
